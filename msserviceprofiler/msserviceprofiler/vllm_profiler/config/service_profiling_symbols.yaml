@@ -57,15 +57,15 @@
 
 - symbol: vllm_ascend.worker.model_runner_v1:NPUModelRunner.execute_model
   name: modelRunnerExec
-  domain: ModelExecute
+  domain: Execute
 
 - symbol: vllm_ascend.worker.model_runner_v1:NPUModelRunner._update_states
   name: _update_states
-  domain: ModelExecute
+  domain: Execute
 
 - symbol: vllm_ascend.worker.model_runner_v1:NPUModelRunner._prepare_inputs
   name: _prepare_inputs
-  domain: ModelExecute
+  domain: Execute
 
 #- symbol: vllm.forward_context:set_forward_context
 #  min_version: "0.9.1"
@@ -88,3 +88,9 @@
 - symbol: vllm.v1.engine.output_processor:OutputProcessor.process_outputs
   min_version: "0.9.1"
   handler: msserviceprofiler.vllm_profiler.vllm_v1.request_hookers:process_outputs
+
+# ===== Meta =====
+
+- symbol: vllm.v1.engine.core:DPEngineCoreProc.add_request
+  min_version: "0.9.1"
+  handler: msserviceprofiler.vllm_profiler.vllm_v1.meta_hookers:init_data_parallel

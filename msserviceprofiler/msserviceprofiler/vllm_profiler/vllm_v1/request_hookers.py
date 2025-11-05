@@ -24,8 +24,8 @@ from ..module_hook import vllm_hook
     min_version="0.9.1"
 )    
 async def add_request_async(original_func, this, request_id, prompt, *args, **kwargs):
-    Profiler(Level.INFO).domain("Request").res(request_id).event("httpReq")
-    Profiler(Level.INFO).domain("Request").res(request_id).event("tokenize")
+    Profiler(Level.INFO).domain("Engine").res(request_id).event("httpReq")
+    Profiler(Level.INFO).domain("Engine").res(request_id).event("tokenize")
     return await original_func(this, request_id, prompt, *args, **kwargs)
 
 
@@ -43,13 +43,13 @@ def process_outputs(original_func, this, engine_core_outputs, *args, **kwargs):
             recv_token_size = len(request_state.prompt_token_ids)
             reply_token_size = (request_state.stats.num_generation_tokens if request_state.stats else None)
             
-            profiler = Profiler(Level.INFO).domain("Request").res(request_id)
+            profiler = Profiler(Level.INFO).domain("Engine").res(request_id)
             profiler = profiler.\
                 metric("recvTokenSize", recv_token_size).\
                 metric("replyTokenSize", reply_token_size)
             profiler.event("httpRes")
 
     ret = original_func(this, engine_core_outputs, *args, **kwargs)
-    prof = Profiler(Level.INFO).domain("Request").res(request_id_list)
+    prof = Profiler(Level.INFO).domain("Engine").res(request_id_list)
     prof.event("detokenize")
     return ret

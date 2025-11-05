@@ -220,7 +220,7 @@ def test_schedule_given_no_requests_when_processing_then_early_return(hook_state
 
     assert result == scheduler_output
     # Should still profile queues
-    assert any(["BatchSchedule" in call for calls in Profiler.instance_calls for call in calls])
+    assert any(["Schedule" in call for calls in Profiler.instance_calls for call in calls])
     assert not any(["QueueSize" in call for calls in Profiler.instance_calls for call in calls])
 
 

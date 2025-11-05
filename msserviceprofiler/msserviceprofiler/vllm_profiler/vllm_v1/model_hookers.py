@@ -46,7 +46,7 @@ _get_state = create_state_getter(HookState)
 )
 def compute_logits(original_func, this, *args, **kwargs):
     """处理执行模型钩子"""
-    prof = Profiler(Level.INFO).domain("ModelExecute").span_start("computing_logits")
+    prof = Profiler(Level.INFO).domain("Execute").span_start("computing_logits")
     synchronize()
     ret = original_func(this, *args, **kwargs)
     synchronize()
@@ -57,7 +57,7 @@ def compute_logits(original_func, this, *args, **kwargs):
 @vllm_hook(hook_points=("vllm.v1.sample.sampler", "Sampler.forward"), min_version="0.9.1")
 def sampler_forward(original_func, this, *args, **kwargs):
     """处理执行模型钩子"""
-    prof = Profiler(Level.INFO).domain("ModelExecute").span_start("sample")
+    prof = Profiler(Level.INFO).domain("Execute").span_start("sample")
     synchronize()
     ret = original_func(this, *args, **kwargs)
     synchronize()
@@ -78,13 +78,13 @@ def execute_model(original_func, this, scheduler_output, *args, **kwargs):
     request_id_list, request_id_with_iter_list, batch_type = classify_requests(state, scheduler_output)
 
     if request_id_list:
-        prof = Profiler(Level.INFO).domain("ModelExecute")
+        prof = Profiler(Level.INFO).domain("Execute")
         prof.res(request_id_with_iter_list)
         prof.attr("batch_type", batch_type)
         prof.span_start("modelExec")
         prof.attr("batch_size", scheduler_output.total_num_scheduled_tokens)
 
-        state.forward_profiler = Profiler(Level.INFO).domain("ModelExecute").res(request_id_list)
+        state.forward_profiler = Profiler(Level.INFO).domain("Execute").res(request_id_list)
 
     ret = original_func(this, scheduler_output, *args, **kwargs)
     if request_id_list:
@@ -97,7 +97,7 @@ def execute_model(original_func, this, scheduler_output, *args, **kwargs):
 def set_forward_context(original_func, *args, **kwargs):
     """前向上下文钩子"""
     state = _get_state()
-    prof = Profiler(Level.INFO).domain("ModelExecute") if state.forward_profiler is None else state.forward_profiler
+    prof = Profiler(Level.INFO).domain("Execute") if state.forward_profiler is None else state.forward_profiler
     prof.span_start("set_forward_context")
     with original_func(*args, **kwargs):
         yield
@@ -110,7 +110,7 @@ def set_forward_context(original_func, *args, **kwargs):
 @contextmanager
 def capture_async(original_func, this, duration_tag, *args, **kwargs):
     """前向上下文钩子"""
-    prof = Profiler(Level.INFO).domain("ModelExecute").span_start(duration_tag)
+    prof = Profiler(Level.INFO).domain("Execute").span_start(duration_tag)
     synchronize(duration_tag == "forward")
     with original_func(this, duration_tag, *args, **kwargs) as ret:
         yield ret
