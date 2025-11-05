@@ -32,7 +32,7 @@ def queue_profiler(before_queue, after_queue, queue_name):
     for seq_group in less_queue: # V1 note: SequenceGroup == Request
         rid_list.append(seq_group.request_id)
     if len(rid_list) > 0:
-        prof = Profiler(Level.INFO).domain("BatchSchedule").res(rid_list[:])
+        prof = Profiler(Level.INFO).domain("Schedule").res(rid_list[:])
         prof.metric("QueueSize", len(after_queue)).metric_scope("QueueName", queue_name).event("Dequeue")
 
     # 队列元素增加
@@ -41,7 +41,7 @@ def queue_profiler(before_queue, after_queue, queue_name):
     for seq_group in add_queue: # V1 note: SequenceGroup == Request
         rid_list.append(seq_group.request_id)
     if len(rid_list) > 0:
-        prof = Profiler(Level.INFO).domain("BatchSchedule").res(rid_list)
+        prof = Profiler(Level.INFO).domain("Schedule").res(rid_list)
         prof.metric("QueueSize", len(after_queue)).metric_scope("QueueName", queue_name).event("Enqueue")
 
 
@@ -57,7 +57,7 @@ _get_state = create_state_getter(HookState)
 @vllm_hook(("vllm.v1.engine.processor", "Processor.process_inputs"), min_version="0.9.1")
 def process_inputs(original_func, this, request_id, *args, **kwargs):
     ret = original_func(this, request_id, *args, **kwargs)
-    Profiler(Level.INFO).domain("BatchSchedule").res(request_id).event("ReqState")
+    Profiler(Level.INFO).domain("Schedule").res(request_id).event("ReqState")
     return ret
 
 
@@ -70,11 +70,26 @@ def process_inputs(original_func, this, request_id, *args, **kwargs):
 )
 def schedule(original_func, this, *args, **kwargs):
     state = _get_state()
-    prof = Profiler(Level.INFO).domain("BatchSchedule").span_start("batchFrameworkProcessing")
+    prof = Profiler(Level.INFO).domain("Schedule").span_start("batchFrameworkProcessing")
+
+    # 获取KVCache状态
+    kv_cache_manager = this.kv_cache_manager
+    block_pool = kv_cache_manager.block_pool
+
+    # 获取调度前的状态
+    before_free_blocks = block_pool.get_num_free_blocks()
+    total_blocks = this.kv_cache_config.num_blocks
+    before_used_blocks = total_blocks - before_free_blocks
 
     before_running_queue = this.running.copy()
     before_waiting_queue = this.waiting.copy()
     scheduler_output = original_func(this, *args, **kwargs)
+
+    # 获取调度后的状态
+    after_usage = kv_cache_manager.usage
+    after_free_blocks = block_pool.get_num_free_blocks()
+    after_used_blocks = total_blocks - after_free_blocks
+    allocated_blocks = after_used_blocks - before_used_blocks
 
     request_id_list, request_id_with_iter_list, batch_type = classify_requests(state, scheduler_output)
 
@@ -85,12 +100,16 @@ def schedule(original_func, this, *args, **kwargs):
     queue_profiler(before_waiting_queue, this.waiting, "WAITING")
     prof.res(request_id_with_iter_list)
 
-    waiting_queue_prof = Profiler(Level.INFO).domain("BatchSchedule")
-    waiting_queue_prof.metric("QueueSize", len(this.waiting)).metric_scope("QueueName", "WAITING").event("Queue")
-    running_queue_prof = Profiler(Level.INFO).domain("BatchSchedule")
-    running_queue_prof.metric("QueueSize", len(this.running)).metric_scope("QueueName", "RUNNING").event("Queue")
-
-    logger.debug(f" state.request_id_to_iter: {state.request_id_to_iter}")
+    if hasattr(scheduler_output, 'num_scheduled_tokens') and scheduler_output.num_scheduled_tokens:
+        batch_req_ids = list(scheduler_output.num_scheduled_tokens.keys())
+        kv_cache_prof = Profiler(Level.INFO).domain("Schedule.KVCache").res(batch_req_ids)
+        kv_cache_prof.metric("TotalBlocks", total_blocks) \
+            .metric("UsedBlocks", after_used_blocks) \
+            .metric("FreeBlocks", after_free_blocks) \
+            .metric("UsagePercent", after_usage) \
+            .metric("AllocatedBlocks", allocated_blocks) \
+            .metric("UsagePercent", after_usage) \
+            .event("KVCacheStatus")
 
     prof.attr("batch_type", batch_type)
     prof.span_end()
@@ -101,7 +120,7 @@ def schedule(original_func, this, *args, **kwargs):
 @vllm_hook(("vllm.v1.core.sched.scheduler", "Scheduler._free_request"), min_version="0.9.1")
 def free_request(original_func, this, request, *args, **kwargs):
     ret = original_func(this, request, *args, **kwargs)
-    prof = Profiler(Level.INFO).domain("BatchSchedule").res(request.request_id)
+    prof = Profiler(Level.INFO).domain("Schedule").res(request.request_id)
     prof.metric_inc("FINISHED", 1).event("ReqState")
     return ret
 
@@ -109,7 +128,7 @@ def free_request(original_func, this, request, *args, **kwargs):
 @vllm_hook(("vllm.v1.core.sched.scheduler", "Scheduler.add_request"), min_version="0.9.1")
 def add_request(original_func, this, request, *args, **kwargs):
     original_func(this, request, *args, **kwargs)
-    prof = Profiler(Level.INFO).domain("BatchSchedule").res(request.request_id)
+    prof = Profiler(Level.INFO).domain("Schedule").res(request.request_id)
     prof.metric_inc("WAITING", 1).event("ReqState")
-    prof_queue = Profiler(Level.INFO).domain("BatchSchedule").res(request.request_id)
+    prof_queue = Profiler(Level.INFO).domain("Schedule").res(request.request_id)
     prof_queue.metric("QueueSize", len(this.waiting)).metric_scope("QueueName", "WAITING").event("Enqueue")

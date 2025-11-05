@@ -26,23 +26,6 @@ from .fake_ms_service_profiler import Profiler, Level
 Request = namedtuple("Request", ["request_id", "num_tokens"])
 
 
-def test_allocate_slots_given_valid_request_when_called_then_log_allocation():
-    mock_this = MagicMock()
-    mock_this.block_pool.get_num_free_blocks.return_value = 42
-    request = Request(request_id="req1", num_tokens=10)
-    mock_original = MagicMock(return_value="result")
-
-    result = kvcache_hookers.allocate_slots(mock_original, mock_this, request)
-
-    mock_original.assert_called_with(mock_this, request)
-    assert result == "result"
-    assert len(Profiler.instance_calls) == 1
-    calls = Profiler.instance_calls[0]
-    assert ("res", "req1") in calls
-    assert ("metric", "deviceBlock", 42) in calls
-    assert ("event", "Allocate") in calls
-
-
 def test_free_given_valid_request_when_called_then_log_free():
     mock_this = MagicMock()
     mock_this.block_pool.get_num_free_blocks.return_value = 50
@@ -73,7 +56,7 @@ def test_get_computed_blocks_given_cache_hit_when_condition_met_then_log_hit_rat
     calls = Profiler.instance_calls[0]
     assert ("res", "req3") in calls
     assert ("attr", "hitCache", 0.8) in calls  # 8/10 = 0.8
-    assert ("event", "GetCacheHitRate") in calls
+    assert ("event", "CacheHitRate") in calls
 
 
 def test_get_computed_blocks_given_insufficient_blocks_when_called_then_no_logging():

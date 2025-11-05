@@ -96,7 +96,7 @@ def test_process_outputs_given_finished_request_when_called_then_httpres_logged_
     # httpRes calls
     http_res_calls = Profiler.instance_calls[0]
     assert http_res_calls == [
-        ("domain", "Request"),
+        ("domain", "Engine"),
         ("res", "req_finished"),
         ("metric", "recvTokenSize", 3),
         ("metric", "replyTokenSize", 5),
@@ -105,7 +105,7 @@ def test_process_outputs_given_finished_request_when_called_then_httpres_logged_
 
     # detokenize calls
     decode_calls = Profiler.instance_calls[1]
-    assert decode_calls == [("domain", "Request"), ("res", ["req_finished"]), ("event", "detokenize")]
+    assert decode_calls == [("domain", "Engine"), ("res", ["req_finished"]), ("event", "detokenize")]
 
 
 def test_process_outputs_given_unfinished_request_when_httpres_not_logged():
