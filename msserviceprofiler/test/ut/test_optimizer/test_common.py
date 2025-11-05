@@ -26,6 +26,8 @@ def test_module_version():
 def test_get_npu_total_memory_success(monkeypatch):
     def _npu_info_usages(*args):
         key_word = "H" + "B" + "M"
+        if args and args[0][2] == "-m":
+            return "0 0 0".encode()
         return f"""
     NPU ID                         : 0
     Chip Count                     : 1
