@@ -9,7 +9,6 @@ from safetensors.torch import load_file
 from ascend_utils.common.security.path import get_valid_read_path
 from msmodelslim.utils.logging import get_logger
 
-
 MAX_READ_FILE_SIZE_16G = 17179869184  # 16G, 16 * 1024 * 1024 * 1024
 
 

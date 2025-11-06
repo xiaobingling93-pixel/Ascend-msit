@@ -2,12 +2,18 @@
 #Copyright 2023 DeepSeek-AI and The HuggingFace Inc. team
 
 import os.path
+from collections import defaultdict
+from contextlib import contextmanager
+from functools import lru_cache
 from importlib import import_module
-from typing import Any, List, Optional, Tuple, Generator, Dict
+from typing import Any, List, Optional, Tuple, Generator, Dict, Union
+from unittest.mock import patch
 
 import torch
 import torch.nn as nn
+from safetensors import safe_open
 from torch import distributed as dist
+from tqdm import tqdm
 
 from msmodelslim.app import DeviceType
 from msmodelslim.core.base.protocol import ProcessRequest
@@ -18,14 +24,25 @@ from msmodelslim.model.factory import ModelFactory
 from msmodelslim.model.transformers import TransformersModel
 from msmodelslim.quant import ir as qir
 from msmodelslim.utils.exception import InvalidModelError
-from msmodelslim.utils.logging import logger_setter
+from msmodelslim.utils.logging import logger_setter, get_logger
+from msmodelslim.utils.security import json_safe_load, get_valid_read_path, MAX_READ_FILE_SIZE_32G
 from msmodelslim.utils.security.model import SafeGenerator
-from msmodelslim.utils.security import json_safe_load, json_safe_dump
-from .convert_fp8_to_bf16 import auto_convert_model_fp8_to_bf16
-from .mtp_quant_module import warp_mtp_model, remove_zero_and_shift
+from .convert_fp8_to_bf16 import auto_convert_module_fp8_to_bf16
+from .mtp_quant_module import remove_zero_and_shift, get_mtp_layer, wrap_mtp_decoder
+from .quarot import get_ln_fuse_map, get_rotate_map
 from ..interface_hub import ModelInfoInterface, ModelSlimPipelineInterfaceV1, IterSmoothInterface, \
     FlexSmoothQuantInterface, FA3QuantAdapterInterface, FA3QuantPlaceHolder, QuaRotInterface, AscendV1SaveInterface
-from .quarot import get_ln_fuse_map, get_rotate_map
+
+
+@contextmanager
+def default_dtype(dtype):
+    """自定义默认 dtype 上下文管理器"""
+    original_dtype = torch.get_default_dtype()
+    torch.set_default_dtype(dtype)
+    try:
+        yield
+    finally:
+        torch.set_default_dtype(original_dtype)
 
 
 @ModelFactory.register("DeepSeek-V3")
@@ -50,39 +67,43 @@ class DeepSeekV3ModelAdapter(TransformersModel,
         return 'deepseek_v3'
 
     def init_model(self, device: DeviceType = DeviceType.NPU) -> nn.Module:
-        # load one more layer for mtp
-        self.config.num_hidden_layers += 1
-        # load model to cpu and cpu
-        model = SafeGenerator.get_model_from_pretrained(model_path=str(self.model_path),
-                                                        config=self.config,
-                                                        trust_remote_code=self.trust_remote_code,
-                                                        device_map="cpu",
-                                                        torch_dtype="auto",
-                                                        attn_implementation='eager')
-        # auto convert fp8 to bf16
-        auto_convert_model_fp8_to_bf16(model, str(self.model_path))
-        # warp mtp into model
-        model = warp_mtp_model(self.config, model, str(self.model_path))
-        return model
+        with default_dtype(torch.bfloat16):
+            # 保存原始层数
+            origin_layers = self.config.num_hidden_layers
+            get_logger().info(f"Model with {origin_layers} layers totally")
+
+            # 临时设置为1层进行初始化
+            self.config.num_hidden_layers = 1
+
+            # 加载只有一层的模型
+            model = SafeGenerator.get_model_from_pretrained(model_path=str(self.model_path),
+                                                            config=self.config,
+                                                            trust_remote_code=self.trust_remote_code,
+                                                            device_map="cpu",
+                                                            torch_dtype="auto",
+                                                            attn_implementation='eager')
+
+            # 恢复原始层数
+            self.config.num_hidden_layers = origin_layers
+
+            # 加载权重
+            state_dict = self.get_state_dict(model)
+            model.load_state_dict(state_dict)
+
+            # auto convert fp8 to bf16
+            auto_convert_module_fp8_to_bf16("", model, str(self.model_path))
+            model.eval()
+            get_logger().info(f"Create model with {self.config.num_hidden_layers} layers successfully at first")
+            return model
 
     def handle_dataset(self, dataset: Any, device: DeviceType = DeviceType.NPU) -> List[Any]:
         return self._get_tokenized_data(dataset, device)
 
     def generate_model_visit(self, model: nn.Module) -> Generator[ProcessRequest, Any, None]:
-        return generated_decoder_layer_visit_func(model)
+        return generated_decoder_layer_visit_func(model, transformer_blocks=self.generate_decoder_layer(model))
 
     def generate_model_forward(self, model: nn.Module, inputs: Any,
                                ) -> Generator[ProcessRequest, Any, None]:
-        def pack_request(name: str, request_args: Tuple, request_kwargs: Dict):
-            module = model.get_submodule(name)
-            return ProcessRequest(name, module, request_args, request_kwargs)
-
-        transformer_blocks = [
-            (name, module)
-            for name, module in model.named_modules()
-            if "decoderlayer" in module.__class__.__name__.lower()
-        ]
-
         # 存储第一个transformer block的输入
         first_block_input: Optional[Tuple] = None
 
@@ -91,12 +112,12 @@ class DeepSeekV3ModelAdapter(TransformersModel,
             first_block_input = (hook_args, hook_kwargs,)
             raise TransformersForwardBreak()
 
-        hooks = [transformer_blocks[0][1].register_forward_pre_hook(break_hook, with_kwargs=True, prepend=True)]
+        remove_handler = model.model.layers[0].register_forward_pre_hook(break_hook, with_kwargs=True, prepend=True)
 
         # 执行一次前向传播以获取输入
         try:
             if isinstance(inputs, list) or isinstance(inputs, tuple):
-                model(*inputs)
+                model(inputs[0])
             elif isinstance(inputs, dict):
                 model(**inputs)
             else:
@@ -106,8 +127,7 @@ class DeepSeekV3ModelAdapter(TransformersModel,
         except Exception as e:
             raise e
         finally:
-            for hook in hooks:
-                hook.remove()
+            remove_handler.remove()
 
         if first_block_input is None:
             raise InvalidModelError("Can't get first block input.", action="Please check the model and input")
@@ -118,14 +138,20 @@ class DeepSeekV3ModelAdapter(TransformersModel,
         if dist.is_initialized():
             dist.barrier()
 
-        mtp_idx = self.config.num_hidden_layers
+        for name, block in self.generate_decoder_layer(model):
+            args, kwargs = current_inputs
+            if name == f'model.layers.{self.config.num_hidden_layers - 1}':
+                args, kwargs = self.mtp_preprocess(model, mtp_decoder=block, inputs=inputs, args=args, kwargs=kwargs)
+            outputs = yield ProcessRequest(name, block, args, kwargs)
+            hidden_states = outputs[0]
+            current_inputs = ((hidden_states,), current_inputs[1])
 
-        args, kwargs = current_inputs
-        for name, block in transformer_blocks[:mtp_idx]:
-            output = yield ProcessRequest(name, block, args, kwargs)
-            hidden_states = output[0]
-            args = (hidden_states,)
-
+    def mtp_preprocess(self,
+                       model: nn.Module,
+                       mtp_decoder: nn.Module,
+                       inputs: Union[List[Any], Dict[str, Any]],
+                       args: Tuple[Any, Any],
+                       kwargs: Dict[str, Any]) -> Tuple[Tuple[Any, Any], Dict[str, Any]]:
         def wrap_device(module: nn.Module):
             def auto_module(arg):
                 module.to('npu')
@@ -135,7 +161,8 @@ class DeepSeekV3ModelAdapter(TransformersModel,
 
             return auto_module
 
-        hidden_states = model.model.norm(*args)
+        hidden_states = args[0]
+        hidden_states = model.model.norm(hidden_states)
         logits = wrap_device(model.lm_head)(hidden_states)
         logits = logits.float()
 
@@ -152,12 +179,11 @@ class DeepSeekV3ModelAdapter(TransformersModel,
         logits[:, -1, :].argmax(dim=1)
         input_ids_mtp[:, -1] = logits[:, -1, :].argmax(dim=1)
 
-        mtp_layer = model.model.layers[self.config.num_hidden_layers]
-        input_embeds_mtp = wrap_device(mtp_layer.embed_tokens)(input_ids_mtp)
-        input_embeds_mtp = wrap_device(mtp_layer.enorm)(input_embeds_mtp)
-        hidden_states_mtp = wrap_device(mtp_layer.hnorm)(hidden_states)
+        input_embeds_mtp = wrap_device(mtp_decoder.embed_tokens)(input_ids_mtp)
+        input_embeds_mtp = wrap_device(mtp_decoder.enorm)(input_embeds_mtp)
+        hidden_states_mtp = wrap_device(mtp_decoder.hnorm)(hidden_states)
         hidden_states_mtp = torch.cat([input_embeds_mtp, hidden_states_mtp], dim=-1)
-        hidden_states_mtp = wrap_device(mtp_layer.eh_proj)(hidden_states_mtp)
+        hidden_states_mtp = wrap_device(mtp_decoder.eh_proj)(hidden_states_mtp)
 
         attention_mask = inputs['attention_mask'] if isinstance(inputs, dict) else inputs[1]
 
@@ -171,27 +197,13 @@ class DeepSeekV3ModelAdapter(TransformersModel,
             0,
         )
 
-        del input_embeds_mtp
-        del attention_mask
-        del input_ids_mtp
-        del input_ids
-        del logits
-        del hidden_states
-        hidden_states_mtp = hidden_states_mtp.detach()
-        attention_mask_mtp = attention_mask_mtp.detach()
-
-        _ = yield pack_request(f"model.layers.{mtp_idx}",
-                               (hidden_states_mtp,),
-                               {
-                                   "attention_mask": attention_mask_mtp,
-                                   "position_ids": position_ids,
-                                   "past_key_value": None,
-                                   "output_attentions": False,
-                                   "use_cache": False,
-                               })
-
-        # the remaining part just ignore
-        return
+        return ((hidden_states_mtp,), {
+            "attention_mask": attention_mask_mtp,
+            "position_ids": position_ids,
+            "past_key_value": None,
+            "output_attentions": False,
+            "use_cache": False,
+        })
 
     def enable_kv_cache(self, model: nn.Module, need_kv_cache: bool) -> None:
         def pre_forward_hook(module, args, kwargs):
@@ -202,7 +214,8 @@ class DeepSeekV3ModelAdapter(TransformersModel,
 
     def get_adapter_config_for_subgraph(self) -> List[AdapterConfig]:
         adapter_config = []
-        for layer_idx in range(self.config.num_hidden_layers):
+        # mtp layer does not apply smooth due to the compatible with pre-refactor
+        for layer_idx in range(self.config.num_hidden_layers - 1):
             # OKV_b融合的映射配置：o_proj -> kv_b_proj
             okv_b_mapping_config = MappingConfig(
                 source=f"model.layers.{layer_idx}.self_attn.kv_b_proj",  # KV_b投影层
@@ -363,16 +376,79 @@ class DeepSeekV3ModelAdapter(TransformersModel,
                 root_module.set_submodule(f"{name}.fa_k", FA3QuantPlaceHolder(ratio=0.9999))
                 root_module.set_submodule(f"{name}.fa_v", FA3QuantPlaceHolder(ratio=1.0))
                 _wrap_attention_forward(module)
-    
+
     def get_ln_fuse_map(self):
         return {}, get_ln_fuse_map(self.config)
-    
+
     def get_bake_names(self):
         return [], []
-    
+
     def get_rotate_map(self, block_size):
         pre_run, rot_pairs, _ = get_rotate_map(self.config, block_size)
         return [pre_run], [pair for pair in rot_pairs.values()]
+
+    @lru_cache(maxsize=1)
+    def get_weight_map(self):
+        model_index_path = os.path.join(self.model_path, "model.safetensors.index.json")
+        model_index = json_safe_load(model_index_path)
+        weight_map = model_index['weight_map']
+        return weight_map
+
+    def get_state_dict(self, module: nn.Module, prefix: str = ""):
+        weight_map = self.get_weight_map()
+        names = map(lambda x: x[0], module.named_parameters())
+
+        groups = defaultdict(list)
+        for name in names:
+            file_name = weight_map[f'{prefix}.{name}' if prefix else name]
+            groups[file_name].append(name)
+
+        state_dict = {}
+        for file_name in tqdm(groups, desc=f'Loading {prefix}'):
+            file_path = os.path.join(self.model_path, file_name)
+            file_path = get_valid_read_path(file_path, extensions='safetensors', size_max=MAX_READ_FILE_SIZE_32G)
+            with safe_open(file_path, framework='pt', device='cpu') as f:
+                for name in tqdm(groups[file_name], desc=f'Loading {file_path}'):
+                    state_dict[name] = f.get_tensor(f'{prefix}.{name}' if prefix else name)
+        return state_dict
+
+    def load_decoder_if_not_exist(self, model: nn.Module, name: str, idx: int):
+        try:
+            decoder = model.get_submodule(name)
+        except AttributeError:
+            # disable reset_parameters so that the weights will not be initialized
+            # these initializations is not necessary because we will load it from the state_dict
+            # and these initializations will cost too much time because the DeepSeekV3's decoder layer is too large
+            with patch.object(nn.Linear, 'reset_parameters', lambda _self: None), default_dtype(torch.bfloat16):
+                get_logger().info(f'Creating decoder layer {idx}')
+                module_list: nn.ModuleList = model.model.layers
+                template_module = module_list[0]
+                decoder = template_module.__class__(layer_idx=idx, config=self.config)
+
+                state_dict = self.get_state_dict(decoder, prefix=name)
+                decoder.load_state_dict(state_dict)
+                auto_convert_module_fp8_to_bf16(name, decoder, str(self.model_path))
+                decoder.eval()
+                module_list.append(decoder)
+                get_logger().info(f'Create decoder layer {idx} successfully')
+        return decoder
+
+    def load_mtp_if_not_load(self, mtp_decoder: nn.Module):
+        try:
+            mtp_decoder.get_submodule('shared_head')
+        except AttributeError:
+            get_logger().info('Creating MTP layer')
+            mtp_layer = get_mtp_layer(config=self.config, model_path=self.model_path)
+            wrap_mtp_decoder(mtp_decoder=mtp_decoder, mtp_layer=mtp_layer)
+            get_logger().info('Create MTP successfully')
+
+    def generate_decoder_layer(self, model: nn.Module):
+        for idx in range(self.config.num_hidden_layers):
+            name = f"model.layers.{idx}"
+            decoder = self.load_decoder_if_not_exist(model, name=name, idx=idx)
+            if idx == self.config.num_hidden_layers - 1:
+                self.load_mtp_if_not_load(decoder)
+            yield name, decoder
 
     def ascendv1_save_postprocess(self, model: nn.Module, save_directory: str) -> None:
         """
@@ -388,7 +464,7 @@ class DeepSeekV3ModelAdapter(TransformersModel,
         """
         use_w4a8 = False
         use_c8 = False
-        
+
         for _, module in model.named_modules():
             if isinstance(module, qir.W4A8DynamicFakeQuantLinear):
                 use_w4a8 = True
@@ -408,8 +484,7 @@ class DeepSeekV3ModelAdapter(TransformersModel,
                 config_data["mla_quantize"] = "w8a8"
             else:
                 config_data["mla_quantize"] = "w8a8_dynamic"
-                
+
             json_safe_dump(config_data, config_file, indent=2, check_user_stat=False)
 
         return
-        
