@@ -20,11 +20,12 @@ from collections import namedtuple
 import pytest
 import torch
 
-from msmodelslim.quant.ir import W4A4DynamicPerGroupFakeQuantLinear, W4A4DynamicPerChannelFakeQuantLinear
-from msmodelslim.quant.ir import W8A8DynamicPerChannelFakeQuantLinear
+from msmodelslim.quant.ir import W4A4DynamicPerGroupFakeQuantLinear, W4A4DynamicPerChannelFakeQuantLinear, \
+                                 W8A8DynamicPerChannelFakeQuantLinear, W4A4MXDynamicPerBlockFakeQuantLinear
 from .base import FakeLlamaModelAdapter, invoke_test, is_npu_available
 from .utils import run_fake_quantization_test, check_w4a4_dynamic_per_group_export, \
-    check_w4a4_dynamic_per_channel_export, check_w8a8_dynamic_per_channel_export, check_tensors_by_mapping
+    check_w4a4_dynamic_per_channel_export, check_w8a8_dynamic_per_channel_export, check_tensors_by_mapping, \
+    check_w4a4_mx_dynamic_per_block_export
 
 
 @pytest.mark.parametrize("test_device, test_dtype", [
@@ -212,5 +213,36 @@ def test_w4a4_laos_with_float_rollback_pipeline(test_device: str, test_dtype: to
 
     finally:
         # 清理临时目录
+        if os.path.exists(tmp_dir):
+            shutil.rmtree(tmp_dir)
+
+
+@pytest.mark.parametrize("test_device, test_dtype", [
+    pytest.param("cpu", torch.float32),
+    pytest.param("npu", torch.float16, marks=pytest.mark.skipif(not is_npu_available(), reason="NPU not available")),
+    pytest.param("npu", torch.bfloat16, marks=pytest.mark.skipif(not is_npu_available(), reason="NPU not available")),
+])
+@pytest.mark.smoke
+def test_w4a4_mx_dynamic_per_block_quantization(test_device, test_dtype):
+    """测试W4A4 per_token量化功能（act: per_token, weight: per_channel）"""
+    torch.set_default_dtype(test_dtype)
+    tmp_dir = tempfile.mkdtemp()
+
+    try:
+        model_adapter = invoke_test("w4a4_mx_dynamic_per_block.yaml", tmp_dir)
+
+        assert isinstance(model_adapter, FakeLlamaModelAdapter), "model_adapter should be FakeLlamaModelAdapter"
+
+        # 使用公共函数进行伪量化测试
+        module_checkers = {W4A4MXDynamicPerBlockFakeQuantLinear: check_w4a4_mx_dynamic_per_block_export}
+
+        run_fake_quantization_test(
+            model_adapter=model_adapter,
+            tmp_dir=tmp_dir,
+            expected_quant_types="W4A4_MXFP4",
+            module_checkers=module_checkers,
+        )
+
+    finally:
         if os.path.exists(tmp_dir):
             shutil.rmtree(tmp_dir)
