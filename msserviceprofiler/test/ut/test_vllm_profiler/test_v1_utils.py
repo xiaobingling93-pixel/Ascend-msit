@@ -103,7 +103,8 @@ def test_classify_requests_prefill_only_and_cleanup():
     request_id_list, request_id_with_iter_list, batch_type = classify_requests(state, sched)
 
     assert request_id_list == [{"rid": "r1"}]
-    assert request_id_with_iter_list == [{"rid": "r1", "iter": 0, "type": 0}]
+    assert request_id_with_iter_list == [{"rid": "r1", "iter": 0, "type": 0,
+            "num_scheduled_tokens": 5, "num_prompt_tokens": 5, "num_computed_tokens": 3}]
     assert batch_type == "Prefill"
 
     # r1 finished -> state cleanup
@@ -125,7 +126,8 @@ def test_classify_requests_decode_only_and_iter_increment():
     )
 
     _, req_with_iter, batch_type = classify_requests(state, sched)
-    assert req_with_iter == [{"rid": "r2", "iter": 0, "type": 1}]
+    assert req_with_iter == [{"rid": "r2", "iter": 0, "type": 1,
+            "num_scheduled_tokens": 3, "num_prompt_tokens": 3, "num_computed_tokens": 3}]
     assert batch_type == "Decode"
 
     # Second call with same r2 should increment iter to 1
@@ -136,7 +138,8 @@ def test_classify_requests_decode_only_and_iter_increment():
         finished_req_ids=set(),
     )
     _, req_with_iter2, _ = classify_requests(state, sched2)
-    assert req_with_iter2 == [{"rid": "r2", "iter": 1, "type": 1}]
+    assert req_with_iter2 == [{"rid": "r2", "iter": 1, "type": 1,
+            "num_scheduled_tokens": 1, "num_prompt_tokens": 3, "num_computed_tokens": 4}]
 
 
 def test_classify_requests_mixed_prefill_and_decode():
@@ -162,8 +165,10 @@ def test_classify_requests_mixed_prefill_and_decode():
     # order aligns with dict iteration; avoid strict order by sorting for assertion
     sorted_req_with_iter = sorted(req_with_iter, key=lambda x: x["rid"])
     assert sorted_req_with_iter == [
-        {"rid": "rA", "iter": 0, "type": 0},
-        {"rid": "rB", "iter": 0, "type": 1},
+        {"rid": "rA", "iter": 0, "type": 0,
+            "num_scheduled_tokens": 3, "num_prompt_tokens": 4, "num_computed_tokens": 2},
+        {"rid": "rB", "iter": 0, "type": 1,
+            "num_scheduled_tokens": 1, "num_prompt_tokens": 2, "num_computed_tokens": 2},
     ]
     assert batch_type == "Prefill,Decode"
 
