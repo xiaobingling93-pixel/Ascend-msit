@@ -68,26 +68,34 @@ def get_inv_tensor(tensor_name, fp8_path, weight_map):
         return f.get_tensor(tensor_name + WEIGHT_SCALE_INV)
 
 
-def auto_convert_model_fp8_to_bf16(model: nn.Module, model_path: str):
+def auto_convert_module_fp8_to_bf16(name: str, module: nn.Module, model_path: str):
     weight_map = get_inv_weight_map(model_path)
 
     if not weight_map:
         return
 
     try:
-        convert_model_fp8_to_bf16(model, model_path, weight_map=weight_map)
+        sub_weight_map = {
+            sub_name: weight_map[sub_name]
+            for sub_name, _ in module.named_modules(prefix=name)
+            if sub_name in weight_map
+        }
+        convert_module_fp8_to_bf16(name, module, model_path, weight_map=sub_weight_map)
     except KeyError:
         get_logger().warning(f'Safetensors files not match index.json, please check whether model is of bf16.')
         get_logger().warning(f'Skip fp8 to bf16.')
 
 
 @torch.no_grad()
-def convert_model_fp8_to_bf16(model: nn.Module,
+def convert_module_fp8_to_bf16(name: str,
+                              module: nn.Module,
                               model_path: str,
                               weight_map: Dict[str, str]):
-    for name, module in tqdm(model.named_modules(), desc='fp8 to bf16', total=len(weight_map)):
-        if name not in weight_map:
-            continue
+    with tqdm(total=len(weight_map), desc='fp8 to bf16') as bar:
+        for sub_name, module in module.named_modules(prefix=name):
+            if sub_name not in weight_map:
+                continue
 
-        scale = get_inv_tensor(name, model_path, weight_map)
-        module.weight[:] = weight_dequant(module.weight, scale.to(module.weight.device))
+            scale = get_inv_tensor(sub_name, model_path, weight_map)
+            module.weight[:] = weight_dequant(module.weight, scale.to(module.weight.device))
+            bar.update(1)

@@ -15,6 +15,7 @@ import os.path
 from collections import defaultdict
 from functools import lru_cache
 from typing import List, Any, Generator, Optional, Tuple, Dict, Union
+from unittest.mock import patch
 
 import torch
 from safetensors import safe_open
@@ -26,12 +27,12 @@ from msmodelslim.app import DeviceType
 from msmodelslim.app.naive_quantization.model_info_interface import ModelInfoInterface
 from msmodelslim.core.base.protocol import ProcessRequest
 from msmodelslim.core.graph import AdapterConfig, MappingConfig, FusionConfig
+from msmodelslim.model.deepseek_v3.quarot import get_ln_fuse_map, get_rotate_map
 from msmodelslim.quant.processor.anti_outlier.smooth_interface import FlexSmoothQuantInterface
+from msmodelslim.quant.processor.quarot import QuaRotInterface
 from msmodelslim.utils.exception import InvalidModelError
 from msmodelslim.utils.logging import logger_setter, get_logger
 from msmodelslim.utils.security import get_valid_read_path, json_safe_load, MAX_READ_FILE_SIZE_32G
-from msmodelslim.quant.processor.quarot import QuaRotInterface, create_rot, QuaRotMode
-from msmodelslim.model.deepseek_v3.quarot import get_ln_fuse_map, get_rotate_map
 from .convert_fp8_to_bf16 import auto_convert_module_fp8_to_bf16
 from .model import Transformer, ModelArgs
 from .mtp_quant_module import get_mtp_layer, wrap_mtp_decoder, remove_zero_and_shift
@@ -273,17 +274,21 @@ class DeepSeekV32ModelAdapter(TransformersModel,
         try:
             decoder = model.get_submodule(name)
         except AttributeError:
-            get_logger().info(f'Creating decoder layer {idx}')
-            module_list: nn.ModuleList = model.model.layers
-            template_module = module_list[0]
-            decoder = template_module.__class__(layer_id=idx, args=self.config)
+            # disable reset_parameters so that the weights will not be initialized
+            # these initializations is not necessary because we will load it from the state_dict
+            # and these initializations will cost too much time because the DeepSeekV3's decoder layer is too large
+            with patch.object(nn.Linear, 'reset_parameters', lambda _self: None):
+                get_logger().info(f'Creating decoder layer {idx}')
+                module_list: nn.ModuleList = model.model.layers
+                template_module = module_list[0]
+                decoder = template_module.__class__(layer_id=idx, args=self.config)
 
-            state_dict = self.get_state_dict(decoder, prefix=name)
-            decoder.load_state_dict(state_dict)
-            auto_convert_module_fp8_to_bf16(name, decoder, str(self.model_path))
-            decoder.eval()
-            module_list.append(decoder)
-            get_logger().info(f'Create decoder layer {idx} successfully')
+                state_dict = self.get_state_dict(decoder, prefix=name)
+                decoder.load_state_dict(state_dict)
+                auto_convert_module_fp8_to_bf16(name, decoder, str(self.model_path))
+                decoder.eval()
+                module_list.append(decoder)
+                get_logger().info(f'Create decoder layer {idx} successfully')
         return decoder
 
     def generate_decoder_layer(self, model: nn.Module):
@@ -309,13 +314,13 @@ class DeepSeekV32ModelAdapter(TransformersModel,
         return [], []
 
     def get_rotate_map(self, block_size):
-        pre_run, rot_pairs, rotate_matrix = get_rotate_map(self.config, 
-                                                            block_size, 
-                                                            num_hidden_layers=self.config.num_hidden_layers)
+        pre_run, rot_pairs, rotate_matrix = get_rotate_map(self.config,
+                                                           block_size,
+                                                           num_hidden_layers=self.config.num_hidden_layers)
         for layer_idx in range(self.config.num_hidden_layers):
             rot_pairs['rot'].right_rot[f"model.layers.{layer_idx}.self_attn.indexer.wk"] = rotate_matrix['rot']
             rot_pairs['rot_b_proj'].right_rot[f"model.layers.{layer_idx}.self_attn.indexer.wq_b"] = \
-                                                                                    rotate_matrix['rot_b_proj']
+                rotate_matrix['rot_b_proj']
         return [pre_run], [pair for pair in rot_pairs.values()]
 
     def _load_config(self, trust_remote_code=False) -> object:
