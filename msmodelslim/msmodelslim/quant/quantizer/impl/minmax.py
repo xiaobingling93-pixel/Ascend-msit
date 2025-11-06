@@ -294,9 +294,7 @@ class MXWeightPerBlockMinmax(AutoWeightQuantizer):
             q_dtype=QDType(self.config.dtype),
             q_scope=QScope(self.config.scope),
             symmetric=self.config.symmetric,
-            element_format=self.config.ext.get('element_format'),
-            axes=self.config.ext.get('axes'),
-            block_size=self.block_size
+            axes=self.config.ext.get('axes')
         )
         self.w_q_param.ext['axes'] = self.axes
         self.weight.value = weight_value
@@ -353,7 +351,7 @@ class MXActPerBlockMinmax(AutoActQuantizer):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        pass
+        return x
 
     def get_q_param(self) -> QParam:
         if self.q_param is None:
