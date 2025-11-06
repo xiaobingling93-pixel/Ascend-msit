@@ -87,7 +87,7 @@ def classify_requests(state: Any, scheduler_output: Any) -> Tuple[List[Dict], Li
     request_id_with_iter_list: List[Dict] = []
     has_prefill, has_decode = False, False
 
-    for request_id, _ in scheduler_output.num_scheduled_tokens.items():
+    for request_id, num in scheduler_output.num_scheduled_tokens.items():
         request_id_list.append({"rid": request_id})
         iter_ = state.request_id_to_iter.get(request_id, -1) + 1
         state.request_id_to_iter[request_id] = iter_
@@ -106,6 +106,9 @@ def classify_requests(state: Any, scheduler_output: Any) -> Tuple[List[Dict], Li
             "rid": request_id,
             "iter": iter_,
             "type": 0 if is_prefill_request else 1,
+            "num_scheduled_tokens": num,
+            "num_prompt_tokens": prompt_len,
+            "num_computed_tokens": num_comp
         })
 
         if request_id in scheduler_output.finished_req_ids:
