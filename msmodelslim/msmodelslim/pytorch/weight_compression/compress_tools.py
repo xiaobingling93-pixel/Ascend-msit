@@ -244,7 +244,11 @@ class Compressor:
             tmp_num = len(compress_info)
             if tmp_num < 3:
                 raise ValueError("`compress_info` should contains at least 3 elements, but only had {}".format(tmp_num))
-            tiling_k, tiling_n, compress_length = compress_info[:3]
+            tiling_n, tiling_k, compress_length = compress_info[:3]  # 压缩算子返回的是 n k
+
+            if len(self.compress_result_info[save_key]) >= 2:
+                self.compress_result_info[save_key][0] = tiling_k  # 解压缩算子需要 k n
+                self.compress_result_info[save_key][1] = tiling_n
 
             if len(self.compress_result_info[save_key]) >= 2:
                 self.compress_result_info[save_key][0] = tiling_k
