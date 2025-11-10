@@ -25,7 +25,7 @@ from msmodelslim.model.transformers import TransformersModel
 from msmodelslim.quant import ir as qir
 from msmodelslim.utils.exception import InvalidModelError
 from msmodelslim.utils.logging import logger_setter, get_logger
-from msmodelslim.utils.security import json_safe_load, get_valid_read_path, MAX_READ_FILE_SIZE_32G
+from msmodelslim.utils.security import json_safe_load, json_safe_dump, get_valid_read_path, MAX_READ_FILE_SIZE_32G
 from msmodelslim.utils.security.model import SafeGenerator
 from .convert_fp8_to_bf16 import auto_convert_module_fp8_to_bf16
 from .mtp_quant_module import remove_zero_and_shift, get_mtp_layer, wrap_mtp_decoder
@@ -69,6 +69,7 @@ class DeepSeekV3ModelAdapter(TransformersModel,
     def init_model(self, device: DeviceType = DeviceType.NPU) -> nn.Module:
         with default_dtype(torch.bfloat16):
             # 保存原始层数
+            self.config.num_hidden_layers += 1
             origin_layers = self.config.num_hidden_layers
             get_logger().info(f"Model with {origin_layers} layers totally")
 
@@ -378,13 +379,15 @@ class DeepSeekV3ModelAdapter(TransformersModel,
                 _wrap_attention_forward(module)
 
     def get_ln_fuse_map(self):
-        return {}, get_ln_fuse_map(self.config)
+        return {}, get_ln_fuse_map(self.config, num_hidden_layers=self.config.num_hidden_layers)
 
     def get_bake_names(self):
         return [], []
 
     def get_rotate_map(self, block_size):
-        pre_run, rot_pairs, _ = get_rotate_map(self.config, block_size)
+        pre_run, rot_pairs, _ = get_rotate_map(self.config, 
+                                                block_size, 
+                                                num_hidden_layers=self.config.num_hidden_layers)
         return [pre_run], [pair for pair in rot_pairs.values()]
 
     @lru_cache(maxsize=1)
