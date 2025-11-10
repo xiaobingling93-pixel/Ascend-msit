@@ -58,12 +58,37 @@ class ServiceProfiler:
         Returns:
             Optional[Dict]: 配置数据，失败时返回 None
         """
-        cfg_path = find_config_path()
-        if not cfg_path:
+        default_cfg = find_config_path()
+
+        env_path = os.environ.get('PROFILING_SYMBOLS_PATH')
+        if env_path and str(env_path).lower().endswith(('.yaml', '.yml')):
+            # 环境变量目标文件已存在：直接加载
+            if os.path.isfile(env_path):
+                logger.debug(f"Loading profiling symbols from env path: {env_path}")
+                return load_yaml_config(env_path)
+
+            # 目标文件不存在：若有默认配置，尝试复制填充
+            if default_cfg:
+                try:
+                    parent_dir = os.path.dirname(env_path) or '.'
+                    os.makedirs(parent_dir, exist_ok=True)
+                    with open(default_cfg, 'r', encoding='utf-8') as src, \
+                         open(env_path, 'w', encoding='utf-8') as dst:
+                        dst.write(src.read())
+                    logger.debug(f"Wrote profiling symbols to env path: {env_path}")
+                    return load_yaml_config(env_path)
+                except Exception as e:
+                    logger.warning(f"Failed to write profiling symbols to env path {env_path}: {e}")
+            else:
+                logger.warning("No default config file found to populate PROFILING_SYMBOLS_PATH")
+        elif env_path and not str(env_path).lower().endswith(('.yaml', '.yml')):
+            logger.warning(f"PROFILING_SYMBOLS_PATH is not a yaml file: {env_path}")
+
+        # 回退：按默认查找顺序加载
+        if not default_cfg:
             logger.warning("No config file found")
             return None
-            
-        return load_yaml_config(cfg_path)
+        return load_yaml_config(default_cfg)
     
     def initialize(self):
         """初始化服务分析器。
@@ -73,7 +98,6 @@ class ServiceProfiler:
         2. 加载配置文件
         3. 导入内置 hookers
         4. 初始化 symbol 监听器
-        5. 应用传统 hooks
         """
         # 检查是否启用了打点
         if not os.environ.get('SERVICE_PROF_CONFIG_PATH'):
