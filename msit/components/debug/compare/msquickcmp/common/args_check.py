@@ -108,6 +108,21 @@ def check_input_path_legality(value):
         return value
     inputs_list = value.split(',')
     for input_path in inputs_list:
+        try:
+            file_stat = FileStat(input_path)
+        except Exception as err:
+            raise argparse.ArgumentTypeError(f"input path:{input_path} is illegal. Please check.") from err
+        if not file_stat.is_basically_legal('read'):
+            raise argparse.ArgumentTypeError(f"input path:{input_path} is illegal. Please check.")
+        check_path_no_group_others_write(input_path)
+    return value
+
+
+def check_input_data_path_legality(value):
+    if not value:
+        return value
+    inputs_list = value.split(',')
+    for input_path in inputs_list:
         check_input_file_path(input_path)
         try:
             file_stat = FileStat(input_path)
@@ -126,7 +141,7 @@ def check_debug_compare_input_data_path(path):
         return path
     input_item_paths = path.split(',')
     for input_item_path in input_item_paths:
-        input_item_path = check_input_path_legality(input_item_path)
+        input_item_path = check_input_data_path_legality(input_item_path)
         if not is_endswith_extensions(input_item_path, ['.npy', '.bin']):
             raise argparse.ArgumentTypeError(f"input data path:{path} is illegal. Please check.")
         check_path_no_group_others_write(input_item_path)
