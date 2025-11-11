@@ -22,7 +22,7 @@ class TestCompareCommand(unittest.TestCase):
     @patch('components.debug.compare.msquickcmp.__main__.check_ops_json_path', side_effect=lambda x: x)
     @patch('components.debug.compare.msquickcmp.__main__.check_om_path_legality', side_effect=lambda x: x)
     @patch('components.debug.compare.msquickcmp.__main__.os.path.exists')
-    @patch('components.debug.compare.msquickcmp.__main__.check_input_path_legality', side_effect=lambda x: x)
+    @patch('components.debug.compare.msquickcmp.__main__.check_input_data_path_legality', side_effect=lambda x: x)
     @patch('msquickcmp.mie_torch.mietorch_comp.MIETorchCompare')
     @patch('components.debug.compare.msquickcmp.__main__.os.path.join', side_effect=lambda *args: "/".join(args))
     def test_handle_ops_json_present(self, mock_join, mock_mietorch, mock_check_path, mock_exists, mock_mietorch_path,

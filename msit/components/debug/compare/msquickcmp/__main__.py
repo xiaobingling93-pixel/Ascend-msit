@@ -21,7 +21,7 @@ from components.utils.security_check import is_enough_disk_space_left
 from components.debug.compare.msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
 from components.debug.compare.msquickcmp.cmp_process import cmp_process
 from components.debug.compare.msquickcmp.common.args_check import (
-    check_model_path_legality, check_om_path_legality, check_weight_path_legality, check_input_path_legality,
+    check_model_path_legality, check_om_path_legality, check_weight_path_legality, check_input_data_path_legality,
     check_cann_path_legality, check_output_path_legality, check_dict_kind_string, check_device_range_valid,
     check_number_list, check_dym_range_string, check_fusion_cfg_path_legality, check_quant_json_path_legality,
     safe_string, str2bool, check_alone_compare_dir_path, check_input_json_path,
@@ -280,7 +280,7 @@ class DumpCommand(BaseCommand):
             '--input',
             default='',
             dest="input_data_path",
-            type=check_input_path_legality,
+            type=check_input_data_path_legality,
             help='The input data path of the model. Separate multiple inputs with commas(,).'
                  ' E.g: input_0.bin,input_1.bin')
         parser.add_argument(
