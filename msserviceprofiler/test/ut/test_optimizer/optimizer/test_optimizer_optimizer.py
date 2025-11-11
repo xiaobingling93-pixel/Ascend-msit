@@ -34,6 +34,7 @@ from msserviceprofiler.modelevalstate.config.base_config import (
 )
 from msserviceprofiler.modelevalstate.optimizer.optimizer import PSOOptimizer, main, plugin_main, arg_parse
 from msserviceprofiler.modelevalstate.optimizer.experience_fine_tunning import StopFineTune
+from msserviceprofiler.modelevalstate.optimizer.plugins.simulate import VllmSimulator
 
 
 @pytest.fixture
@@ -587,10 +588,9 @@ def test_main(scheduler_multi, scheduler, vllm_simulator, simulator, psooptimize
 
 
 @patch("msserviceprofiler.modelevalstate.optimizer.optimizer.PSOOptimizer")
-@patch("msserviceprofiler.modelevalstate.optimizer.plugins.simulate.VllmSimulator")
 @patch("msserviceprofiler.modelevalstate.optimizer.scheduler.Scheduler")
 @patch("msserviceprofiler.modelevalstate.optimizer.scheduler.ScheduleWithMultiMachine")
-def test_plugin_main(scheduler_multi, scheduler, vllm_simulator, psooptimizer):
+def test_plugin_main(scheduler_multi, scheduler, psooptimizer):
     args = MagicMock()
     args.benchmark_policy = BenchMarkPolicy.vllm_benchmark.value
     args.deploy_policy = DeployPolicy.single.value
@@ -599,9 +599,12 @@ def test_plugin_main(scheduler_multi, scheduler, vllm_simulator, psooptimizer):
     args.engine = EnginePolicy.vllm.value
  
     # 调用被测试的方法
-    with patch("shutil.which", return_value="path/to/benchmark"):
-        plugin_main(args)
-
+    with patch("msserviceprofiler.modelevalstate.optimizer.register.register_simulator"):
+        # 模拟 simulates 字典，确保 'vllm' 对应的模拟器类存在
+        with patch("msserviceprofiler.modelevalstate.optimizer.optimizer.simulates", {'vllm': VllmSimulator}):
+            with patch("shutil.which", return_value="path/to/benchmark"):
+                plugin_main(args)
+    
     psooptimizer.assert_called_once()
     scheduler.assert_called_once()
 
