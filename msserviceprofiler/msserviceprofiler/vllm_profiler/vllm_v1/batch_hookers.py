@@ -54,13 +54,6 @@ class HookState(SharedHookState):
 _get_state = create_state_getter(HookState)
 
 
-@vllm_hook(("vllm.v1.engine.processor", "Processor.process_inputs"), min_version="0.9.1")
-def process_inputs(original_func, this, request_id, *args, **kwargs):
-    ret = original_func(this, request_id, *args, **kwargs)
-    Profiler(Level.INFO).domain("Schedule").res(request_id).event("ReqState")
-    return ret
-
-
 @vllm_hook(
     hook_points=[
         ("vllm.v1.core.sched.scheduler", "Scheduler.schedule"),
@@ -117,18 +110,8 @@ def schedule(original_func, this, *args, **kwargs):
     return scheduler_output
 
 
-@vllm_hook(("vllm.v1.core.sched.scheduler", "Scheduler._free_request"), min_version="0.9.1")
-def free_request(original_func, this, request, *args, **kwargs):
-    ret = original_func(this, request, *args, **kwargs)
-    prof = Profiler(Level.INFO).domain("Schedule").res(request.request_id)
-    prof.metric_inc("FINISHED", 1).event("ReqState")
-    return ret
-
-
 @vllm_hook(("vllm.v1.core.sched.scheduler", "Scheduler.add_request"), min_version="0.9.1")
 def add_request(original_func, this, request, *args, **kwargs):
     original_func(this, request, *args, **kwargs)
-    prof = Profiler(Level.INFO).domain("Schedule").res(request.request_id)
-    prof.metric_inc("WAITING", 1).event("ReqState")
     prof_queue = Profiler(Level.INFO).domain("Schedule").res(request.request_id)
     prof_queue.metric("QueueSize", len(this.waiting)).metric_scope("QueueName", "WAITING").event("Enqueue")

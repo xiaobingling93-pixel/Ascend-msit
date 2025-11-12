@@ -130,18 +130,6 @@ def test_get_state_given_existing_state_when_called_then_return_same_instance():
     assert batch_hookers._get_state() is state1
 
 
-def test_process_inputs_given_valid_request_when_called_then_log_event():
-    mock_original = MagicMock(return_value="result")
-    mock_this = MagicMock()
-
-    result = batch_hookers.process_inputs(mock_original, mock_this, "req1")
-
-    mock_original.assert_called_with(mock_this, "req1")
-    assert result == "result"
-    assert len(Profiler.instance_calls) == 1
-    assert Profiler.instance_calls[0][-1] == ("event", "ReqState")
-
-
 def test_schedule_given_new_requests_when_processing_then_update_state_and_log(hook_state, mock_scheduler):
     req1, req2 = create_request("req1", 5), create_request("req2", 3)
     mock_scheduler.running = deque([SequenceGroup("req1", (1, 2, 3)), SequenceGroup("req2", (4, 5))])
@@ -224,53 +212,6 @@ def test_schedule_given_no_requests_when_processing_then_early_return(hook_state
     assert not any(["QueueSize" in call for calls in Profiler.instance_calls for call in calls])
 
 
-def test_free_request_given_running_request_when_freed_then_transition_state(hook_state):
-    request = create_request("req1")
-
-    with patch.object(batch_hookers, "_get_state", return_value=hook_state):
-        batch_hookers.free_request(MagicMock(), MagicMock(), request)
-
-    assert any(
-        [
-            call[0] == "metric_inc" and call[1] == "FINISHED" and call[2] == 1
-            for calls in Profiler.instance_calls
-            for call in calls
-        ]
-    )
-
-
-def test_free_request_given_waiting_request_when_freed_then_transition_state(hook_state):
-    request = create_request("req1")
-
-    with patch.object(batch_hookers, "_get_state", return_value=hook_state):
-        batch_hookers.free_request(MagicMock(), MagicMock(), request)
-
-    assert any(
-        [
-            call[0] == "metric_inc" and call[1] == "FINISHED" and call[2] == 1
-            for calls in Profiler.instance_calls
-            for call in calls
-        ]
-    )
-
-
-def test_free_request_given_unknown_request_when_freed_then_no_state_change(hook_state):
-    request = create_request("req1")
-
-    with patch.object(batch_hookers, "_get_state", return_value=hook_state):
-        batch_hookers.free_request(MagicMock(), MagicMock(), request)
-
-    # Should still create Profiler event
-    assert len(Profiler.instance_calls) == 1
-    calls = Profiler.instance_calls[0]
-    # Verify that res() was called with the request_id
-    assert ("res", "req1") in calls
-    # Verify that event("ReqState") was called
-    assert ("event", "ReqState") in calls
-    # Verify that metric_inc("FINISHED", 1) was called
-    assert ("metric_inc", "FINISHED", 1) in calls
-
-
 def test_add_request_given_new_request_when_added_then_update_state_and_log(hook_state):
     scheduler = MagicMock()
     scheduler.waiting = deque([SequenceGroup("req1", [1, 2, 3])])
@@ -279,10 +220,5 @@ def test_add_request_given_new_request_when_added_then_update_state_and_log(hook
     with patch.object(batch_hookers, "_get_state", return_value=hook_state):
         batch_hookers.add_request(MagicMock(), scheduler, request)
 
-    assert any(
-        call[0] == "metric_inc" and call[1] == "WAITING" and call[2] == 1
-        for calls in Profiler.instance_calls
-        for call in calls
-    )
     # Verify queue enqueue event
     assert any(call[0] == "event" and call[1] == "Enqueue" for calls in Profiler.instance_calls for call in calls)

@@ -1,7 +1,4 @@
 # ===== Batch / Scheduler =====
-- symbol: vllm.v1.engine.processor:Processor.process_inputs
-  min_version: "0.9.1"
-  handler: msserviceprofiler.vllm_profiler.vllm_v1.batch_hookers:process_inputs
 
 - symbol: vllm.v1.core.sched.scheduler:Scheduler.schedule
   min_version: "0.9.1"
@@ -12,10 +9,6 @@
   min_version: "0.9.1"
   handler: msserviceprofiler.vllm_profiler.vllm_v1.batch_hookers:schedule
   name: batchFrameworkProcessing
-
-- symbol: vllm.v1.core.sched.scheduler:Scheduler._free_request
-  min_version: "0.9.1"
-  handler: msserviceprofiler.vllm_profiler.vllm_v1.batch_hookers:free_request
 
 - symbol: vllm.v1.core.sched.scheduler:Scheduler.add_request
   min_version: "0.9.1"
