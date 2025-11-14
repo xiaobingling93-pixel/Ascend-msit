@@ -24,7 +24,7 @@ OPTIONS参数说明如下：
 |----------------| ------------------------------------------------------------ | -------- |
 | -gm, --golden-model | 标杆模型输入路径，支持onnx、caffe、tensorflow模型            | 是       |
 | -o, --output   | 输出路径，在该路径下会生成分析结果**result.csv**             | 是       |
-| --framework    | 模型类型，和[atc](https://www.hiascend.com/document/detail/zh/canncommercial/63RC1/inferapplicationdev/atctool/atctool_000041.html)参数一致，0：caffe，3：tensorflow，5：onnx | 否       |
+| --framework    | 模型类型，和[atc](https://www.hiascend.com/document/detail/zh/canncommercial/82RC1/devaids/atctool/atlasatcparam_16_0014.html)参数一致，0：caffe，3：tensorflow，5：onnx | 否       |
 | -w, --weight   | 权重文件，输入模型是caffe时，需要传入该文件                  | 否       |
 | -soc, --soc-version | 芯片类型，不指定则会通过[acl](https://www.hiascend.com/document/detail/zh/canncommercial/63RC1/inferapplicationdev/aclpythondevg/aclpythondevg_01_0008.html)接口获取 | 否       |
 
