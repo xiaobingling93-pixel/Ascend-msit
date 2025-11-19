@@ -9,15 +9,11 @@ spec:
           dtype: "mxfp8"
           symmetric: True
           method: "minmax"
-          ext:
-            axes: -1
         weight:
           scope: "per_block"
           dtype: "mxfp4"
           symmetric: True
           method: "minmax"
-          ext:
-            axes: -1
       include:
         - "*"
 
