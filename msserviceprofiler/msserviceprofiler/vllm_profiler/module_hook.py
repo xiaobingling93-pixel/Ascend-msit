@@ -16,12 +16,11 @@ import traceback
 import importlib
 import inspect
 import functools
-import traceback
 from abc import ABC, abstractmethod
 from typing import Union, Tuple, List, Optional, Callable, Any
 from packaging.version import Version
 from .logger import logger
-from .registry import get_hook_registry, add_to_hook_registry
+from .registry import add_to_hook_registry
 
 
 def import_object_from_string(import_path: str, module_path: str) -> Any:
@@ -37,13 +36,13 @@ def import_object_from_string(import_path: str, module_path: str) -> Any:
         Any: 导入的对象，失败时返回 None
     """
     if not import_path:
-        logger.error(f"Module import_path is empty")
+        logger.error("Module import_path is empty")
         return None
 
     try:
         module = importlib.import_module(import_path)
     except ImportError as e:
-        logger.error(f"Module import failed for %s: %s", module_path, e)
+        logger.error("Module import failed for %s: %s", module_path, e)
         return None
 
     current = module
@@ -204,6 +203,152 @@ def get_parents_name(ori_func, index=1):
         return None
 
 
+class TrackableOriginalFunc:
+    """可追踪的原函数包装器，用于避免重复执行原函数。
+    
+    当 hook 函数内部已经调用了原函数，但在后处理逻辑中出错时，
+    可以通过此包装器检测原函数是否已执行，避免在异常处理中重复调用。
+    
+    Attributes:
+        original_func: 原始函数
+        executed: 是否已执行
+        cached_result: 缓存的执行结果
+        cached_exception: 缓存的异常（如果执行时抛出）
+    """
+    
+    def __init__(self, original_func):
+        """初始化可追踪的原函数包装器。
+        
+        Args:
+            original_func: 原始函数
+        """
+        self.original_func = original_func
+        self.executed = False
+        self.cached_result = None
+        self.cached_exception = None
+    
+    def __call__(self, *args, **kwargs):
+        """调用原函数并缓存结果。
+        
+        支持同步和异步函数：
+        - 如果是异步函数，返回协程对象
+        - 如果是同步函数，直接返回结果
+        
+        Args:
+            *args: 位置参数
+            **kwargs: 关键字参数
+            
+        Returns:
+            原函数的返回值（同步）或协程对象（异步）
+            
+        Raises:
+            原函数抛出的异常
+        """
+        cached = self._check_cached_result()
+        if cached is not None:
+            return cached
+        
+        # 检查原函数是否是异步函数
+        if inspect.iscoroutinefunction(self.original_func):
+            # 异步函数，返回协程对象，由调用者 await
+            return self._execute_and_cache_async(*args, **kwargs)
+        else:
+            # 同步函数，直接执行并缓存结果
+            return self._execute_and_cache_sync(*args, **kwargs)
+    
+    def reset(self):
+        """重置执行状态，用于每次新的函数调用。
+        
+        每次 wrapper 被调用时应该调用此方法，以确保每次调用都是独立的。
+        """
+        self.executed = False
+        self.cached_result = None
+        self.cached_exception = None
+    
+    def call_with_reset(self, func):
+        """装饰器：在每次函数调用时自动重置执行状态。
+        
+        使用此装饰器装饰 wrapper 函数，可以确保每次调用时都会自动重置状态。
+        
+        Args:
+            func: 要装饰的函数（可以是同步或异步函数）
+            
+        Returns:
+            装饰后的函数
+        """
+        if inspect.iscoroutinefunction(func):
+            @functools.wraps(func)
+            async def async_wrapper(*args, **kwargs):
+                self.reset()
+                return await func(*args, **kwargs)
+            return async_wrapper
+        else:
+            @functools.wraps(func)
+            def sync_wrapper(*args, **kwargs):
+                self.reset()
+                return func(*args, **kwargs)
+            return sync_wrapper
+    
+    def _check_cached_result(self):
+        """检查并返回缓存的结果。
+        
+        Returns:
+            缓存的返回值
+            
+        Raises:
+            如果执行时抛出异常，重新抛出该异常
+        """
+        if self.executed:
+            if self.cached_exception is not None:
+                raise self.cached_exception
+            return self.cached_result
+        return None
+    
+    def _execute_and_cache_sync(self, *args, **kwargs):
+        """执行同步函数并缓存结果。
+        
+        Args:
+            *args: 位置参数
+            **kwargs: 关键字参数
+            
+        Returns:
+            原函数的返回值
+            
+        Raises:
+            原函数抛出的异常
+        """
+        try:
+            self.cached_result = self.original_func(*args, **kwargs)
+            self.executed = True
+            return self.cached_result
+        except Exception as e:
+            self.cached_exception = e
+            self.executed = True
+            raise
+    
+    async def _execute_and_cache_async(self, *args, **kwargs):
+        """执行异步函数并缓存结果。
+        
+        Args:
+            *args: 位置参数
+            **kwargs: 关键字参数
+            
+        Returns:
+            原函数的返回值
+            
+        Raises:
+            原函数抛出的异常
+        """
+        try:
+            self.cached_result = await self.original_func(*args, **kwargs)
+            self.executed = True
+            return self.cached_result
+        except Exception as e:
+            self.cached_exception = e
+            self.executed = True
+            raise
+
+
 class VLLMHookerBase(ABC):
     """Hooker基类，提供核心功能。
     
@@ -242,16 +387,23 @@ class VLLMHookerBase(ABC):
         """
         pass
 
-    def replace_func(self, ori_func, pname, profiler_func, on_recover: Optional[Callable] = None):
+    def replace_func(
+            self, 
+            trackable_ori_func: TrackableOriginalFunc, 
+            pname, 
+            profiler_func, 
+            on_recover: Optional[Callable] = None
+        ):
         """创建替换函数，带失败回退机制。
         
         功能特性：
         - 任一 hook 执行抛异常时，不影响业务逻辑：返回原始函数结果
         - 连续失败达到 5 次，自动回退为原始函数（若提供 on_recover 则调用以执行恢复）
         - 支持 context manager 的特殊处理
+        - 避免重复执行原函数：如果 hook 函数内部已调用原函数，异常处理时不会重复调用
         
         Args:
-            ori_func: 原始函数
+            trackable_ori_func: 可追踪的原函数包装器
             pname: 调用者过滤名称
             profiler_func: profiler 函数
             on_recover: 恢复回调函数，可选
@@ -259,14 +411,27 @@ class VLLMHookerBase(ABC):
         Returns:
             Callable: 替换函数
         """
+        # 从 trackable_ori_func 获取原始函数用于类型检测
+        ori_func = trackable_ori_func.original_func
         # 检测函数类型
         is_context_manager_func = inspect.isgeneratorfunction(profiler_func)
         is_async_func = inspect.iscoroutinefunction(ori_func) or inspect.iscoroutinefunction(profiler_func)
 
         if is_async_func:
-            return self._create_async_wrapper(ori_func, profiler_func, pname, on_recover, is_context_manager_func)
+            return self._create_async_wrapper(
+                trackable_ori_func, 
+                profiler_func, pname, 
+                on_recover, 
+                is_context_manager_func
+            )
         else:
-            return self._create_sync_wrapper(ori_func, profiler_func, pname, on_recover, is_context_manager_func)
+            return self._create_sync_wrapper(
+                trackable_ori_func, 
+                profiler_func, 
+                pname, 
+                on_recover, 
+                is_context_manager_func
+            )
 
     def do_hook(self, hook_points, profiler_func_maker, pname=None):
         """执行实际的hook操作。
@@ -279,7 +444,10 @@ class VLLMHookerBase(ABC):
         for ori_func in hook_points:
             if ori_func is None:
                 continue
-            profiler_func = profiler_func_maker(ori_func)
+            # 创建可追踪的原函数包装器，用于避免重复执行
+            trackable_ori_func = TrackableOriginalFunc(ori_func)
+            # 将可追踪的原函数传递给 profiler_func_maker
+            profiler_func = profiler_func_maker(trackable_ori_func)
             cur_hook = HookHelper(ori_func, None)
 
             def _recover_current(cur_hook_ref=cur_hook):
@@ -287,8 +455,8 @@ class VLLMHookerBase(ABC):
                     cur_hook_ref.recover()
                 except Exception as e:
                     logger.error(f"Recover call failed: {e}")
-            
-            wrapped = self.replace_func(ori_func, pname, profiler_func, on_recover=_recover_current)
+
+            wrapped = self.replace_func(trackable_ori_func, pname, profiler_func, on_recover=_recover_current)
             cur_hook.new_function = wrapped
             cur_hook.replace()
             self.hooks.append(cur_hook)
@@ -318,29 +486,36 @@ class VLLMHookerBase(ABC):
         """注册hooker到全局注册表。"""
         add_to_hook_registry(self)
 
-    def _log_hook_exception(self, ori_func, e: Exception, failures: int):
+    def _log_hook_exception(self, trackable_ori_func: TrackableOriginalFunc, e: Exception, failures: int):
         """记录 hook 执行异常。
         
         Args:
-            ori_func: 原始函数
+            trackable_ori_func: 可追踪的原函数包装器
             e: 异常对象
             failures: 失败次数
         """
+        ori_func = trackable_ori_func.original_func
         logger.error(f"Hook execution failed ({failures}/5) for {ori_func}: {e}")
         logger.error(f"Exception details: {type(e).__name__}: {str(e)}")
         logger.error(f"Traceback: {traceback.format_exc()}")
 
-    def _handle_context_manager_failure(self, ori_func, on_recover: Optional[Callable], is_async: bool):
+    def _handle_context_manager_failure(
+        self,
+        trackable_ori_func: TrackableOriginalFunc,
+        on_recover: Optional[Callable],
+        is_async: bool
+    ):
         """处理 context manager 函数失败的情况。
         
         Args:
-            ori_func: 原始函数
+            trackable_ori_func: 可追踪的原函数包装器
             on_recover: 恢复回调函数
             is_async: 是否为异步函数
             
         Returns:
             Callable: 返回原始函数的包装器
         """
+        ori_func = trackable_ori_func.original_func
         logger.warning(f"Context manager hook failed, immediately reverting to original for {ori_func}")
         try:
             if callable(on_recover):
@@ -348,24 +523,30 @@ class VLLMHookerBase(ABC):
         except Exception as re:
             logger.error(f"Failed to recover original function for {ori_func}: {re}")
         
-        # 对于 context manager，直接返回原始函数的结果
+        # 对于 context manager，使用 trackable_ori_func 获取结果或执行原函数
         if is_async:
             async def _return_original_async(*args, **kwargs):
-                return await ori_func(*args, **kwargs)
+                return await trackable_ori_func(*args, **kwargs)
             return _return_original_async
         else:
             def _return_original_sync(*args, **kwargs):
-                return ori_func(*args, **kwargs)
+                return trackable_ori_func(*args, **kwargs)
             return _return_original_sync
 
-    def _handle_permanent_fallback(self, ori_func, on_recover: Optional[Callable], failures: int):
+    def _handle_permanent_fallback(
+        self,
+        trackable_ori_func: TrackableOriginalFunc,
+        on_recover: Optional[Callable],
+        failures: int
+    ):
         """处理永久回退的情况。
         
         Args:
-            ori_func: 原始函数
+            trackable_ori_func: 可追踪的原函数包装器
             on_recover: 恢复回调函数
             failures: 失败次数
         """
+        ori_func = trackable_ori_func.original_func
         if failures >= 5:
             try:
                 if callable(on_recover):
@@ -374,12 +555,12 @@ class VLLMHookerBase(ABC):
             except Exception as re:
                 logger.error(f"Failed to recover original function for {ori_func}: {re}")
 
-    def _create_async_wrapper(self, ori_func, profiler_func, pname: Optional[str], 
+    def _create_async_wrapper(self, trackable_ori_func: TrackableOriginalFunc, profiler_func, pname: Optional[str], 
                              on_recover: Optional[Callable], is_context_manager_func: bool):
         """创建异步函数包装器。
         
         Args:
-            ori_func: 原始函数
+            trackable_ori_func: 可追踪的原函数包装器
             profiler_func: profiler 函数
             pname: 调用者过滤名称
             on_recover: 恢复回调函数
@@ -388,49 +569,57 @@ class VLLMHookerBase(ABC):
         Returns:
             Callable: 异步包装器函数
         """
+        ori_func = trackable_ori_func.original_func
         failures = 0
         
         @functools.wraps(ori_func)
+        @trackable_ori_func.call_with_reset
         async def async_wrapper(*args, **kwargs):
             # 检查调用者过滤
             if pname is not None and get_parents_name(ori_func) != pname:
                 logger.debug(f"calling {ori_func}")
-                return await ori_func(*args, **kwargs)
+                return await trackable_ori_func(*args, **kwargs)
 
             nonlocal failures
             if failures >= 5:
-                return await ori_func(*args, **kwargs)
+                return await trackable_ori_func(*args, **kwargs)
 
             try:
                 logger.debug(f"calling profiler_func={self.applied_hook_func_name} for {ori_func}")
                 return await profiler_func(*args, **kwargs)
             except Exception as e:
                 failures += 1
-                self._log_hook_exception(ori_func, e, failures)
+                self._log_hook_exception(trackable_ori_func, e, failures)
                 
                 # 对于 context manager 函数，第一次失败就立即回退
                 if is_context_manager_func:
-                    return await self._handle_context_manager_failure(ori_func, on_recover, True)(*args, **kwargs)
+                    handler = self._handle_context_manager_failure(
+                        trackable_ori_func, on_recover, True
+                    )
+                    return await handler(*args, **kwargs)
                 
-                # 异步函数，调用原始函数获取结果
+                # 使用 trackable_ori_func 获取结果或执行原函数（避免重复执行）
                 try:
-                    result = await ori_func(*args, **kwargs)
+                    result = await trackable_ori_func(*args, **kwargs)
                 except Exception as orig_e:
                     logger.error(f"Original function also failed for {ori_func}: {orig_e}")
+                    # 检查是否需要永久回退（在重新抛出异常前）
+                    self._handle_permanent_fallback(trackable_ori_func, on_recover, failures)
+                    # 重新抛出原始函数的异常，让调用者处理
                     raise orig_e
                 
                 # 检查是否需要永久回退
-                self._handle_permanent_fallback(ori_func, on_recover, failures)
+                self._handle_permanent_fallback(trackable_ori_func, on_recover, failures)
                 return result
         
         return async_wrapper
 
-    def _create_sync_wrapper(self, ori_func, profiler_func, pname: Optional[str], 
+    def _create_sync_wrapper(self, trackable_ori_func: TrackableOriginalFunc, profiler_func, pname: Optional[str], 
                             on_recover: Optional[Callable], is_context_manager_func: bool):
         """创建同步函数包装器。
         
         Args:
-            ori_func: 原始函数
+            trackable_ori_func: 可追踪的原函数包装器
             profiler_func: profiler 函数
             pname: 调用者过滤名称
             on_recover: 恢复回调函数
@@ -439,39 +628,44 @@ class VLLMHookerBase(ABC):
         Returns:
             Callable: 同步包装器函数
         """
+        ori_func = trackable_ori_func.original_func
         failures = 0
         
         @functools.wraps(ori_func)
+        @trackable_ori_func.call_with_reset
         def wrapper(*args, **kwargs):
             # 检查调用者过滤
             if pname is not None and get_parents_name(ori_func) != pname:
                 logger.debug(f"calling {ori_func}")
-                return ori_func(*args, **kwargs)
+                return trackable_ori_func(*args, **kwargs)
 
             nonlocal failures
             if failures >= 5:
-                return ori_func(*args, **kwargs)
+                return trackable_ori_func(*args, **kwargs)
 
             try:
                 logger.debug(f"calling profiler_func={self.applied_hook_func_name} for {ori_func}")
                 return profiler_func(*args, **kwargs)
             except Exception as e:
                 failures += 1
-                self._log_hook_exception(ori_func, e, failures)
+                self._log_hook_exception(trackable_ori_func, e, failures)
                 
                 # 对于 context manager 函数，第一次失败就立即回退
                 if is_context_manager_func:
-                    return self._handle_context_manager_failure(ori_func, on_recover, False)(*args, **kwargs)
+                    return self._handle_context_manager_failure(trackable_ori_func, on_recover, False)(*args, **kwargs)
                 
-                # 普通函数，调用原始函数获取结果
+                # 使用 trackable_ori_func 获取结果或执行原函数（避免重复执行）
                 try:
-                    result = ori_func(*args, **kwargs)
+                    result = trackable_ori_func(*args, **kwargs)
                 except Exception as orig_e:
                     logger.error(f"Original function also failed for {ori_func}: {orig_e}")
+                    # 检查是否需要永久回退（在重新抛出异常前）
+                    self._handle_permanent_fallback(trackable_ori_func, on_recover, failures)
+                    # 重新抛出原始函数的异常，让调用者处理
                     raise orig_e
                 
                 # 检查是否需要永久回退
-                self._handle_permanent_fallback(ori_func, on_recover, failures)
+                self._handle_permanent_fallback(trackable_ori_func, on_recover, failures)
                 return result
         
         return wrapper
