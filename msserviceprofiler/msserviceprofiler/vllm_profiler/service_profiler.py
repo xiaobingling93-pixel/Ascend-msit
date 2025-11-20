@@ -99,27 +99,32 @@ class ServiceProfiler:
         3. 导入内置 hookers
         4. 初始化 symbol 监听器
         """
-        # 检查是否启用了打点
-        if not os.environ.get('SERVICE_PROF_CONFIG_PATH'):
-            logger.debug("SERVICE_PROF_CONFIG_PATH not set, skipping hooks")
-            return
+        try:
+            # 检查是否启用了打点
+            if not os.environ.get('SERVICE_PROF_CONFIG_PATH'):
+                logger.debug("SERVICE_PROF_CONFIG_PATH not set, skipping hooks")
+                return
+                
+            logger.debug("Initializing service profiler")
             
-        logger.debug("Initializing service profiler")
-        
-        # 加载配置文件
-        config_data = self._load_config()
-        if not config_data:
-            logger.warning("No configuration loaded, skipping profiler initialization")
-            return
-        
-        # 按版本导入内置 hookers
-        self._import_hookers()
-        
-        # 初始化 symbol 监听器
-        self._init_symbol_watcher(config_data)
-        
-        self._hooks_applied = True
-        logger.debug("Service profiler initialized successfully")
+            # 加载配置文件
+            config_data = self._load_config()
+            if not config_data:
+                logger.warning("No configuration loaded, skipping profiler initialization")
+                return
+            
+            # 按版本导入内置 hookers
+            self._import_hookers()
+            
+            # 初始化 symbol 监听器
+            self._init_symbol_watcher(config_data)
+            
+            self._hooks_applied = True
+            logger.debug("Service profiler initialized successfully")
+            
+        except Exception as e:
+            logger.exception("Failed to initialize service profiler: %s", str(e))
+            self._hooks_applied = False
     
     def _import_hookers(self):
         """按版本导入内置 hookers。
