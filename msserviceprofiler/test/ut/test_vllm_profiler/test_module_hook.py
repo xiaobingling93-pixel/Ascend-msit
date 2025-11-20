@@ -219,6 +219,21 @@ def test_vllmhookerbase_do_hook_given_caller_filter_when_calling_then_filters_co
 
     hooker = FilterHooker()
     hooker.init()
-    assert test_caller() == "filtered"  # Should be filtered
-    assert sample_function() != "filtered"  # Direct call shouldn't be filtered
+
+    flag = {"match": False}
+
+    def fake_get_parents_name(*args, **kwargs):
+        return "test_caller" if flag["match"] else "non_match"
+
+    with patch(
+        "msserviceprofiler.vllm_profiler.module_hook.get_parents_name",
+        side_effect=fake_get_parents_name,
+    ):
+        # When caller name does not match, the hook should be bypassed.
+        assert sample_function() == "original function"
+
+        # Flip the flag so that the next invocation reports the expected caller.
+        flag["match"] = True
+        assert test_caller() == "filtered"
+
     hooker.hooks[0].recover()
