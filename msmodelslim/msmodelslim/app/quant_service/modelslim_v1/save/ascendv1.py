@@ -372,6 +372,7 @@ class AscendV1Saver(AutoSaverProcessor):
             if not (isinstance(module.w_axes, (int, list))):
                 raise SchemaValidateError("w_axes must be int or list[int].")
             weight_scale = module.weight_scale
+            self.group_size = 32
             self.write_tensor(prefix + ".weight", "W8A8_MXFP8", module.weight.cpu().to(torch.float8_e4m3fn))
             self.write_tensor(
                 prefix + ".weight_scale",
@@ -430,6 +431,7 @@ class AscendV1Saver(AutoSaverProcessor):
             if not (isinstance(module.w_axes, (int, list))):
                 raise SchemaValidateError("w_axes must be int or list[int].")
             weight_scale = module.weight_scale
+            self.group_size = 32
             self.write_tensor(prefix + ".weight", "W4A4_MXFP4", module.weight.cpu().to(torch.float8_e4m3fn))
             self.write_tensor(
                 prefix + ".weight_scale",
@@ -446,6 +448,7 @@ class AscendV1Saver(AutoSaverProcessor):
             if not (isinstance(module.w_axes, (int, list))):
                 raise SchemaValidateError("w_axes must be int or list[int].")
             weight_scale = module.weight_scale
+            self.group_size = 32
             self.write_tensor(prefix + ".weight", "W4A8_MXFP", module.weight.cpu().to(torch.float8_e4m3fn))
             self.write_tensor(
                 prefix + ".weight_scale",
