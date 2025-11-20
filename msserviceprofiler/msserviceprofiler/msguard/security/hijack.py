@@ -61,11 +61,11 @@ def update_env_s(
     if current_value:
         parts = [p for p in current_value.split(os.pathsep)]
         if prepend:
-            parts.insert(0, path)
+            parts.insert(0, abs_path)
         else:
-            parts.append(path)
+            parts.append(abs_path)
         new_value = os.pathsep.join(parts)
     else:
-        new_value = path
+        new_value = abs_path
 
     os.environ[env_var] = new_value
