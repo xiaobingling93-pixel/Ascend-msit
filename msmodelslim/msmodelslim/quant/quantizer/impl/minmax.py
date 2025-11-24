@@ -264,11 +264,6 @@ class MXWeightPerBlockMinmax(AutoWeightQuantizer):
             )
         self.block_size = config.dtype.mx_finfo.block_size
 
-        minmax_config = MinMaxBlockObserverConfig(axes=self.axes)
-        self.minmax_block_observer = MsMinMaxBlockObserver(minmax_config)
-
-        self.weight: Optional[QStorage] = None
-        self.bias: Optional[torch.Tensor] = None
         self.w_q_param: Optional[QParam] = None
         self.w_q_storage: Optional[QStorage] = None
 
@@ -276,7 +271,15 @@ class MXWeightPerBlockMinmax(AutoWeightQuantizer):
         if self.weight is None:
             raise SpecError("No weight was set", action="please call init_weight first")
 
-        weight_value = self.weight.value
+        dequant_value = dequantize(self.w_q_storage, self.w_q_param).value
+        dequant_value = undo_reshape_to_blocks(dequant_value, padded_shape, orig_shape, axes)
+        return dequant_value
+
+    @validate_call(config=dict(arbitrary_types_allowed=True))
+    def init_weight(self, weight: QStorage, bias: Optional[torch.Tensor] = None) -> None:
+        minmax_config = MinMaxBlockObserverConfig(axes=self.axes)
+        minmax_block_observer = MsMinMaxBlockObserver(minmax_config)
+        weight_value = weight.value.detach()
         axes = self.axes
         axes = [axes] if isinstance(axes, int) else axes
         axes = [x + weight_value.ndim if x < 0 else x for x in axes]
@@ -284,9 +287,9 @@ class MXWeightPerBlockMinmax(AutoWeightQuantizer):
         weight_value, axes_, orig_shape, padded_shape = reshape_to_blocks(weight_value, axes, self.block_size)
         shared_exp_axes = [x + 1 for x in axes_] if self.block_size > 0 else axes_
 
-        self.minmax_block_observer.update(weight_value, shared_exp_axes=shared_exp_axes)
+        minmax_block_observer.update(weight_value, shared_exp_axes=shared_exp_axes)
 
-        min_val, max_val = self.minmax_block_observer.get_min_max()
+        min_val, max_val = minmax_block_observer.get_min_max()
 
         self.w_q_param = calculate_qparam(
             min_val=min_val,
@@ -297,27 +300,15 @@ class MXWeightPerBlockMinmax(AutoWeightQuantizer):
             axes=self.config.ext.get('axes')
         )
         self.w_q_param.ext['axes'] = self.axes
-        self.weight.value = weight_value
-        self.w_q_storage = quantize(self.weight, self.w_q_param)
+        self.w_q_storage = quantize(QStorage(QDType.FLOAT, weight_value), self.w_q_param)
         dequant_value = dequantize(self.w_q_storage, self.w_q_param).value
         dequant_value = undo_reshape_to_blocks(dequant_value, padded_shape, orig_shape, axes)
-        self.weight.value = undo_reshape_to_blocks(self.weight.value, padded_shape, orig_shape, axes)
         self.w_q_storage.value = undo_reshape_to_blocks(self.w_q_storage.value, padded_shape, orig_shape, axes)
-        return dequant_value
-
-    @validate_call(config=dict(arbitrary_types_allowed=True))
-    def init_weight(self, weight: QStorage, bias: Optional[torch.Tensor] = None) -> None:
-        self.weight = weight
-        self.bias = bias
 
     def get_q_storage(self) -> QStorage:
-        if self.w_q_storage is None:
-            _ = self.forward(None)
         return self.w_q_storage
 
     def get_q_param(self) -> QParam:
-        if self.w_q_param is None:
-            _ = self.forward(None)
         return self.w_q_param
 
 
