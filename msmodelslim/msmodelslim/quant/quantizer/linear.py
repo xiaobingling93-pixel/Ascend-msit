@@ -43,7 +43,6 @@ class LinearQuantizer(nn.Module):
         self.config = config
         self.input_quantizer = AutoActQuantizer.from_config(config.act)
         self.weight_quantizer = AutoWeightQuantizer.from_config(config.weight)
-        self.weight: Optional[nn.Parameter] = None
         self.bias: Optional[nn.Parameter] = None
         self.q_weight: Optional[QStorage] = None
 
@@ -51,7 +50,7 @@ class LinearQuantizer(nn.Module):
     def setup(self, linear: nn.Linear):
         self.weight = linear.weight
         self.bias = linear.bias
-        self.weight_quantizer.init_weight(QStorage(QDType.FLOAT, value=self.weight), self.bias)
+        self.weight_quantizer.init_weight(QStorage(QDType.FLOAT, value=linear.weight.detach()), self.bias)
 
         for hook_id, hook in linear._forward_pre_hooks.items():
             with_kwargs = hook_id in linear._forward_pre_hooks_with_kwargs
