@@ -107,7 +107,7 @@ Passing '--scene' without providing '--config-parent-dir' will not take any effe
 ### 大 EP 场景
 
 ```bash
-msprechecker precheck --user-config <user-config> --mindie-env <mindie-env>
+msprechecker precheck --user-config-path <user-config> --mindie-env-path <mindie-env>
 ```
 
 其中 `<user-config>` 为大 EP 场景下需要手动配置的 `user_config.json` 文件；`<mindie-env>` 为管理 Pod 拉起之后的环境变量文件 `mindie_env.json`。用户通过命令行的方式将路径传入即可触发校验。
@@ -310,7 +310,7 @@ a:
 ### PD 混部选项
 | 参数名         | 参数描述                                             | 是否必选                       |
 | -------------- | ---------------------------------------------------- | ------------------------------ |
-| --mies-config-path | 指定 PD 混部模式所需要修改的 `config,json` 路径，通常路径为 `/usr/local/Ascend/mindie/latest/mindie-service/conf/config.json`。 其对应的 Legacy 参数为 `-service, --service_config_path` | 否 |
+| --mies-config-path | 指定 PD 混部模式所需要修改的 `config.json` 路径，通常路径为 `/usr/local/Ascend/mindie/latest/mindie-service/conf/config.json`。 其对应的 Legacy 参数为 `-service, --service_config_path` | 否 |
 
 ### Network 选项
 | 参数名         | 参数描述                                             | 是否必选                       |
@@ -369,7 +369,7 @@ a:
 | --filter | 是否只落盘跟昇腾相关的环境变量。开启该选项则 **不会** 落盘如 `LD_LIBRARY_PATH` 的环境变量，因为与昇腾研发的环境变量无关  | 否，默认 `False`
 | --user-config-path | 额外落盘大 EP 场景下的 `user_config.json` 路径。其对应的 Legacy 参数为 `-user, --user_config_path` | 否 |
 | --mindie-env-path | 额外落盘大 EP 场景下的 `mindie_env.json` 路径。其对应的 Legacy 参数为 `--mindie_env_config_path` | 否 |
-| --mies-config-path | 额外落盘 PD 混部模式所需要修改的 `config,json` 路径，通常路径为 `/usr/local/Ascend/mindie/latest/mindie-service/conf/config.json`。 其对应的 Legacy 参数为 `-service, --service_config_path` | 否 |
+| --mies-config-path | 额外落盘 PD 混部模式所需要修改的 `config.json` 路径，通常路径为 `/usr/local/Ascend/mindie/latest/mindie-service/conf/config.json`。 其对应的 Legacy 参数为 `-service, --service_config_path` | 否 |
 | --rank-table-path | 额外落盘 *rank table* 文件。其对应的 Legacy 参数为 `-ranktable, --ranktable_file` | 否 |
 | --weight-dir | 额外落盘模型权重目录下的 `config.json` 和所有 `*.safetensors` 权重 sha256sum 哈希值。其对应的 Legacy 参数为 `--weight_dir` | 否 |
 | --chunk-size | int，单位为 MB，指定在计算权重哈希时，每次读取文件的大小，只支持 32, 64, 128 或者 256。默认为 32 | 否 |
