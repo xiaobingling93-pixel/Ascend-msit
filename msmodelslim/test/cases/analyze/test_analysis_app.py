@@ -23,6 +23,7 @@ from msmodelslim.app.analysis_service.layer_selector import \
 from msmodelslim.app.base import DeviceType
 from msmodelslim.utils.exception import SchemaValidateError
 from msmodelslim.utils.logging import clean_output
+from msmodelslim.model.interface import IModelFactory
 
 mock_init_config()
 
@@ -235,7 +236,7 @@ class TestAppAnalysisModule(TestComprehensiveAnalysisCoverage):
         mock_logger = MagicMock()
 
         # 设置模拟返回值
-        mock_model_factory.return_value = mock_model_adapter
+        mock_model_factory.create.return_value = mock_model_adapter
         mock_service.analyze.return_value = mock_result
         mock_get_logger.return_value = mock_logger
 
@@ -257,10 +258,8 @@ class TestAppAnalysisModule(TestComprehensiveAnalysisCoverage):
         self.assertEqual(result, mock_result)
 
         # 验证模型工厂调用
-        mock_model_factory.assert_called_once_with(
-            "Qwen2.5-7B-Instruct",
-            self.model_path,
-            False
+        mock_model_factory.create.assert_called_once_with(
+            "Qwen2.5-7B-Instruct", self.model_path, False
         )
 
         # 验证分析服务调用
@@ -290,7 +289,7 @@ class TestAppAnalysisModule(TestComprehensiveAnalysisCoverage):
         mock_model_adapter = MagicMock()  # 不是PipelineInterface
         mock_logger = MagicMock()
 
-        mock_model_factory.return_value = mock_model_adapter
+        mock_model_factory.create.return_value = mock_model_adapter
         mock_get_logger.return_value = mock_logger
 
         app = LayerAnalysisApplication(mock_service, mock_model_factory)
@@ -320,7 +319,7 @@ class TestAppAnalysisModule(TestComprehensiveAnalysisCoverage):
         mock_logger = MagicMock()
 
         # 设置服务返回None
-        mock_model_factory.return_value = mock_model_adapter
+        mock_model_factory.create.return_value = mock_model_adapter
         mock_service.analyze.return_value = None
         mock_get_logger.return_value = mock_logger
 

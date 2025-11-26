@@ -1,5 +1,5 @@
-#Copyright 2023 DeepSeek-AI and The HuggingFace Inc. team. All rights reserved.
-#Copyright 2023 DeepSeek-AI and The HuggingFace Inc. team
+# Copyright 2023 DeepSeek-AI and The HuggingFace Inc. team. All rights reserved.
+# Copyright 2023 DeepSeek-AI and The HuggingFace Inc. team
 
 import os.path
 from collections import defaultdict
@@ -20,8 +20,7 @@ from msmodelslim.core.base.protocol import ProcessRequest
 from msmodelslim.core.graph import AdapterConfig, MappingConfig, FusionConfig
 from msmodelslim.model.common.layer_wise_forward import generated_decoder_layer_visit_func, \
     TransformersForwardBreak
-from msmodelslim.model.factory import ModelFactory
-from msmodelslim.model.transformers import TransformersModel
+from msmodelslim.model.common.transformers import TransformersModel
 from msmodelslim.quant import ir as qir
 from msmodelslim.utils.exception import InvalidModelError
 from msmodelslim.utils.logging import logger_setter, get_logger
@@ -45,11 +44,6 @@ def default_dtype(dtype):
         torch.set_default_dtype(original_dtype)
 
 
-@ModelFactory.register("DeepSeek-V3")
-@ModelFactory.register("DeepSeek-V3-0324")
-@ModelFactory.register("DeepSeek-R1")
-@ModelFactory.register("DeepSeek-R1-0528")
-@ModelFactory.register("DeepSeek-V3.1")
 @logger_setter("msmodelslim.model.deepseek_v3")
 class DeepSeekV3ModelAdapter(TransformersModel,
                              ModelInfoInterface,  # support naive quantization

@@ -19,12 +19,12 @@ from typing import Generator, Any, Optional, Tuple, List
 from torch import nn
 
 from msmodelslim.app import DeviceType
-from msmodelslim.core.base.model import BaseModelInterface
+from msmodelslim.model import IModel
 from msmodelslim.core.base.protocol import ProcessRequest
 from msmodelslim.utils.exception import ToDoError
 
 
-class PipelineInterface(BaseModelInterface):
+class PipelineInterface(IModel):
     """
     Interface for determining the pipeline of model inference.
     Runner schedules the process of model in finer granularity.

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+import logging
 from configparser import ConfigParser
 
 from setuptools import setup, find_packages
@@ -23,6 +24,20 @@ config.read('./config/config.ini')
 abs_path = os.path.dirname(os.path.realpath(__file__))
 with open(os.path.join(abs_path, "requirements.txt")) as f:
     required = f.read().splitlines()
+
+model_adapter_plugins = []
+entry_section = config["ModelAdapterEntryPoints"]
+
+for group, models in config.items("ModelAdapter"):
+    model_list = [m.strip() for m in models.split(",")]
+    if group in entry_section:
+        entry_point = entry_section[group]
+    else:
+        logging.warning(f"ModelAdapter group '{group}' has no entry point defined in ModelAdapterEntryPoints")
+        continue
+
+    for model in model_list:
+        model_adapter_plugins.append(f"{model}={entry_point}")
 
 setup(
     name='msmodelslim',
@@ -69,6 +84,7 @@ setup(
             "modelslim_v1=msmodelslim.app.quant_service.modelslim_v1:ModelslimV1QuantService",
             "multimodal_sd_modelslim_v1="
             "msmodelslim.app.quant_service.multimodal_sd_v1:MultimodalSDModelslimV1QuantService",
-        ]
+        ],
+        "msmodelslim.model_adapter.plugins": model_adapter_plugins,
     },
 )

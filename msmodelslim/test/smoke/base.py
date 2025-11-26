@@ -17,15 +17,14 @@ import os
 from functools import lru_cache
 from pathlib import Path
 from typing import List
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import torch
 from torch import nn
 from transformers import PretrainedConfig, PreTrainedTokenizerBase
 
 from msmodelslim.app import DeviceType
-from msmodelslim.model import ModelFactory
-from msmodelslim.model.qwen3 import Qwen3ModelAdapter
+from msmodelslim.model.qwen3.model_adapter import Qwen3ModelAdapter
 from msmodelslim.quant.processor.kv_smooth import KVSmoothFusedUnit, KVSmoothFusedType
 from resources.fake_llama.fake_llama import get_fake_llama_model_and_tokenizer
 
@@ -47,7 +46,6 @@ def is_cuda_available():
         return False
 
 
-@ModelFactory.register("fake_llama")
 class FakeLlamaModelAdapter(Qwen3ModelAdapter):
     def __init__(self, model_type: str, model_path: Path, trust_remote_code: bool = False):
         model, tokenizer = get_fake_llama_model_and_tokenizer()
@@ -89,6 +87,10 @@ def invoke_test(config_name: str, model_save_path: str, device: str = 'cpu', off
     # 用于存储model_adapter的变量
     captured_model_adapter = None
 
+    fake_ep = MagicMock()
+    fake_ep.name = "fake_llama"
+    fake_ep.load.return_value = FakeLlamaModelAdapter
+
     try:
         # 构建命令行参数
         config_path = os.path.join(os.path.dirname(__file__), "configs", config_name)
@@ -104,7 +106,14 @@ def invoke_test(config_name: str, model_save_path: str, device: str = 'cpu', off
         ]
 
         # 使用patch来模拟copy_files调用并拦截model_adapter
-        with patch('msmodelslim.app.quant_service.modelslim_v1.save.ascendv1.copy_files') as mock_copy_files:
+        with patch(
+            "msmodelslim.model.plugin_factory.entry_points"
+        ) as mock_entry_points, patch(
+            "msmodelslim.app.quant_service.modelslim_v1.save.ascendv1.copy_files"
+        ) as mock_copy_files:
+
+            mock_entry_points.return_value.select.return_value = [fake_ep]
+
             # 获取原始的quantize方法
             from msmodelslim.app.quant_service.proxy import QuantServiceProxy
             original_quantize = QuantServiceProxy.quantize
@@ -160,7 +169,6 @@ def invoke_analysis_test(metrics: str = "kurtosis", patterns: list = None, topk:
         分析结果
     """
     import sys
-    from unittest.mock import MagicMock
     from msmodelslim.cli.__main__ import main as cli_main
 
     # 保存原始的sys.argv

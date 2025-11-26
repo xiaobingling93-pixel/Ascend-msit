@@ -18,7 +18,7 @@ from pathlib import Path
 from msmodelslim.utils.exception import ToDoError
 
 
-class BaseModelInterface(ABC):
+class IModel(ABC):
     """
     Base Interface for the model.
     Just show the basic properties of the model.
@@ -41,3 +41,16 @@ class BaseModelInterface(ABC):
     def trust_remote_code(self) -> bool:
         raise ToDoError("trust_remote_code is not implemented",
                         action="Please implement trust_remote_code for your model.")
+
+
+class IModelFactory(ABC):
+
+    @classmethod
+    @abstractmethod
+    def create(
+        cls, model_type: str, model_path: Path, trust_remote_code: bool = False
+    ) -> IModel:
+        raise ToDoError(
+            "create is not implemented",
+            action="Please implement create for your model.",
+        )
