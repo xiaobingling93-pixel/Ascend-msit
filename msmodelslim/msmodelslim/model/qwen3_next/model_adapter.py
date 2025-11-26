@@ -1,32 +1,28 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
-from typing import Any, List, Generator
+
+from typing import List, Any, Optional, Generator, Tuple
 
 from torch import nn
 
 from msmodelslim.app import DeviceType
 from msmodelslim.core.base.protocol import ProcessRequest
 from msmodelslim.utils.logging import logger_setter
-from .common.layer_wise_forward import generated_decoder_layer_visit_func, transformers_generated_forward_func
-from .factory import ModelFactory
-from .interface_hub import ModelInfoInterface, ModelSlimPipelineInterfaceV0, ModelSlimPipelineInterfaceV1, \
-    AnalyzePipelineInterface
-from .transformers import TransformersModel
+from ..common.layer_wise_forward import generated_decoder_layer_visit_func, transformers_generated_forward_func
+from ..interface_hub import ModelInfoInterface, ModelSlimPipelineInterfaceV0, ModelSlimPipelineInterfaceV1
+from ..common.transformers import TransformersModel
 
 
-@ModelFactory.register("Qwen-QwQ-32B")
-@ModelFactory.register("QwQ-32B")
 @logger_setter()
-class QwqModelAdapter(TransformersModel,
-                      ModelInfoInterface,
-                      ModelSlimPipelineInterfaceV0,
-                      ModelSlimPipelineInterfaceV1,
-                      AnalyzePipelineInterface,
-                      ):
+class Qwen3NextModelAdapter(TransformersModel,
+                           ModelInfoInterface,
+                           ModelSlimPipelineInterfaceV0,
+                           ModelSlimPipelineInterfaceV1
+                           ):
     def get_model_type(self) -> str:
         return self.model_type
 
     def get_model_pedigree(self) -> str:
-        return 'qwq'
+        return 'qwen3_next'
 
     def load_model(self, device: DeviceType = DeviceType.NPU) -> nn.Module:
         return self._load_model(device)
@@ -45,8 +41,9 @@ class QwqModelAdapter(TransformersModel,
     def init_model(self, device: DeviceType = DeviceType.NPU) -> nn.Module:
         return self._load_model(device)
 
-    def generate_model_visit(self, model: nn.Module) -> Generator[ProcessRequest, Any, None]:
-        yield from generated_decoder_layer_visit_func(model)
+    def generate_model_visit(self, model: nn.Module, transformer_blocks: Optional[List[Tuple[str, nn.Module]]] = None,
+                             ) -> Generator[ProcessRequest, Any, None]:
+        yield from generated_decoder_layer_visit_func(model, transformer_blocks)
 
     def generate_model_forward(self, model: nn.Module, inputs: Any,
                                ) -> Generator[ProcessRequest, Any, None]:
@@ -54,3 +51,4 @@ class QwqModelAdapter(TransformersModel,
 
     def enable_kv_cache(self, model: nn.Module, need_kv_cache: bool) -> None:
         return self._enable_kv_cache(model, need_kv_cache)
+

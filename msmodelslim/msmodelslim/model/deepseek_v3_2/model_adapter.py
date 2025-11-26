@@ -37,12 +37,10 @@ from .convert_fp8_to_bf16 import auto_convert_module_fp8_to_bf16
 from .model import Transformer, ModelArgs
 from .mtp_quant_module import get_mtp_layer, wrap_mtp_decoder, remove_zero_and_shift
 from ..common.layer_wise_forward import generated_decoder_layer_visit_func, TransformersForwardBreak
-from ..factory import ModelFactory
 from ..interface_hub import ModelSlimPipelineInterfaceV1
-from ..transformers import TransformersModel
+from ..common.transformers import TransformersModel
 
 
-@ModelFactory.register("DeepSeek-V3.2-Exp")
 @logger_setter("msmodelslim.model.deepseek_v3_2")
 class DeepSeekV32ModelAdapter(TransformersModel,
                               ModelInfoInterface,

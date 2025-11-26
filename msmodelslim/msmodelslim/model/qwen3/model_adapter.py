@@ -17,17 +17,12 @@ from msmodelslim.quant.processor.quarot import (
                                                 create_rot, 
                                                 QuaRotMode
                                                 )
-from .common.layer_wise_forward import generated_decoder_layer_visit_func, transformers_generated_forward_func
-from .factory import ModelFactory
-from .interface_hub import ModelInfoInterface, ModelSlimPipelineInterfaceV0, ModelSlimPipelineInterfaceV1, \
+from ..common.layer_wise_forward import generated_decoder_layer_visit_func, transformers_generated_forward_func
+from ..interface_hub import ModelInfoInterface, ModelSlimPipelineInterfaceV0, ModelSlimPipelineInterfaceV1, \
     AnalyzePipelineInterface, KVSmoothFusedInterface, IterSmoothInterface, FlexSmoothQuantInterface
-from .transformers import TransformersModel
+from ..common.transformers import TransformersModel
 
 
-
-@ModelFactory.register("Qwen3-8B")
-@ModelFactory.register("Qwen3-14B")
-@ModelFactory.register("Qwen3-32B")
 @logger_setter()
 class Qwen3ModelAdapter(TransformersModel,
                         ModelInfoInterface,

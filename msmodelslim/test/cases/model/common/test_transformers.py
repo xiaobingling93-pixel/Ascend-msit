@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch, Mock
 import torch
 
 from msmodelslim.app.base.const import DeviceType
-from msmodelslim.model.transformers import TransformersModel
+from msmodelslim.model.common.transformers import TransformersModel
 from msmodelslim.utils.exception import SchemaValidateError
 
 
@@ -24,13 +24,13 @@ class TestTransformersModelLoadConfig(unittest.TestCase):
         """测试前的准备工作"""
         self.model_path = Path('.')
 
-    @patch('msmodelslim.model.transformers.SafeGenerator.get_config_from_pretrained')
+    @patch('msmodelslim.model.common.transformers.SafeGenerator.get_config_from_pretrained')
     def test_load_config_when_called_then_delegate_to_safe_generator(self, mock_get_config):
         """测试_load_config方法：应委托给SafeGenerator"""
         mock_config = DummyConfig()
         mock_get_config.return_value = mock_config
         
-        with patch('msmodelslim.model.transformers.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             adapter.model_path = self.model_path
             
@@ -42,13 +42,13 @@ class TestTransformersModelLoadConfig(unittest.TestCase):
                 trust_remote_code=False
             )
 
-    @patch('msmodelslim.model.transformers.SafeGenerator.get_config_from_pretrained')
+    @patch('msmodelslim.model.common.transformers.SafeGenerator.get_config_from_pretrained')
     def test_load_config_with_trust_remote_code_when_called_then_pass_trust_flag(self, mock_get_config):
         """测试_load_config方法：trust_remote_code=True时应正确传递"""
         mock_config = DummyConfig()
         mock_get_config.return_value = mock_config
         
-        with patch('msmodelslim.model.transformers.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             adapter.model_path = self.model_path
             
@@ -67,13 +67,13 @@ class TestTransformersModelLoadTokenizer(unittest.TestCase):
         """测试前的准备工作"""
         self.model_path = Path('.')
 
-    @patch('msmodelslim.model.transformers.SafeGenerator.get_tokenizer_from_pretrained')
+    @patch('msmodelslim.model.common.transformers.SafeGenerator.get_tokenizer_from_pretrained')
     def test_load_tokenizer_when_called_then_delegate_to_safe_generator(self, mock_get_tokenizer):
         """测试_load_tokenizer方法：应委托给SafeGenerator"""
         mock_tokenizer = MagicMock()
         mock_get_tokenizer.return_value = mock_tokenizer
         
-        with patch('msmodelslim.model.transformers.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             adapter.model_path = self.model_path
             
@@ -87,13 +87,13 @@ class TestTransformersModelLoadTokenizer(unittest.TestCase):
                 trust_remote_code=False
             )
 
-    @patch('msmodelslim.model.transformers.SafeGenerator.get_tokenizer_from_pretrained')
+    @patch('msmodelslim.model.common.transformers.SafeGenerator.get_tokenizer_from_pretrained')
     def test_load_tokenizer_with_trust_remote_code_when_called_then_pass_trust_flag(self, mock_get_tokenizer):
         """测试_load_tokenizer方法：trust_remote_code=True时应正确传递"""
         mock_tokenizer = MagicMock()
         mock_get_tokenizer.return_value = mock_tokenizer
         
-        with patch('msmodelslim.model.transformers.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             adapter.model_path = self.model_path
             
@@ -114,13 +114,13 @@ class TestTransformersModelLoadModel(unittest.TestCase):
         """测试前的准备工作"""
         self.model_path = Path('.')
 
-    @patch('msmodelslim.model.transformers.SafeGenerator.get_model_from_pretrained')
+    @patch('msmodelslim.model.common.transformers.SafeGenerator.get_model_from_pretrained')
     def test_load_model_with_npu_device_when_called_then_use_auto_device_map(self, mock_get_model):
         """测试_load_model方法：NPU设备时应使用auto device_map"""
         mock_model = MagicMock()
         mock_get_model.return_value = mock_model
         
-        with patch('msmodelslim.model.transformers.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             adapter.model_path = self.model_path
             adapter.config = DummyConfig()
@@ -133,13 +133,13 @@ class TestTransformersModelLoadModel(unittest.TestCase):
             call_kwargs = mock_get_model.call_args[1]
             self.assertEqual(call_kwargs['device_map'], 'auto')
 
-    @patch('msmodelslim.model.transformers.SafeGenerator.get_model_from_pretrained')
+    @patch('msmodelslim.model.common.transformers.SafeGenerator.get_model_from_pretrained')
     def test_load_model_with_cpu_device_when_called_then_use_cpu_device_map(self, mock_get_model):
         """测试_load_model方法：CPU设备时应使用cpu device_map"""
         mock_model = MagicMock()
         mock_get_model.return_value = mock_model
         
-        with patch('msmodelslim.model.transformers.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             adapter.model_path = self.model_path
             adapter.config = DummyConfig()
@@ -157,7 +157,7 @@ class TestTransformersModelGetModelType(unittest.TestCase):
 
     def test_get_model_type_with_none_when_called_then_return_config_model_type(self):
         """测试_get_model_type方法：model_type为None时应返回config中的model_type"""
-        with patch('msmodelslim.model.transformers.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             adapter.config = DummyConfig()
             adapter.config.model_type = 'ConfigModelType'
@@ -168,7 +168,7 @@ class TestTransformersModelGetModelType(unittest.TestCase):
 
     def test_get_model_type_with_value_when_called_then_return_input_value(self):
         """测试_get_model_type方法：model_type有值时应返回输入值"""
-        with patch('msmodelslim.model.transformers.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             adapter.config = DummyConfig()
             
@@ -182,7 +182,7 @@ class TestTransformersModelGetModelPedigree(unittest.TestCase):
 
     def test_get_model_pedigree_with_none_when_called_then_return_config_model_type(self):
         """测试_get_model_pedigree方法：model_type为None时应返回config中的model_type"""
-        with patch('msmodelslim.model.transformers.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             adapter.config = DummyConfig()
             adapter.config.model_type = 'Qwen2'
@@ -193,7 +193,7 @@ class TestTransformersModelGetModelPedigree(unittest.TestCase):
 
     def test_get_model_pedigree_with_valid_name_when_called_then_extract_prefix(self):
         """测试_get_model_pedigree方法：有效名称时应提取前缀并转小写"""
-        with patch('msmodelslim.model.transformers.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             adapter.config = DummyConfig()
             
@@ -207,7 +207,7 @@ class TestTransformersModelGetModelPedigree(unittest.TestCase):
 
     def test_get_model_pedigree_with_invalid_name_when_called_then_raise_schema_validate_error(self):
         """测试_get_model_pedigree方法：无效名称时应抛出SchemaValidateError"""
-        with patch('msmodelslim.model.transformers.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             adapter.config = DummyConfig()
             
@@ -227,7 +227,7 @@ class TestTransformersModelGetTokenizedData(unittest.TestCase):
 
     def test_get_tokenized_data_with_non_list_when_called_then_raise_schema_validate_error(self):
         """测试_get_tokenized_data方法：非列表输入时应抛出SchemaValidateError"""
-        with patch('msmodelslim.model.transformers.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             
             # 测试字符串输入
@@ -246,7 +246,7 @@ class TestTransformersModelGetBatchTokenizedData(unittest.TestCase):
 
     def test_get_batch_tokenized_data_with_valid_list_when_called_then_return_batched_data(self):
         """测试_get_batch_tokenized_data方法：有效列表时应返回批量数据"""
-        with patch('msmodelslim.model.transformers.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             
             # Mock _get_padding_data方法
@@ -267,7 +267,7 @@ class TestTransformersModelGetBatchTokenizedData(unittest.TestCase):
 
     def test_get_batch_tokenized_data_with_non_list_when_called_then_raise_schema_validate_error(self):
         """测试_get_batch_tokenized_data方法：非列表输入时应抛出SchemaValidateError"""
-        with patch('msmodelslim.model.transformers.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             
             # 测试字符串输入
@@ -286,7 +286,7 @@ class TestTransformersModelGetPaddingData(unittest.TestCase):
 
     def test_get_padding_data_with_same_length_when_called_then_no_padding(self):
         """测试_get_padding_data方法：相同长度时不需要padding"""
-        with patch('msmodelslim.model.transformers.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             
             # 创建模拟tokenizer，返回相同长度的输入
@@ -299,7 +299,7 @@ class TestTransformersModelGetPaddingData(unittest.TestCase):
             adapter.tokenizer = mock_tokenizer
             
             import torch.nn.functional as F_torch
-            with patch('msmodelslim.model.transformers.F', F_torch):
+            with patch('msmodelslim.model.common.transformers.F', F_torch):
                 calib_list = ['text1', 'text2']
                 result = adapter._get_padding_data(calib_list, DeviceType.CPU)
                 
@@ -309,7 +309,7 @@ class TestTransformersModelGetPaddingData(unittest.TestCase):
 
     def test_get_padding_data_with_different_lengths_when_called_then_apply_padding(self):
         """测试_get_padding_data方法：不同长度时应应用padding"""
-        with patch('msmodelslim.model.transformers.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             
             # 创建模拟tokenizer，返回不同长度的输入
@@ -322,7 +322,7 @@ class TestTransformersModelGetPaddingData(unittest.TestCase):
             adapter.tokenizer = mock_tokenizer
             
             import torch.nn.functional as F_torch
-            with patch('msmodelslim.model.transformers.F', F_torch):
+            with patch('msmodelslim.model.common.transformers.F', F_torch):
                 calib_list = ['short', 'longer text']
                 result = adapter._get_padding_data(calib_list, DeviceType.CPU)
                 

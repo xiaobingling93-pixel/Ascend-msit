@@ -11,17 +11,12 @@ from msmodelslim.quant.processor.kv_smooth import KVSmoothFusedType, KVSmoothFus
 from msmodelslim.utils.exception import InvalidModelError
 from msmodelslim.utils.logging import logger_setter
 from msmodelslim.utils.security.model import SafeGenerator
-from .common.layer_wise_forward import generated_decoder_layer_visit_func, transformers_generated_forward_func
-from .factory import ModelFactory
-from .interface_hub import ModelInfoInterface, ModelSlimPipelineInterfaceV0, ModelSlimPipelineInterfaceV1, \
+from ..common.layer_wise_forward import generated_decoder_layer_visit_func, transformers_generated_forward_func
+from ..interface_hub import ModelInfoInterface, ModelSlimPipelineInterfaceV0, ModelSlimPipelineInterfaceV1, \
     AnalyzePipelineInterface, KVSmoothFusedInterface
-from .transformers import TransformersModel
+from ..common.transformers import TransformersModel
 
 
-@ModelFactory.register("Qwen2.5-7B-Instruct")
-@ModelFactory.register("Qwen2.5-32B-Instruct")
-@ModelFactory.register("Qwen2.5-72B-Instruct")
-@ModelFactory.register("Qwen2.5-Coder-7B-Instruct")
 @logger_setter()
 class Qwen25ModelAdapter(TransformersModel,
                          ModelInfoInterface,

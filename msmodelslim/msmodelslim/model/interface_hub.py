@@ -24,7 +24,7 @@ Just implement the interfaces for components you need.
 
 __all__ = [
     # base interface
-    'BaseModelInterface',  # Necessary, including model_type, model_path, trust_remote_code, etc.
+    'IModel',  # Necessary, including model_type, model_path, trust_remote_code, etc.
 
     # app interface
     'ModelInfoInterface',  # For Naive Quantization, get model info from model.
@@ -59,7 +59,7 @@ from msmodelslim.app.quant_service.modelslim_v0.pipeline_interface import \
 from msmodelslim.app.quant_service.multimodal_sd_v1.pipeline_interface import \
     MultimodalPipelineInterface as MultimodalSDPipelineInterface
 from msmodelslim.app.quant_service.modelslim_v1.save.interface import AscendV1SaveInterface
-from msmodelslim.core.base.model import BaseModelInterface
+from msmodelslim.model import IModel
 from msmodelslim.core.runner.pipeline_interface import PipelineInterface as ModelSlimPipelineInterfaceV1
 from msmodelslim.quant.processor.anti_outlier.smooth_interface import IterSmoothInterface, FlexSmoothQuantInterface
 from msmodelslim.quant.processor.kv_smooth import KVSmoothFusedInterface

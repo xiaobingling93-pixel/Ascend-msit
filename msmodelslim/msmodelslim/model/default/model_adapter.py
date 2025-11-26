@@ -11,13 +11,11 @@ from msmodelslim.model.common.layer_wise_forward import transformers_generated_f
 from msmodelslim.utils.exception import InvalidModelError
 from msmodelslim.utils.exception_decorator import exception_handler
 from msmodelslim.utils.logging import logger_setter, get_logger
-from .factory import ModelFactory
-from .interface_hub import ModelInfoInterface, ModelSlimPipelineInterfaceV0, ModelSlimPipelineInterfaceV1, \
+from ..interface_hub import ModelInfoInterface, ModelSlimPipelineInterfaceV0, ModelSlimPipelineInterfaceV1, \
     AnalyzePipelineInterface
-from .transformers import TransformersModel
+from ..common.transformers import TransformersModel
 
 
-@ModelFactory.register("default")
 @logger_setter()
 class DefaultModelAdapter(TransformersModel,
                           ModelInfoInterface,  # support naive quantization

@@ -25,7 +25,7 @@ from torch import nn
 from ascend_utils.common.security.path import json_safe_load, json_safe_dump
 from msmodelslim import logger
 from msmodelslim.core.QAL.qregistry import QABCRegistry
-from msmodelslim.core.base.model import BaseModelInterface
+from msmodelslim.model import IModel
 from msmodelslim.core.base.protocol import BatchProcessRequest
 from msmodelslim.quant import ir as qir
 from msmodelslim.quant.processor.base import AutoSessionProcessor
@@ -220,9 +220,9 @@ class AscendV1Saver(AutoSaverProcessor):
         self.json_writer.close()
         self.safetensors_writer.close()
 
-        if not isinstance(self.adapter, BaseModelInterface):
+        if not isinstance(self.adapter, IModel):
             raise ToDoError(f'Model Adapter does NOT has attr model_path',
-                            action=f'Please implement BaseModelInterface for saving')
+                            action=f'Please implement IModel for saving')
         copy_files(self.adapter.model_path, self.config.save_directory)
         remove_quantization_config(self.config.save_directory)
 

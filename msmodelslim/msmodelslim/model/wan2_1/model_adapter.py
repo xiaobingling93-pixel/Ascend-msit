@@ -18,11 +18,10 @@ from msmodelslim.core.base.protocol import ProcessRequest
 from msmodelslim.model.base import BaseModelAdapter
 from msmodelslim.model.common.layer_wise_forward import TransformersForwardBreak, \
     generated_decoder_layer_visit_func_with_keyword
-from msmodelslim.model.factory import ModelFactory
 from msmodelslim.utils.cache import to_device
 from msmodelslim.utils.exception import InvalidModelError, SchemaValidateError, UnsupportedError
 from msmodelslim.utils.logging import logger_setter
-from .interface_hub import ModelInfoInterface, MultimodalSDPipelineInterface
+from ..interface_hub import ModelInfoInterface, MultimodalSDPipelineInterface
 
 MAX_RECURSION_DEPTH = 20
 
@@ -53,8 +52,6 @@ EXAMPLE_PROMPT = {
 SUPPORTED_TASKS = ['t2v-14B', 't2v-1.3B']
 
 
-@ModelFactory.register("Wan2_1")
-@ModelFactory.register("Wan2.1")
 @logger_setter()
 class Wan2Point1Adapter(BaseModelAdapter,
                         ModelInfoInterface,

@@ -10,7 +10,7 @@ from transformers import PreTrainedTokenizerBase, PreTrainedModel, PretrainedCon
 from msmodelslim.app.base.const import DeviceType
 from msmodelslim.utils.exception import SchemaValidateError
 from msmodelslim.utils.security.model import SafeGenerator
-from .base import BaseModelAdapter
+from ..base import BaseModelAdapter
 
 
 class TransformersModel(BaseModelAdapter):

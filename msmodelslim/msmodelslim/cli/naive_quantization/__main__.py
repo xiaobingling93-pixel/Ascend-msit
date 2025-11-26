@@ -4,11 +4,9 @@ from pathlib import Path
 
 from msmodelslim.app.naive_quantization import NaiveQuantizationApplication
 from msmodelslim.app.quant_service.proxy import QuantServiceProxy
-from msmodelslim.core.base.model import BaseModelInterface
 from msmodelslim.infra.dataset_loader import FileDatasetLoader
 from msmodelslim.infra.practice_manager import PracticeManager
-from msmodelslim.model import ModelFactory
-from msmodelslim.model.base import BaseModelAdapter
+from msmodelslim.model import PluginModelFactory
 from msmodelslim.utils.security.path import get_valid_read_path
 
 
@@ -26,14 +24,6 @@ def get_dataset_dir():
     return Path(lab_calib_dir)
 
 
-def create_model(model_type: str, model_path: Path, trust_remote_code: bool) -> BaseModelInterface:
-    return ModelFactory.create(model_type, interface=BaseModelAdapter)(
-        model_type=model_type,
-        model_path=model_path,
-        trust_remote_code=trust_remote_code,
-    )
-
-
 def main(args):
     config_dir = get_practice_dir()
     practice_manager = PracticeManager(official_config_dir=config_dir)
@@ -44,7 +34,7 @@ def main(args):
     app = NaiveQuantizationApplication(
         practice_manager=practice_manager,
         quant_service=quant_service,
-        model_factory=create_model,
+        model_factory=PluginModelFactory,
     )
 
     app.quant(

@@ -3,6 +3,7 @@ from enum import Enum
 from pathlib import Path
 from typing import List, Callable, Union
 
+from msmodelslim.model import IModelFactory
 from msmodelslim.utils.exception import SchemaValidateError, UnsupportedError
 from msmodelslim.utils.exception_decorator import exception_catcher
 from msmodelslim.utils.logging import logger_setter, get_logger
@@ -16,7 +17,6 @@ from msmodelslim.utils.validation.value import validate_str_length
 from ..analysis_service import BaseAnalysisService
 from ..analysis_service.pipeline_interface import PipelineInterface
 from ..base import DeviceType, ExtendedEnum
-from ...core.base.model import BaseModelInterface
 
 
 class AnalysisMetrics(ExtendedEnum):
@@ -30,9 +30,11 @@ class AnalysisMetrics(ExtendedEnum):
 class LayerAnalysisApplication:
     """Application for analyzing model layer sensitivity"""
 
-    def __init__(self,
-                 analysis_service: BaseAnalysisService,
-                 model_factory: Callable[[str, Path, bool], BaseModelInterface]):
+    def __init__(
+        self,
+        analysis_service: BaseAnalysisService,
+        model_factory: IModelFactory,
+    ):
         self.analysis_service = analysis_service
         self.model_factory = model_factory
 
@@ -130,7 +132,9 @@ class LayerAnalysisApplication:
             'method_params': {}
         }
 
-        model_adapter = self.model_factory(model_type, model_path, trust_remote_code)
+        model_adapter = self.model_factory.create(
+            model_type, model_path, trust_remote_code
+        )
         if not isinstance(model_adapter, PipelineInterface):
             raise UnsupportedError(f'Model adapter {model_adapter.__class__.__name__} does NOT support analyze',
                                    action='Please implement PipelineInterface for model analyzing')             
@@ -145,7 +149,7 @@ class LayerAnalysisApplication:
         if result is None:
             get_logger().info(f"===========ANALYSIS COMPLETE===========")
             return result
-            
+
         # export results using service-specific formatter
         self.analysis_service.export_results(result, topk)
 

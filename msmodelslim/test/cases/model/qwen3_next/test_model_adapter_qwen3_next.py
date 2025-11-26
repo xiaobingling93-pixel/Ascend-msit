@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import torch.nn as nn
 
 from msmodelslim.app import DeviceType
-from msmodelslim.model.qwen3_next import Qwen3NextModelAdapter
+from msmodelslim.model.qwen3_next.model_adapter import Qwen3NextModelAdapter
 from msmodelslim.core.base.protocol import ProcessRequest
 
 
@@ -14,11 +14,11 @@ class TestQwen3NextModelAdapter(unittest.TestCase):
 
     def setUp(self):
         self.model_type = 'Qwen3-Next-80B-A3B-Instruct'
-        self.model_path = Path('.')
+        self.model_path = Path('..')
 
     def test_get_model_type(self):
         """测试get_model_type方法"""
-        with patch('msmodelslim.model.qwen3_next.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.qwen3_next.model_adapter.TransformersModel.__init__', return_value=None):
             adapter = Qwen3NextModelAdapter(
                 model_type=self.model_type,
                 model_path=self.model_path
@@ -30,7 +30,7 @@ class TestQwen3NextModelAdapter(unittest.TestCase):
 
     def test_get_model_pedigree(self):
         """测试get_model_pedigree方法"""
-        with patch('msmodelslim.model.qwen3_next.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.qwen3_next.model_adapter.TransformersModel.__init__', return_value=None):
             adapter = Qwen3NextModelAdapter(
                 model_type=self.model_type,
                 model_path=self.model_path
@@ -41,7 +41,7 @@ class TestQwen3NextModelAdapter(unittest.TestCase):
 
     def test_load_model(self):
         """测试load_model方法"""
-        with patch('msmodelslim.model.qwen3_next.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.qwen3_next.model_adapter.TransformersModel.__init__', return_value=None):
             adapter = Qwen3NextModelAdapter(
                 model_type=self.model_type,
                 model_path=self.model_path
@@ -57,7 +57,7 @@ class TestQwen3NextModelAdapter(unittest.TestCase):
 
     def test_handle_dataset(self):
         """测试handle_dataset方法"""
-        with patch('msmodelslim.model.qwen3_next.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.qwen3_next.model_adapter.TransformersModel.__init__', return_value=None):
             adapter = Qwen3NextModelAdapter(
                 model_type=self.model_type,
                 model_path=self.model_path
@@ -73,7 +73,7 @@ class TestQwen3NextModelAdapter(unittest.TestCase):
 
     def test_handle_dataset_by_batch(self):
         """测试handle_dataset_by_batch方法"""
-        with patch('msmodelslim.model.qwen3_next.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.qwen3_next.model_adapter.TransformersModel.__init__', return_value=None):
             adapter = Qwen3NextModelAdapter(
                 model_type=self.model_type,
                 model_path=self.model_path
@@ -97,7 +97,7 @@ class TestQwen3NextModelAdapter(unittest.TestCase):
 
     def test_init_model(self):
         """测试init_model方法"""
-        with patch('msmodelslim.model.qwen3_next.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.qwen3_next.model_adapter.TransformersModel.__init__', return_value=None):
             adapter = Qwen3NextModelAdapter(
                 model_type=self.model_type,
                 model_path=self.model_path
@@ -113,7 +113,7 @@ class TestQwen3NextModelAdapter(unittest.TestCase):
 
     def test_generate_model_visit(self):
         """测试generate_model_visit方法"""
-        with patch('msmodelslim.model.qwen3_next.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.qwen3_next.model_adapter.TransformersModel.__init__', return_value=None):
             adapter = Qwen3NextModelAdapter(
                 model_type=self.model_type,
                 model_path=self.model_path
@@ -122,7 +122,9 @@ class TestQwen3NextModelAdapter(unittest.TestCase):
             mock_model = nn.Linear(10, 10)
             mock_transformer_blocks = [('block1', nn.Linear(5, 5)), ('block2', nn.Linear(5, 5))]
             
-            with patch('msmodelslim.model.qwen3_next.generated_decoder_layer_visit_func') as mock_visit_func:
+            with patch(
+                    'msmodelslim.model.qwen3_next.'
+                       'model_adapter.generated_decoder_layer_visit_func') as mock_visit_func:
                 mock_visit_func.return_value = iter([MagicMock(spec=ProcessRequest)])
                 
                 result = list(adapter.generate_model_visit( \
@@ -135,7 +137,7 @@ class TestQwen3NextModelAdapter(unittest.TestCase):
 
     def test_generate_model_visit_with_none_transformer_blocks(self):
         """测试generate_model_visit方法当transformer_blocks为None时"""
-        with patch('msmodelslim.model.qwen3_next.TransformersModel.__init__', return_value=None):
+        with (patch('msmodelslim.model.qwen3_next.model_adapter.TransformersModel.__init__', return_value=None)):
             adapter = Qwen3NextModelAdapter(
                 model_type=self.model_type,
                 model_path=self.model_path
@@ -143,7 +145,9 @@ class TestQwen3NextModelAdapter(unittest.TestCase):
             
             mock_model = nn.Linear(10, 10)
             
-            with patch('msmodelslim.model.qwen3_next.generated_decoder_layer_visit_func') as mock_visit_func:
+            with patch(
+                    'msmodelslim.model.qwen3_next.model_adapter.'
+                    'generated_decoder_layer_visit_func') as mock_visit_func:
                 mock_visit_func.return_value = iter([MagicMock(spec=ProcessRequest)])
                 
                 result = list(adapter.generate_model_visit(model=mock_model))
@@ -154,7 +158,7 @@ class TestQwen3NextModelAdapter(unittest.TestCase):
 
     def test_generate_model_forward(self):
         """测试generate_model_forward方法"""
-        with patch('msmodelslim.model.qwen3_next.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.qwen3_next.model_adapter.TransformersModel.__init__', return_value=None):
             adapter = Qwen3NextModelAdapter(
                 model_type=self.model_type,
                 model_path=self.model_path
@@ -163,7 +167,9 @@ class TestQwen3NextModelAdapter(unittest.TestCase):
             mock_model = nn.Linear(10, 10)
             mock_inputs = {'input_ids': [1, 2, 3]}
             
-            with patch('msmodelslim.model.qwen3_next.transformers_generated_forward_func') as mock_forward_func:
+            with patch(
+                    'msmodelslim.model.qwen3_next.model_adapter.'
+                    'transformers_generated_forward_func') as mock_forward_func:
                 mock_forward_func.return_value = iter([MagicMock(spec=ProcessRequest)])
                 
                 result = list(adapter.generate_model_forward(model=mock_model, inputs=mock_inputs))
@@ -175,7 +181,7 @@ class TestQwen3NextModelAdapter(unittest.TestCase):
 
     def test_enable_kv_cache(self):
         """测试enable_kv_cache方法"""
-        with patch('msmodelslim.model.qwen3_next.TransformersModel.__init__', return_value=None):
+        with patch('msmodelslim.model.qwen3_next.model_adapter.TransformersModel.__init__', return_value=None):
             adapter = Qwen3NextModelAdapter(
                 model_type=self.model_type,
                 model_path=self.model_path

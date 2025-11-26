@@ -23,7 +23,7 @@ from torch import nn
 
 import msmodelslim.quant.ir as qir
 from msmodelslim.core.QAL.qregistry import QABCRegistry
-from msmodelslim.core.base.model import BaseModelInterface
+from msmodelslim.model import IModel
 from msmodelslim.core.base.protocol import BatchProcessRequest
 from msmodelslim.quant.processor.base import AutoSessionProcessor
 from msmodelslim.utils.dist import DistHelper
@@ -160,7 +160,7 @@ class MindIEFormatSaver(AutoSaverProcessor):
     def __init__(self, model: nn.Module, config: MindIEFormatConfig, adapter: object, **kwargs: Dict[str, Any]):
         super().__init__(model, config, adapter, **kwargs)
         self.config = config
-        self.adapter: BaseModelInterface = adapter
+        self.adapter: IModel = adapter
         self.json_append = dict()
         self.save_directory = self.get_rank_save_directory() if dist.is_initialized() else config.save_directory
         self.json_writer = JsonWriter(config.save_directory, DEFAULT_DESC_JSON_NAME)

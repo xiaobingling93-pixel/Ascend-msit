@@ -15,10 +15,10 @@
 
 from pathlib import Path
 
-from .interface_hub import BaseModelInterface
+from .interface_hub import IModel
 
 
-class BaseModelAdapter(BaseModelInterface):
+class BaseModelAdapter(IModel):
 
     def __init__(self, model_type: str, model_path: Path, trust_remote_code: bool = False):
         self._model_type = model_type

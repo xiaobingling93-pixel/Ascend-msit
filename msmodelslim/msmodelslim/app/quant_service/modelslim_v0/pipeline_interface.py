@@ -19,11 +19,11 @@ from typing import Any, List
 from torch import nn
 
 from msmodelslim.app import DeviceType
-from msmodelslim.core.base.model import BaseModelInterface
+from msmodelslim.model import IModel
 from msmodelslim.utils.exception import UnsupportedError
 
 
-class PipelineInterface(BaseModelInterface):
+class PipelineInterface(IModel):
     """
     Interface for determining the pipeline of model inference.
     ModelSlim V0 is a simple quant service, which does NOT schedule the model inference pipeline in finer granularity.

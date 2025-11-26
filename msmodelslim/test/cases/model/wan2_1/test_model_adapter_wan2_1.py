@@ -18,7 +18,7 @@ from pathlib import Path
 from unittest.mock import Mock, MagicMock, patch, call
 import pytest
 
-from msmodelslim.model.wan2_1 import (
+from msmodelslim.model.wan2_1.model_adapter import (
     Wan2Point1Adapter, InvalidModelError,
     SchemaValidateError, UnsupportedError
 )
@@ -74,36 +74,30 @@ def mock_env(monkeypatch):
 
 # ------------------------------ 适配器基础功能测试 ------------------------------
 class TestWan2Point1Adapter:
-    @pytest.fixture
-    def adapter(self):
-        """当前类专用的适配器实例fixture"""
-        with patch("msmodelslim.model.wan2_1.Wan2Point1Adapter._check_import_dependency"):
-            adapter_instance = Wan2Point1Adapter("t2v-14B", Path("/test/model/path"))
-
-        adapter_instance.model_args = MagicMock()
-        adapter_instance.model_args.task = "t2v-14B"
-        adapter_instance.model_args.size = "1280*720"
-        return adapter_instance
-
-    def test_initialization(self, adapter):
+    @staticmethod
+    def test_initialization(adapter):
         assert adapter.model_type == "t2v-14B"
         assert adapter.model_path == Path("/test/model/path")
 
-    def test_get_model_info(self, adapter):
+    @staticmethod
+    def test_get_model_info(adapter):
         assert adapter.get_model_type() == "t2v-14B"
         assert adapter.get_model_pedigree() == "wan2_1"
 
-    def test_handle_dataset(self, adapter):
+    @staticmethod
+    def test_handle_dataset(adapter):
         mock_dataset = [Mock(), Mock()]
         result = adapter.handle_dataset(mock_dataset)
         assert list(result) == mock_dataset
 
-    def test_enable_kv_cache(self, adapter):
+    @staticmethod
+    def test_enable_kv_cache(adapter):
         """测试enable_kv_cache方法的调用和参数传递"""
         adapter.enable_kv_cache(Mock(), True)
         assert True  # 方法无异常执行即通过
 
-    def test_init_model_returns_transformer(self):
+    @staticmethod
+    def test_init_model_returns_transformer():
         """测试init_model方法是否正确返回transformer"""
         mock_self = Mock()
         mock_transformer = Mock()
@@ -112,9 +106,58 @@ class TestWan2Point1Adapter:
         result = Wan2Point1Adapter.init_model(mock_self)
         assert result == mock_transformer, "init_model应返回self.transformer"
 
+    @pytest.fixture
+    def adapter(self):
+        """当前类专用的适配器实例fixture"""
+        with patch("msmodelslim.model.wan2_1.model_adapter.Wan2Point1Adapter._check_import_dependency"):
+            adapter_instance = Wan2Point1Adapter("t2v-14B", Path("/test/model/path"))
+
+        adapter_instance.model_args = MagicMock()
+        adapter_instance.model_args.task = "t2v-14B"
+        adapter_instance.model_args.size = "1280*720"
+        return adapter_instance
+
 
 # ------------------------------ _load_pipeline方法测试 ------------------------------
 class TestLoadPipeline:
+    @staticmethod
+    def test_normal_execution(mock_self, mock_env):
+        Wan2Point1Adapter._load_pipeline(mock_self)
+        sys.modules['wan'].WanT2V.assert_called_once()
+        assert mock_self.wan_t2v is not None
+
+    @staticmethod
+    def test_t5_fsdp_unsupported(mock_self, mock_env):
+        mock_self.model_args.t5_fsdp = True
+        with pytest.raises(SchemaValidateError):
+            Wan2Point1Adapter._load_pipeline(mock_self)
+
+    @staticmethod
+    def test_dit_fsdp_unsupported(mock_self, mock_env):
+        mock_self.model_args.dit_fsdp = True
+        with pytest.raises(SchemaValidateError):
+            Wan2Point1Adapter._load_pipeline(mock_self)
+
+    @staticmethod
+    def test_ulysses_size_validation(mock_self, mock_env):
+        mock_self.model_args.ulysses_size = 3
+        with pytest.raises(SchemaValidateError):
+            Wan2Point1Adapter._load_pipeline(mock_self)
+
+    @staticmethod
+    def test_vae_parallel_unsupported(mock_self, mock_env):
+        mock_self.model_args.vae_parallel = True
+        with pytest.raises(SchemaValidateError):
+            Wan2Point1Adapter._load_pipeline(mock_self)
+
+    @staticmethod
+    def test_load_pipeline_execution_order(mock_self):
+        """测试load_pipeline调用内部方法的次数和顺序"""
+        Wan2Point1Adapter.load_pipeline(mock_self)
+        assert mock_self._load_pipeline.call_count == 1
+        assert mock_self._setup_cache.call_count == 1
+        assert mock_self.method_calls == [call._load_pipeline(), call._setup_cache()]
+
     @pytest.fixture
     def mock_self(self):
         """当前类专用的self对象fixture"""
@@ -131,41 +174,193 @@ class TestLoadPipeline:
         mock._init_logging = Mock()
         return mock
 
-    def test_normal_execution(self, mock_self, mock_env):
-        Wan2Point1Adapter._load_pipeline(mock_self)
-        sys.modules['wan'].WanT2V.assert_called_once()
-        assert mock_self.wan_t2v is not None
-
-    def test_t5_fsdp_unsupported(self, mock_self, mock_env):
-        mock_self.model_args.t5_fsdp = True
-        with pytest.raises(SchemaValidateError):
-            Wan2Point1Adapter._load_pipeline(mock_self)
-
-    def test_dit_fsdp_unsupported(self, mock_self, mock_env):
-        mock_self.model_args.dit_fsdp = True
-        with pytest.raises(SchemaValidateError):
-            Wan2Point1Adapter._load_pipeline(mock_self)
-
-    def test_ulysses_size_validation(self, mock_self, mock_env):
-        mock_self.model_args.ulysses_size = 3
-        with pytest.raises(SchemaValidateError):
-            Wan2Point1Adapter._load_pipeline(mock_self)
-
-    def test_vae_parallel_unsupported(self, mock_self, mock_env):
-        mock_self.model_args.vae_parallel = True
-        with pytest.raises(SchemaValidateError):
-            Wan2Point1Adapter._load_pipeline(mock_self)
-
-    def test_load_pipeline_execution_order(self, mock_self):
-        """测试load_pipeline调用内部方法的次数和顺序"""
-        Wan2Point1Adapter.load_pipeline(mock_self)
-        assert mock_self._load_pipeline.call_count == 1
-        assert mock_self._setup_cache.call_count == 1
-        assert mock_self.method_calls == [call._load_pipeline(), call._setup_cache()]
-
 
 # ------------------------------ _validate_args方法测试 ------------------------------
 class TestValidateArgs:
+    @staticmethod
+    def test_valid_base_case(mock_self, base_args):
+        Wan2Point1Adapter._validate_args(mock_self, base_args)
+
+    @staticmethod
+    def test_missing_prompt(mock_self, base_args):
+        del base_args.prompt  # 删除prompt属性
+        with pytest.raises(SchemaValidateError) as exc_info:
+            Wan2Point1Adapter._validate_args(mock_self, base_args)
+        assert "Missing required parameter: prompt" in str(exc_info.value)
+
+    @staticmethod
+    def test_invalid_prompt_type(mock_self, base_args):
+        base_args.prompt = 123  # 非字符串类型
+        with pytest.raises(SchemaValidateError):
+            Wan2Point1Adapter._validate_args(mock_self, base_args)
+
+    @staticmethod
+    def test_empty_prompt(mock_self, base_args):
+        base_args.prompt = ""
+        with pytest.raises(SchemaValidateError):
+            Wan2Point1Adapter._validate_args(mock_self, base_args)
+
+    @staticmethod
+    def test_missing_ckpt_dir(mock_self, base_args):
+        base_args.ckpt_dir = None
+        with pytest.raises(InvalidModelError):
+            Wan2Point1Adapter._validate_args(mock_self, base_args)
+
+    @staticmethod
+    def test_unsupported_task(mock_self, base_args):
+        base_args.task = True
+        with pytest.raises(SchemaValidateError):
+            Wan2Point1Adapter._validate_args(mock_self, base_args)
+
+        base_args.task = "invalid-task"
+        with pytest.raises(UnsupportedError):
+            Wan2Point1Adapter._validate_args(mock_self, base_args)
+
+    @staticmethod
+    def test_sample_steps_defaults(mock_self, base_args):
+        base_args.sample_steps = None
+        base_args.task = "i2v-14B"
+        Wan2Point1Adapter._validate_args(mock_self, base_args)
+        assert base_args.sample_steps == 40
+
+    @staticmethod
+    def test_sample_shift_i2v_832x480(mock_self, base_args):
+        """测试i2v任务+832*480尺寸时sample_shift默认值为3.0"""
+        base_args.task = "i2v-14B"
+        base_args.size = "832*480"
+        base_args.sample_shift = None  # 触发默认值逻辑
+
+        Wan2Point1Adapter._validate_args(mock_self, base_args)
+        assert base_args.sample_shift == 3.0
+
+    @staticmethod
+    def test_sample_shift_other_cases(mock_self, base_args):
+        """测试其他场景下sample_shift默认值为5.0"""
+        # 场景1: t2v任务+任意尺寸
+        base_args.task = "t2v-14B"
+        base_args.size = "832*480"
+        base_args.sample_shift = None
+        Wan2Point1Adapter._validate_args(mock_self, base_args)
+        assert base_args.sample_shift == 5.0
+
+        # 场景2: i2v任务+非832*480尺寸
+        base_args.task = "i2v-14B"
+        base_args.size = "1280*720"
+        base_args.sample_shift = None
+        Wan2Point1Adapter._validate_args(mock_self, base_args)
+        assert base_args.sample_shift == 5.0
+
+    @staticmethod
+    def test_base_seed_non_negative(mock_self, base_args):
+        """测试base_seed非负时保持原值"""
+        base_args.base_seed = 100  # 非负值
+        Wan2Point1Adapter._validate_args(mock_self, base_args)
+        assert base_args.base_seed == 100
+
+    @staticmethod
+    def test_base_seed_negative_random(mock_self, base_args, mocker):
+        """测试base_seed为负时随机生成"""
+        mocker.patch("msmodelslim.model.wan2_1.model_adapter.random.randint", return_value=999)
+        base_args.base_seed = -5  # 负值
+        Wan2Point1Adapter._validate_args(mock_self, base_args)
+        assert base_args.base_seed == 999
+
+    @staticmethod
+    def test_offload_model_absent(mock_self, base_args):
+        del base_args.offload_model
+        Wan2Point1Adapter._validate_args(mock_self, base_args)
+
+    @staticmethod
+    def test_offload_model_valid_boolean(mock_self, base_args):
+        base_args.offload_model = True
+        Wan2Point1Adapter._validate_args(mock_self, base_args)
+
+        base_args.offload_model = False
+        Wan2Point1Adapter._validate_args(mock_self, base_args)
+
+    @staticmethod
+    def test_offload_model_invalid_str(mock_self, base_args):
+        base_args.offload_model = "invalid"
+        with pytest.raises(SchemaValidateError):
+            Wan2Point1Adapter._validate_args(mock_self, base_args)
+
+    @staticmethod
+    def test_frame_num_t2i_must_be_1(mock_self, base_args):
+        """强化t2i任务frame_num必须为1的检查"""
+        base_args.task = "t2i-14B"
+        base_args.frame_num = 0
+        with pytest.raises(SchemaValidateError):
+            Wan2Point1Adapter._validate_args(mock_self, base_args)
+
+        base_args.frame_num = 2
+        with pytest.raises(UnsupportedError):
+            Wan2Point1Adapter._validate_args(mock_self, base_args)
+
+    @staticmethod
+    def test_sample_steps_invalid_values(mock_self, base_args):
+        base_args.sample_steps = "invalid"
+        with pytest.raises(SchemaValidateError):
+            Wan2Point1Adapter._validate_args(mock_self, base_args)
+
+    @staticmethod
+    def test_sample_steps_valid_values(mock_self, base_args):
+        base_args.sample_steps = 0
+        with pytest.raises(SchemaValidateError):
+            Wan2Point1Adapter._validate_args(mock_self, base_args)
+
+        base_args.sample_steps = 1
+        Wan2Point1Adapter._validate_args(mock_self, base_args)  # 不应抛出异常
+
+    @staticmethod
+    def test_frame_num_boundary_values(mock_self, base_args):
+        base_args.frame_num = 0
+        with pytest.raises(SchemaValidateError):
+            Wan2Point1Adapter._validate_args(mock_self, base_args)
+
+        base_args.task = "t2v-14B"
+        base_args.frame_num = 1
+        Wan2Point1Adapter._validate_args(mock_self, base_args)
+
+    @staticmethod
+    def test_frame_num_default_t2i(mock_self, base_args):
+        base_args.task = "t2i-14B"
+        base_args.frame_num = None  # 触发默认值逻辑
+        Wan2Point1Adapter._validate_args(mock_self, base_args)
+        assert base_args.frame_num == 1
+
+    @staticmethod
+    def test_frame_num_default_t2v(mock_self, base_args):
+        base_args.task = "t2v-14B"
+        base_args.frame_num = None  # 触发默认值逻辑
+        Wan2Point1Adapter._validate_args(mock_self, base_args)
+        assert base_args.frame_num == 81
+
+    @staticmethod
+    def test_frame_num_default_i2v(mock_self, base_args):
+        base_args.task = "i2v-14B"
+        base_args.frame_num = None  # 触发默认值逻辑
+        Wan2Point1Adapter._validate_args(mock_self, base_args)
+        assert base_args.frame_num == 81
+
+    @staticmethod
+    def test_frame_num_invalid_type_string(mock_self, base_args):
+        base_args.frame_num = "81"
+        with pytest.raises(SchemaValidateError) as exc_info:
+            Wan2Point1Adapter._validate_args(mock_self, base_args)
+        assert "frame_num must be an integer, got str" in str(exc_info.value)
+
+    @staticmethod
+    def test_size_valid_values(mock_self, base_args):
+        base_args.size = "1280*720"
+        base_args.task = "t2v-14B"
+        Wan2Point1Adapter._validate_args(mock_self, base_args)
+
+        base_args.size = "1280*720"
+        base_args.task = "t2v-1.3B"
+        with pytest.raises(UnsupportedError) as exc_info:
+            Wan2Point1Adapter._validate_args(mock_self, base_args)
+        assert "Unsupported size '1280*720' for task 't2v-1.3B'" in str(exc_info.value)
+
     @pytest.fixture
     def mock_self(self):
         """当前类专用的self对象fixture"""
@@ -199,183 +394,18 @@ class TestValidateArgs:
     def mock_supported_tasks(self, monkeypatch):
         """当前类专用的任务配置模拟"""
         monkeypatch.setattr(
-            "msmodelslim.model.wan2_1.SUPPORTED_TASKS",
+            "msmodelslim.model.wan2_1.model_adapter.SUPPORTED_TASKS",
             ["t2v-14B", "i2v-14B", "t2i-14B", "t2v-1.3B"]
         )
-
-    def test_valid_base_case(self, mock_self, base_args):
-        Wan2Point1Adapter._validate_args(mock_self, base_args)
-
-    def test_missing_prompt(self, mock_self, base_args):
-        del base_args.prompt  # 删除prompt属性
-        with pytest.raises(SchemaValidateError) as exc_info:
-            Wan2Point1Adapter._validate_args(mock_self, base_args)
-        assert "Missing required parameter: prompt" in str(exc_info.value)
-
-    def test_invalid_prompt_type(self, mock_self, base_args):
-        base_args.prompt = 123  # 非字符串类型
-        with pytest.raises(SchemaValidateError):
-            Wan2Point1Adapter._validate_args(mock_self, base_args)
-
-    def test_empty_prompt(self, mock_self, base_args):
-        base_args.prompt = ""
-        with pytest.raises(SchemaValidateError):
-            Wan2Point1Adapter._validate_args(mock_self, base_args)
-
-    def test_missing_ckpt_dir(self, mock_self, base_args):
-        base_args.ckpt_dir = None
-        with pytest.raises(InvalidModelError):
-            Wan2Point1Adapter._validate_args(mock_self, base_args)
-
-    def test_unsupported_task(self, mock_self, base_args):
-        base_args.task = True
-        with pytest.raises(SchemaValidateError):
-            Wan2Point1Adapter._validate_args(mock_self, base_args)
-
-        base_args.task = "invalid-task"
-        with pytest.raises(UnsupportedError):
-            Wan2Point1Adapter._validate_args(mock_self, base_args)
-
-    def test_sample_steps_defaults(self, mock_self, base_args):
-        base_args.sample_steps = None
-        base_args.task = "i2v-14B"
-        Wan2Point1Adapter._validate_args(mock_self, base_args)
-        assert base_args.sample_steps == 40
-
-    def test_sample_shift_i2v_832x480(self, mock_self, base_args):
-        """测试i2v任务+832*480尺寸时sample_shift默认值为3.0"""
-        base_args.task = "i2v-14B"
-        base_args.size = "832*480"
-        base_args.sample_shift = None  # 触发默认值逻辑
-
-        Wan2Point1Adapter._validate_args(mock_self, base_args)
-        assert base_args.sample_shift == 3.0
-
-    def test_sample_shift_other_cases(self, mock_self, base_args):
-        """测试其他场景下sample_shift默认值为5.0"""
-        # 场景1: t2v任务+任意尺寸
-        base_args.task = "t2v-14B"
-        base_args.size = "832*480"
-        base_args.sample_shift = None
-        Wan2Point1Adapter._validate_args(mock_self, base_args)
-        assert base_args.sample_shift == 5.0
-
-        # 场景2: i2v任务+非832*480尺寸
-        base_args.task = "i2v-14B"
-        base_args.size = "1280*720"
-        base_args.sample_shift = None
-        Wan2Point1Adapter._validate_args(mock_self, base_args)
-        assert base_args.sample_shift == 5.0
-
-    def test_base_seed_non_negative(self, mock_self, base_args):
-        """测试base_seed非负时保持原值"""
-        base_args.base_seed = 100  # 非负值
-        Wan2Point1Adapter._validate_args(mock_self, base_args)
-        assert base_args.base_seed == 100
-
-    def test_base_seed_negative_random(self, mock_self, base_args, mocker):
-        """测试base_seed为负时随机生成"""
-        mocker.patch("msmodelslim.model.wan2_1.random.randint", return_value=999)
-        base_args.base_seed = -5  # 负值
-        Wan2Point1Adapter._validate_args(mock_self, base_args)
-        assert base_args.base_seed == 999
-
-    def test_offload_model_absent(self, mock_self, base_args):
-        del base_args.offload_model
-        Wan2Point1Adapter._validate_args(mock_self, base_args)
-
-    def test_offload_model_valid_boolean(self, mock_self, base_args):
-        base_args.offload_model = True
-        Wan2Point1Adapter._validate_args(mock_self, base_args)
-
-        base_args.offload_model = False
-        Wan2Point1Adapter._validate_args(mock_self, base_args)
-
-    def test_offload_model_invalid_str(self, mock_self, base_args):
-        base_args.offload_model = "invalid"
-        with pytest.raises(SchemaValidateError):
-            Wan2Point1Adapter._validate_args(mock_self, base_args)
-
-    def test_frame_num_t2i_must_be_1(self, mock_self, base_args):
-        """强化t2i任务frame_num必须为1的检查"""
-        base_args.task = "t2i-14B"
-        base_args.frame_num = 0
-        with pytest.raises(SchemaValidateError):
-            Wan2Point1Adapter._validate_args(mock_self, base_args)
-
-        base_args.frame_num = 2
-        with pytest.raises(UnsupportedError):
-            Wan2Point1Adapter._validate_args(mock_self, base_args)
-
-    def test_sample_steps_invalid_values(self, mock_self, base_args):
-        base_args.sample_steps = "invalid"
-        with pytest.raises(SchemaValidateError):
-            Wan2Point1Adapter._validate_args(mock_self, base_args)
-
-    def test_sample_steps_valid_values(self, mock_self, base_args):
-        base_args.sample_steps = 0
-        with pytest.raises(SchemaValidateError):
-            Wan2Point1Adapter._validate_args(mock_self, base_args)
-
-        base_args.sample_steps = 1
-        Wan2Point1Adapter._validate_args(mock_self, base_args)  # 不应抛出异常
-
-    def test_frame_num_boundary_values(self, mock_self, base_args):
-        base_args.frame_num = 0
-        with pytest.raises(SchemaValidateError):
-            Wan2Point1Adapter._validate_args(mock_self, base_args)
-
-        base_args.task = "t2v-14B"
-        base_args.frame_num = 1
-        Wan2Point1Adapter._validate_args(mock_self, base_args)
-
-    def test_frame_num_default_t2i(self, mock_self, base_args):
-        base_args.task = "t2i-14B"
-        base_args.frame_num = None  # 触发默认值逻辑
-        Wan2Point1Adapter._validate_args(mock_self, base_args)
-        assert base_args.frame_num == 1
-
-    def test_frame_num_default_t2v(self, mock_self, base_args):
-        base_args.task = "t2v-14B"
-        base_args.frame_num = None  # 触发默认值逻辑
-        Wan2Point1Adapter._validate_args(mock_self, base_args)
-        assert base_args.frame_num == 81
-
-    def test_frame_num_default_i2v(self, mock_self, base_args):
-        base_args.task = "i2v-14B"
-        base_args.frame_num = None  # 触发默认值逻辑
-        Wan2Point1Adapter._validate_args(mock_self, base_args)
-        assert base_args.frame_num == 81
-
-    def test_frame_num_invalid_type_string(self, mock_self, base_args):
-        base_args.frame_num = "81"
-        with pytest.raises(SchemaValidateError) as exc_info:
-            Wan2Point1Adapter._validate_args(mock_self, base_args)
-        assert "frame_num must be an integer, got str" in str(exc_info.value)
-
-    def test_size_valid_values(self, mock_self, base_args):
-        base_args.size = "1280*720"
-        base_args.task = "t2v-14B"
-        Wan2Point1Adapter._validate_args(mock_self, base_args)
-
-        base_args.size = "1280*720"
-        base_args.task = "t2v-1.3B"
-        with pytest.raises(UnsupportedError) as exc_info:
-            Wan2Point1Adapter._validate_args(mock_self, base_args)
-        assert "Unsupported size '1280*720' for task 't2v-1.3B'" in str(exc_info.value)
 
 
 # ------------------------------ _init_logging方法测试 ------------------------------
 class TestInitLogging:
-    @pytest.fixture
-    def mock_self(self):
-        """当前类专用的self对象fixture"""
-        return Mock()
-
-    def test_rank_zero_config(self, mock_self, mocker):
+    @staticmethod
+    def test_rank_zero_config(mock_self, mocker):
         import logging
-        mock_stream_handler = mocker.patch('msmodelslim.model.wan2_1.logging.StreamHandler')
-        mock_basic_config = mocker.patch('msmodelslim.model.wan2_1.logging.basicConfig')
+        mock_stream_handler = mocker.patch('msmodelslim.model.wan2_1.model_adapter.logging.StreamHandler')
+        mock_basic_config = mocker.patch('msmodelslim.model.wan2_1.model_adapter.logging.basicConfig')
         Wan2Point1Adapter._init_logging(mock_self, rank=0)  # 执行测试
         mock_stream_handler.assert_called_once_with(stream=sys.stdout)  # 验证StreamHandler创建
 
@@ -386,9 +416,10 @@ class TestInitLogging:
             handlers=[mock_stream_handler.return_value]
         )
 
-    def test_non_zero_rank_logging_config(self, mock_self, mocker):
+    @staticmethod
+    def test_non_zero_rank_logging_config(mock_self, mocker):
         import logging
-        mock_basic_config = mocker.patch('msmodelslim.model.wan2_1.logging.basicConfig')
+        mock_basic_config = mocker.patch('msmodelslim.model.wan2_1.model_adapter.logging.basicConfig')
 
         for rank in [1, 2, -1]:
             mock_basic_config.reset_mock()  # 重置mock
@@ -396,14 +427,15 @@ class TestInitLogging:
 
             mock_basic_config.assert_called_once_with(level=logging.ERROR)  # 验证配置
 
-
-class TestCheckImportDependency:
     @pytest.fixture
     def mock_self(self):
-        """创建模拟的self对象"""
+        """当前类专用的self对象fixture"""
         return Mock()
 
-    def test_successful_import(self, mock_self):
+
+class TestCheckImportDependency:
+    @staticmethod
+    def test_successful_import(mock_self):
         """测试所有依赖都能正常导入的场景"""
         # 执行方法，不应抛出异常
         Wan2Point1Adapter._check_import_dependency(mock_self)
@@ -426,9 +458,69 @@ class TestCheckImportDependency:
                 if module_to_remove in sys.modules:
                     del sys.modules[module_to_remove]
 
+    @pytest.fixture
+    def mock_self(self):
+        """创建模拟的self对象"""
+        return Mock()
+
 
 # ------------------------------ set_model_args方法测试 ------------------------------
 class TestSetModelArgs:
+    @staticmethod
+    def test_valid_update(mock_self, base_override):
+        """测试合法配置更新：用base_override创建有效配置"""
+        valid_config = base_override({
+            "sample_steps": 60,
+            "offload_model": True,
+            "use_attentioncache": True
+        })
+        mock_self.set_model_args(valid_config)
+
+        assert mock_self.model_args.ckpt_dir == mock_self.model_path
+        assert mock_self.model_args.sample_steps == 60
+        mock_self._validate_args.assert_called_once()
+
+    @staticmethod
+    def test_illegal_attr_raise_error(mock_self, base_override):
+        """测试非法属性：动态传入含非法键的配置"""
+        invalid_config = base_override({
+            "sample_steps": 60,
+            "illegal_attr": "invalid"  # 非法属性
+        })
+        with pytest.raises(SchemaValidateError) as exc:
+            mock_self.set_model_args(invalid_config)
+
+        assert "illegal config attributes: ['illegal_attr']" in str(exc.value)
+
+    @staticmethod
+    def test_skip_none_value(mock_self, base_override):
+        """测试跳过None值：动态传入含None的配置"""
+        none_config = base_override({
+            "sample_steps": 60,
+            "offload_model": None  # None值参数
+        })
+        mock_parser = mock_self._get_parser()
+        mock_self.set_model_args(none_config)
+        argv = mock_parser.parse_args.call_args[0][0]
+
+        assert "--sample_steps" in argv
+        assert "offload_model" not in str(argv)
+
+    @staticmethod
+    def test_bool_false_handling(mock_self, base_override):
+        """测试False布尔值：动态传入含False的配置（无需单独类）"""
+        false_bool_config = base_override({
+            "sample_steps": 60,
+            "offload_model": True,  # True保留
+            "use_attentioncache": False  # False忽略
+        })
+        mock_parser = mock_self._get_parser()
+        mock_self.set_model_args(false_bool_config)
+        argv = mock_parser.parse_args.call_args[0][0]
+
+        assert "--use_attentioncache" not in argv
+        assert "--offload_model" in argv and "true" in argv
+
     @pytest.fixture
     def mock_self(self):
         """初始化核心属性+必要mock"""
@@ -458,64 +550,14 @@ class TestSetModelArgs:
             def __init__(self, config):
                 self.config = config  # 接收动态配置字典
 
-            def keys(self):
-                return self.config.keys()  # 跟随配置动态返回键
-
             def __getitem__(self, key):
                 return self.config[key]  # 按配置返回值
 
+            def keys(self):
+                return self.config.keys()  # 跟随配置动态返回键
+
         return Override
 
-    def test_valid_update(self, mock_self, base_override):
-        """测试合法配置更新：用base_override创建有效配置"""
-        valid_config = base_override({
-            "sample_steps": 60,
-            "offload_model": True,
-            "use_attentioncache": True
-        })
-        mock_self.set_model_args(valid_config)
-
-        assert mock_self.model_args.ckpt_dir == mock_self.model_path
-        assert mock_self.model_args.sample_steps == 60
-        mock_self._validate_args.assert_called_once()
-
-    def test_illegal_attr_raise_error(self, mock_self, base_override):
-        """测试非法属性：动态传入含非法键的配置"""
-        invalid_config = base_override({
-            "sample_steps": 60,
-            "illegal_attr": "invalid"  # 非法属性
-        })
-        with pytest.raises(SchemaValidateError) as exc:
-            mock_self.set_model_args(invalid_config)
-
-        assert "illegal config attributes: ['illegal_attr']" in str(exc.value)
-
-    def test_skip_none_value(self, mock_self, base_override):
-        """测试跳过None值：动态传入含None的配置"""
-        none_config = base_override({
-            "sample_steps": 60,
-            "offload_model": None  # None值参数
-        })
-        mock_parser = mock_self._get_parser()
-        mock_self.set_model_args(none_config)
-        argv = mock_parser.parse_args.call_args[0][0]
-
-        assert "--sample_steps" in argv
-        assert "offload_model" not in str(argv)
-
-    def test_bool_false_handling(self, mock_self, base_override):
-        """测试False布尔值：动态传入含False的配置（无需单独类）"""
-        false_bool_config = base_override({
-            "sample_steps": 60,
-            "offload_model": True,  # True保留
-            "use_attentioncache": False  # False忽略
-        })
-        mock_parser = mock_self._get_parser()
-        mock_self.set_model_args(false_bool_config)
-        argv = mock_parser.parse_args.call_args[0][0]
-
-        assert "--use_attentioncache" not in argv
-        assert "--offload_model" in argv and "true" in argv
 
 
 class TestApplyQuantization:
@@ -546,10 +588,12 @@ class TestApplyQuantization:
 
         # 创建完整的no_sync上下文管理器
         class MockNoSync:
-            def __enter__(self):
+            @staticmethod
+            def __enter__():
                 return self
 
-            def __exit__(self, *args):
+            @staticmethod
+            def __exit__(*args):
                 return False
 
         mock_self.no_sync = Mock(return_value=MockNoSync())
@@ -559,6 +603,21 @@ class TestApplyQuantization:
 
 
 class TestRunCalibInference:
+    @staticmethod
+    def test_run_calib_inference_success(mock_self):
+        """测试生成流程完整执行"""
+        Wan2Point1Adapter.run_calib_inference(mock_self)
+
+        # 验证核心调用
+        mock_self.wan_t2v.model.to.assert_called_once_with('npu')
+        mock_self.wan_t2v.generate.assert_called_once()
+
+        # 验证日志正确输出
+        from msmodelslim.model.wan2_1.model_adapter import logging
+        logging.info.assert_called_once()
+        # 验证日志信息包含正确的时间差（3.0 - 1.0 = 2.0）
+        assert "Generating video used time  2.0000s" in str(logging.info.call_args)
+
     @pytest.fixture
     def mock_self(self):
         """创建完整的模拟对象"""
@@ -588,27 +647,13 @@ class TestRunCalibInference:
     def mock_dependencies(self):
         """模拟依赖并设置具体时间值"""
         with patch('wan.configs.SIZE_CONFIGS', {'1280*720': (1280, 720)}), \
-                patch('msmodelslim.model.wan2_1.torch'), \
-                patch('msmodelslim.model.wan2_1.logging'):
+                patch('msmodelslim.model.wan2_1.model_adapter.torch'), \
+                patch('msmodelslim.model.wan2_1.model_adapter.logging'):
             # 关键：让tqdm可迭代
-            with patch('msmodelslim.model.wan2_1.tqdm') as mock_tqdm:
+            with patch('msmodelslim.model.wan2_1.model_adapter.tqdm') as mock_tqdm:
                 mock_tqdm.return_value.__iter__.return_value = [1]
 
                 # 关键：给time.time()设置具体返回值，避免Mock对象参与格式化
-                with patch('msmodelslim.model.wan2_1.time') as mock_time:
+                with patch('msmodelslim.model.wan2_1.model_adapter.time') as mock_time:
                     mock_time.time.side_effect = [1.0, 3.0]  # begin=1.0, end=3.0
                     yield
-
-    def test_run_calib_inference_success(self, mock_self):
-        """测试生成流程完整执行"""
-        Wan2Point1Adapter.run_calib_inference(mock_self)
-
-        # 验证核心调用
-        mock_self.wan_t2v.model.to.assert_called_once_with('npu')
-        mock_self.wan_t2v.generate.assert_called_once()
-
-        # 验证日志正确输出
-        from msmodelslim.model.wan2_1 import logging
-        logging.info.assert_called_once()
-        # 验证日志信息包含正确的时间差（3.0 - 1.0 = 2.0）
-        assert "Generating video used time  2.0000s" in str(logging.info.call_args)

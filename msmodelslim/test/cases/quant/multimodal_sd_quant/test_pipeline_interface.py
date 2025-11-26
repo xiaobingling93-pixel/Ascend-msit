@@ -22,7 +22,7 @@ from msmodelslim.app.quant_service.multimodal_sd_v1.pipeline_interface import Mu
 class FullImplementedBase(MultimodalPipelineInterface):
     """完全实现所有抽象方法的基础类，用于测试"""
 
-    # 实现BaseModelInterface的抽象属性
+    # 实现IModel的抽象属性
     model_path = "mock_path"
     model_type = "mock_type"
     trust_remote_code = False

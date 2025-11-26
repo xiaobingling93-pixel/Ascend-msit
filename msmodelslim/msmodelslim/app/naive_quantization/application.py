@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from msmodelslim.app.base import QuantType
+from msmodelslim.model import IModelFactory
 from msmodelslim.utils.exception import SchemaValidateError, ToDoError, UnsupportedError
 from msmodelslim.utils.exception_decorator import exception_catcher
 from msmodelslim.utils.logging import logger_setter, get_logger
@@ -19,7 +20,7 @@ from .model_info_interface import ModelInfoInterface
 from .practice_interface import PracticeManagerInterface
 from ..base import BaseQuantConfig, DeviceType
 from ..quant_service import BaseQuantService
-from ...core.base.model import BaseModelInterface
+
 
 DEFAULT_PEDIGREE = 'default'
 DEFAULT_CONFIG_ID = 'default'
@@ -27,10 +28,13 @@ DEFAULT_CONFIG_ID = 'default'
 
 @logger_setter('msmodelslim.app.naive_quantization')
 class NaiveQuantizationApplication:
-    def __init__(self,
-                 practice_manager: PracticeManagerInterface,
-                 quant_service: BaseQuantService,
-                 model_factory: Callable[[str, Path, bool], BaseModelInterface]):
+
+    def __init__(
+        self,
+        practice_manager: PracticeManagerInterface,
+        quant_service: BaseQuantService,
+        model_factory: IModelFactory,
+    ):
         self.practice_manager = practice_manager
         self.quant_service = quant_service
         self.model_factory = model_factory
@@ -179,7 +183,9 @@ class NaiveQuantizationApplication:
             trust_remote_code: bool = False
     ):
         get_logger().info(f"===========ANALYSE MODEL===========")
-        model_adapter = self.model_factory(model_type, model_path, trust_remote_code)
+        model_adapter = self.model_factory.create(
+            model_type, model_path, trust_remote_code
+        )
         get_logger().info(f"Using model adapter {model_adapter.__class__.__name__}.")
 
         get_logger().info(f"===========GET BEST PRACTICE===========")

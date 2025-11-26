@@ -9,15 +9,12 @@ from msmodelslim.core.base.protocol import ProcessRequest
 from msmodelslim.core.graph import AdapterConfig, MappingConfig
 from msmodelslim.utils.logging import logger_setter
 from msmodelslim.quant.processor.quarot import QuaRotInterface
-from .common.layer_wise_forward import generated_decoder_layer_visit_func, transformers_generated_forward_func
-from .factory import ModelFactory
-from .interface_hub import ModelInfoInterface, ModelSlimPipelineInterfaceV0, ModelSlimPipelineInterfaceV1, \
+from ..common.layer_wise_forward import generated_decoder_layer_visit_func, transformers_generated_forward_func
+from ..interface_hub import ModelInfoInterface, ModelSlimPipelineInterfaceV0, ModelSlimPipelineInterfaceV1, \
     IterSmoothInterface, FlexSmoothQuantInterface
-from .transformers import TransformersModel
+from ..common.transformers import TransformersModel
 
 
-@ModelFactory.register("Qwen3-30B")
-@ModelFactory.register("Qwen3-235B")
 @logger_setter()
 class Qwen3MoeModelAdapter(TransformersModel,
                            ModelInfoInterface,
@@ -173,4 +170,3 @@ def qwen3_moe_get_rotate_map(config, block_size):
     rot_pairs["rot_uv"] = QuaRotInterface.RotatePair(left_rot=left_rot_uv, right_rot=right_rot_uv)
     
     return pre_run, rot_pairs, rot, rot_uv
-
