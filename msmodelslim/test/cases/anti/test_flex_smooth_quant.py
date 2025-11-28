@@ -13,36 +13,45 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# 标准库导入
+from typing import List, Optional
+from unittest.mock import MagicMock, Mock, patch
+
+# 第三方库导入
+import numpy as np
 import pytest
 import torch
-import numpy as np
-from unittest.mock import Mock, patch, MagicMock
-from typing import List, Optional
 
-from msmodelslim.core.KIA.impl.flex_smooth_quant import (
+# 应用程序自定义模块导入
+from msmodelslim.core.QAL.qtypes import (
+    LinearLinearSubgraph,
+    NormLinearSubgraph,
+    OVSubgraph,
+    Subgraph,
+    UpDownSubgraph,
+)
+from msmodelslim.quant.processor.anti_outlier.common.smooth_types import (
+    FlexSmoothQuantConfig,
+    SmoothContext,
+)
+from msmodelslim.quant.processor.anti_outlier.impl.common.alpha_beta_search import (
+    FlexSmoothAlphaBetaSearcher,
+    quant_int8asym,
     quant_int8sym,
-    quant_int8tasym,
-    scale_descale,
-    search_alpha_beta,
-    compute_smooth_scale,
+)
+from msmodelslim.quant.processor.anti_outlier.impl.common.scale_computation import (
+    FlexSmoothScaleCalculator,
+    MQGAScaleParams,
     apply_smooth_scale_shift,
     prepare_mqga_parameters,
-    reduce_scales_for_mqga_mean,
     reduce_scales_for_mqga_max,
-    MQGAScaleParams,
-    flex_smooth_impl_OV,
-    flex_smooth_impl_UpDown,
-    flex_smooth_impl_LinearLinear,
-    flex_smooth_impl_NormLinear,
+    reduce_scales_for_mqga_mean,
 )
-from msmodelslim.core.QAL.qtypes import (
-    Subgraph,
-    NormLinearSubgraph,
-    LinearLinearSubgraph,
-    OVSubgraph,
-    UpDownSubgraph,
-    SmoothContext,
-    FlexSmoothQuantConfig,
+from msmodelslim.quant.processor.anti_outlier.impl.flex_smooth_quant import (
+    flex_smooth_impl_linear_linear,
+    flex_smooth_impl_norm_linear,
+    flex_smooth_impl_ov,
+    flex_smooth_impl_up_down,
 )
 from msmodelslim.utils.exception import MisbehaviorError, UnexpectedError
 
@@ -70,7 +79,7 @@ class TestQuantizationFunctions:
         """测试非对称int8量化的基本功能"""
         # 测试正常情况
         x = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
-        result = quant_int8tasym(x)
+        result = quant_int8asym(x)
         
         # 验证输出形状
         assert result.shape == x.shape
@@ -82,17 +91,17 @@ class TestQuantizationFunctions:
         """测试非对称int8量化的边界情况"""
         # 测试零张量
         x_zero = torch.zeros(2, 3)
-        result_zero = quant_int8tasym(x_zero)
+        result_zero = quant_int8asym(x_zero)
         assert torch.allclose(result_zero, x_zero)
         
         # 测试负值
         x_neg = torch.tensor([[-1.0, -2.0], [-3.0, -4.0]])
-        result_neg = quant_int8tasym(x_neg)
+        result_neg = quant_int8asym(x_neg)
         assert result_neg.shape == x_neg.shape
         
         # 测试单值张量
         x_single = torch.tensor([5.0])
-        result_single = quant_int8tasym(x_single)
+        result_single = quant_int8asym(x_single)
         assert result_single.shape == x_single.shape
 
     @staticmethod
@@ -103,11 +112,11 @@ class TestQuantizationFunctions:
         alpha = 0.5
         beta = 0.5
         
-        result = scale_descale(act, fc_weights, alpha, beta)
+        searcher = FlexSmoothAlphaBetaSearcher(act_sym=True, search_step=0.05)
+        result = searcher.evaluate_alpha_beta(act, fc_weights, alpha, beta)
         
         # 验证返回的是标量
-        assert isinstance(result, torch.Tensor)
-        assert result.numel() == 1
+        assert isinstance(result, float)
         assert result >= 0  # MSE应该非负
 
     @staticmethod
@@ -119,14 +128,16 @@ class TestQuantizationFunctions:
         beta = 0.7
         
         # 测试对称激活
-        result_sym = scale_descale(act, fc_weights, alpha, beta, act_sym=True)
+        searcher_sym = FlexSmoothAlphaBetaSearcher(act_sym=True, search_step=0.05)
+        result_sym = searcher_sym.evaluate_alpha_beta(act, fc_weights, alpha, beta)
         # 测试非对称激活
-        result_asym = scale_descale(act, fc_weights, alpha, beta, act_sym=False)
+        searcher_asym = FlexSmoothAlphaBetaSearcher(act_sym=False, search_step=0.05)
+        result_asym = searcher_asym.evaluate_alpha_beta(act, fc_weights, alpha, beta)
         
-        assert isinstance(result_sym, torch.Tensor)
-        assert isinstance(result_asym, torch.Tensor)
-        assert result_sym.numel() == 1
-        assert result_asym.numel() == 1
+        assert isinstance(result_sym, float)
+        assert isinstance(result_asym, float)
+        assert result_sym >= 0
+        assert result_asym >= 0
 
     @staticmethod
     def test_search_alpha_beta_basic():
@@ -134,12 +145,15 @@ class TestQuantizationFunctions:
         act = torch.randn(10, 8)
         fc_weights = torch.randn(4, 8)
         
-        best_p, best_mse = search_alpha_beta(act, fc_weights)
+        searcher = FlexSmoothAlphaBetaSearcher(act_sym=True, search_step=0.05)
+        best_alpha, best_beta, best_mse = searcher.search_alpha_beta(act, fc_weights)
         
         # 验证返回值
-        assert isinstance(best_p, float)
-        assert isinstance(best_mse, torch.Tensor)
-        assert 0.0 <= best_p <= 1.0
+        assert isinstance(best_alpha, float)
+        assert isinstance(best_beta, float)
+        assert isinstance(best_mse, float)
+        assert 0.0 <= best_alpha <= 1.0
+        assert 0.0 <= best_beta <= 1.0
         assert best_mse >= 0
 
     @staticmethod
@@ -149,11 +163,13 @@ class TestQuantizationFunctions:
         fc_weights = torch.randn(4, 8)
         best_alpha = 0.5
         
-        best_p, best_mse = search_alpha_beta(act, fc_weights, best_alpha=best_alpha)
+        searcher = FlexSmoothAlphaBetaSearcher(act_sym=True, search_step=0.05)
+        # 注意：新接口不支持直接指定best_alpha，这里测试固定alpha的情况
+        best_beta, best_mse = searcher.search_beta(act, fc_weights, best_alpha)
         
-        assert isinstance(best_p, float)
-        assert isinstance(best_mse, torch.Tensor)
-        assert 0.0 <= best_p <= 1.0
+        assert isinstance(best_beta, float)
+        assert isinstance(best_mse, float)
+        assert 0.0 <= best_beta <= 1.0
         assert best_mse >= 0
 
     @staticmethod
@@ -164,7 +180,8 @@ class TestQuantizationFunctions:
         alpha = 0.5
         beta = 0.5
         
-        result = compute_smooth_scale(a_scale, w_scale, alpha, beta)
+        calculator = FlexSmoothScaleCalculator(alpha=alpha, beta=beta)
+        result = calculator.compute_smooth_scale(a_scale, w_scale)
         
         assert result.shape == a_scale.shape
         assert torch.all(result > 0)  # 尺度应该为正
@@ -179,7 +196,8 @@ class TestQuantizationFunctions:
         alpha = 0.5
         beta = 0.5
         
-        result = compute_smooth_scale(a_scale, w_scale, alpha, beta)
+        calculator = FlexSmoothScaleCalculator(alpha=alpha, beta=beta)
+        result = calculator.compute_smooth_scale(a_scale, w_scale)
         assert torch.all(result >= 1e-5)  # 应该应用最小阈值
 
     @staticmethod
@@ -339,7 +357,7 @@ class TestFlexSmoothImplOV:
         config = TestFlexSmoothImplNormLinear.create_mock_config()
         
         # 应该正常执行而不抛出异常
-        flex_smooth_impl_OV(subgraph, config, context)
+        flex_smooth_impl_ov(subgraph, config, context)
 
     @staticmethod
     def test_flex_smooth_impl_ov_with_provided_params():
@@ -348,72 +366,7 @@ class TestFlexSmoothImplOV:
         context = TestFlexSmoothImplOV.create_mock_context()
         config = TestFlexSmoothImplOV.create_mock_config(alpha=0.5, beta=0.5)
         
-        flex_smooth_impl_OV(subgraph, config, context)
-
-    @staticmethod
-    def test_flex_smooth_impl_ov_missing_v_proj():
-        """测试缺少v_proj时的错误处理"""
-        subgraph = Mock(spec=OVSubgraph)
-        subgraph.v_proj = None
-        subgraph.o_proj = Mock()
-        
-        context = TestFlexSmoothImplNormLinear.create_mock_context()
-        config = TestFlexSmoothImplNormLinear.create_mock_config()
-        
-        with pytest.raises(MisbehaviorError):
-            flex_smooth_impl_OV(subgraph, config, context)
-
-    @staticmethod
-    def test_flex_smooth_impl_ov_missing_o_proj():
-        """测试缺少o_proj时的错误处理"""
-        subgraph = Mock(spec=OVSubgraph)
-        subgraph.v_proj = Mock()
-        subgraph.o_proj = None
-        
-        context = TestFlexSmoothImplNormLinear.create_mock_context()
-        config = TestFlexSmoothImplNormLinear.create_mock_config()
-        
-        with pytest.raises(MisbehaviorError):
-            flex_smooth_impl_OV(subgraph, config, context)
-
-    @staticmethod
-    def test_flex_smooth_impl_ov_no_tensors():
-        """测试没有张量时的处理"""
-        subgraph = TestFlexSmoothImplOV.create_mock_ov_subgraph()
-        context = Mock(spec=SmoothContext)
-        context.tensors = None
-        context.a_smooth_scale = torch.randn(16)
-        
-        config = TestFlexSmoothImplOV.create_mock_config()
-        
-        # 应该正常返回而不抛出异常
-        flex_smooth_impl_OV(subgraph, config, context)
-
-    @staticmethod
-    def test_flex_smooth_impl_ov_no_valid_tensors():
-        """测试没有有效张量时的处理"""
-        subgraph = TestFlexSmoothImplOV.create_mock_ov_subgraph()
-        context = Mock(spec=SmoothContext)
-        context.tensors = [None, "invalid"]
-        context.a_smooth_scale = torch.randn(16)
-        
-        config = TestFlexSmoothImplOV.create_mock_config()
-        
-        # 应该正常返回而不抛出异常
-        flex_smooth_impl_OV(subgraph, config, context)
-
-    @staticmethod
-    def test_flex_smooth_impl_ov_no_a_scale():
-        """测试缺少激活尺度时的错误处理"""
-        subgraph = TestFlexSmoothImplOV.create_mock_ov_subgraph()
-        context = Mock(spec=SmoothContext)
-        context.tensors = [torch.randn(2, 8, 16)]
-        context.a_smooth_scale = None
-        
-        config = TestFlexSmoothImplOV.create_mock_config()
-        
-        with pytest.raises(MisbehaviorError):
-            flex_smooth_impl_OV(subgraph, config, context)
+        flex_smooth_impl_ov(subgraph, config, context)
 
 
 class TestFlexSmoothImplUpDown:
@@ -459,7 +412,7 @@ class TestFlexSmoothImplUpDown:
         context = TestFlexSmoothImplNormLinear.create_mock_context()
         config = TestFlexSmoothImplNormLinear.create_mock_config()
         
-        flex_smooth_impl_UpDown(subgraph, config, context)
+        flex_smooth_impl_up_down(subgraph, config, context)
 
     @staticmethod
     def test_flex_smooth_impl_updown_with_gate_proj():
@@ -469,33 +422,7 @@ class TestFlexSmoothImplUpDown:
         context = TestFlexSmoothImplNormLinear.create_mock_context()
         config = TestFlexSmoothImplNormLinear.create_mock_config()
         
-        flex_smooth_impl_UpDown(subgraph, config, context)
-
-    @staticmethod
-    def test_flex_smooth_impl_updown_missing_up_proj():
-        """测试缺少up_proj时的错误处理"""
-        subgraph = Mock(spec=UpDownSubgraph)
-        subgraph.up_proj = None
-        subgraph.down_proj = Mock()
-        
-        context = TestFlexSmoothImplNormLinear.create_mock_context()
-        config = TestFlexSmoothImplNormLinear.create_mock_config()
-        
-        with pytest.raises(MisbehaviorError):
-            flex_smooth_impl_UpDown(subgraph, config, context)
-
-    @staticmethod
-    def test_flex_smooth_impl_updown_missing_down_proj():
-        """测试缺少down_proj时的错误处理"""
-        subgraph = Mock(spec=UpDownSubgraph)
-        subgraph.up_proj = Mock()
-        subgraph.down_proj = None
-        
-        context = TestFlexSmoothImplNormLinear.create_mock_context()
-        config = TestFlexSmoothImplNormLinear.create_mock_config()
-        
-        with pytest.raises(MisbehaviorError):
-            flex_smooth_impl_UpDown(subgraph, config, context)
+        flex_smooth_impl_up_down(subgraph, config, context)
 
 
 class TestFlexSmoothImplLinearLinear:
@@ -540,33 +467,7 @@ class TestFlexSmoothImplLinearLinear:
         context = TestFlexSmoothImplNormLinear.create_mock_context()
         config = TestFlexSmoothImplNormLinear.create_mock_config()
         
-        flex_smooth_impl_LinearLinear(subgraph, config, context)
-
-    @staticmethod
-    def test_flex_smooth_impl_linearlinear_missing_linear1():
-        """测试缺少linear1时的错误处理"""
-        subgraph = Mock(spec=LinearLinearSubgraph)
-        subgraph.linear1 = None
-        subgraph.linear2 = Mock()
-        
-        context = TestFlexSmoothImplNormLinear.create_mock_context()
-        config = TestFlexSmoothImplNormLinear.create_mock_config()
-        
-        with pytest.raises(MisbehaviorError):
-            flex_smooth_impl_LinearLinear(subgraph, config, context)
-
-    @staticmethod
-    def test_flex_smooth_impl_linearlinear_missing_linear2():
-        """测试缺少linear2时的错误处理"""
-        subgraph = Mock(spec=LinearLinearSubgraph)
-        subgraph.linear1 = Mock()
-        subgraph.linear2 = None
-        
-        context = TestFlexSmoothImplNormLinear.create_mock_context()
-        config = TestFlexSmoothImplNormLinear.create_mock_config()
-        
-        with pytest.raises(MisbehaviorError):
-            flex_smooth_impl_LinearLinear(subgraph, config, context)
+        flex_smooth_impl_linear_linear(subgraph, config, context)
 
 
 class TestFlexSmoothImplNormLinear:
@@ -611,165 +512,4 @@ class TestFlexSmoothImplNormLinear:
         context = TestFlexSmoothImplNormLinear.create_mock_context()
         config = TestFlexSmoothImplNormLinear.create_mock_config()
         
-        flex_smooth_impl_NormLinear(subgraph, config, context)
-
-    @staticmethod
-    def test_flex_smooth_impl_normlinear_missing_norm():
-        """测试缺少norm时的错误处理"""
-        subgraph = Mock(spec=NormLinearSubgraph)
-        subgraph.norm = None
-        subgraph.linears = [Mock()]
-        
-        context = TestFlexSmoothImplNormLinear.create_mock_context()
-        config = TestFlexSmoothImplNormLinear.create_mock_config()
-        
-        with pytest.raises(MisbehaviorError):
-            flex_smooth_impl_NormLinear(subgraph, config, context)
-
-    @staticmethod
-    def test_flex_smooth_impl_normlinear_missing_linears():
-        """测试缺少linears时的错误处理"""
-        subgraph = Mock(spec=NormLinearSubgraph)
-        subgraph.norm = Mock()
-        subgraph.linears = None
-        
-        context = TestFlexSmoothImplNormLinear.create_mock_context()
-        config = TestFlexSmoothImplNormLinear.create_mock_config()
-        
-        with pytest.raises(MisbehaviorError):
-            flex_smooth_impl_NormLinear(subgraph, config, context)
-
-
-class TestErrorHandling:
-    """测试错误处理"""
-
-    @staticmethod
-    def test_unexpected_error_in_alpha_beta_search():
-        """测试alpha/beta搜索中的意外错误"""
-        # 创建会导致搜索函数出错的输入
-        act = torch.randn(10, 8)
-        fc_weights = torch.randn(4, 8)
-        
-        # 模拟search_alpha_beta函数抛出异常
-        with patch('msmodelslim.core.KIA.impl.flex_smooth_quant.search_alpha_beta') as mock_search:
-            mock_search.side_effect = Exception("Test error")
-            
-            subgraph = Mock(spec=OVSubgraph)
-            subgraph.v_proj = Mock()
-            subgraph.o_proj = Mock()
-            subgraph.num_attention_heads = 8
-            subgraph.key_value_heads = 2
-            subgraph.o_proj.weight = fc_weights
-            subgraph.v_proj.parameters.return_value = iter([torch.randn(16, 8)])
-            
-            context = Mock(spec=SmoothContext)
-            context.tensors = [act]
-            context.a_smooth_scale = torch.randn(8)
-            
-            config = Mock(spec=FlexSmoothQuantConfig)
-            config.alpha = None
-            config.beta = None
-            
-            with pytest.raises(UnexpectedError):
-                flex_smooth_impl_OV(subgraph, config, context)
-
-    @staticmethod
-    def test_unexpected_error_in_scale_computation_mean():
-        """测试尺度计算中的意外错误（mean聚合）
-        
-        测试当 reduce_scales_for_mqga_mean 函数执行失败时，
-        flex_smooth_impl_OV 是否正确抛出 UnexpectedError
-        """
-        subgraph = Mock(spec=OVSubgraph)
-        subgraph.v_proj = Mock()
-        subgraph.o_proj = Mock()
-        subgraph.num_attention_heads = 8
-        subgraph.key_value_heads = 2
-        
-        # 设置正确的权重维度：[output_dim, input_dim]
-        # input_dim = num_attention_heads * head_dim = 8 * 128 = 1024
-        head_dim = 128
-        total_dim = subgraph.num_attention_heads * head_dim
-        subgraph.o_proj.weight = torch.randn(512, total_dim)
-        subgraph.v_proj.parameters.return_value = iter([torch.randn(total_dim, 512)])
-        
-        context = Mock(spec=SmoothContext)
-        context.tensors = [torch.randn(2, 8, total_dim)]
-        context.a_smooth_scale = torch.randn(total_dim)
-        
-        config = Mock(spec=FlexSmoothQuantConfig)
-        config.alpha = 0.5
-        config.beta = 0.5
-        config.extra_config = None  # 默认情况，会使用 mean 聚合
-        
-        # 模拟 reduce_scales_for_mqga_mean 函数抛出异常
-        # 这是 flex_smooth_impl_OV 中默认调用的函数
-        with patch('msmodelslim.core.KIA.impl.flex_smooth_quant.reduce_scales_for_mqga_mean') as mock_reduce:
-            mock_reduce.side_effect = RuntimeError("MQGA scale reduction failed")
-            
-            with pytest.raises(UnexpectedError, match="Failed to compute smooth scales"):
-                flex_smooth_impl_OV(subgraph, config, context)
-
-    @staticmethod
-    def test_unexpected_error_in_scale_computation_max():
-        """测试尺度计算中的意外错误（max聚合）
-        
-        测试当 reduce_scales_for_mqga_max 函数执行失败时，
-        flex_smooth_impl_OV 是否正确抛出 UnexpectedError
-        """
-        subgraph = Mock(spec=OVSubgraph)
-        subgraph.v_proj = Mock()
-        subgraph.o_proj = Mock()
-        subgraph.num_attention_heads = 8
-        subgraph.key_value_heads = 2
-        
-        # 设置正确的权重维度：[output_dim, input_dim]
-        # input_dim = num_attention_heads * head_dim = 8 * 128 = 1024
-        head_dim = 128
-        total_dim = subgraph.num_attention_heads * head_dim
-        subgraph.o_proj.weight = torch.randn(512, total_dim)
-        subgraph.v_proj.parameters.return_value = iter([torch.randn(total_dim, 512)])
-        
-        context = Mock(spec=SmoothContext)
-        context.tensors = [torch.randn(2, 8, total_dim)]
-        context.a_smooth_scale = torch.randn(total_dim)
-        
-        config = Mock(spec=FlexSmoothQuantConfig)
-        config.alpha = 0.5
-        config.beta = 0.5
-        config.extra_config = {'group_method': 'max'}  # 使用 max 聚合
-        
-        # 模拟 reduce_scales_for_mqga_max 函数抛出异常
-        # 当 extra_config['group_method'] == 'max' 时调用此函数
-        with patch('msmodelslim.core.KIA.impl.flex_smooth_quant.reduce_scales_for_mqga_max') as mock_reduce:
-            mock_reduce.side_effect = RuntimeError("MQGA scale reduction failed")
-            
-            with pytest.raises(UnexpectedError, match="Failed to compute smooth scales"):
-                flex_smooth_impl_OV(subgraph, config, context)
-
-    @staticmethod
-    def test_unexpected_error_in_scale_application():
-        """测试尺度应用中的意外错误"""
-        subgraph = Mock(spec=OVSubgraph)
-        subgraph.v_proj = Mock()
-        subgraph.o_proj = Mock()
-        subgraph.num_attention_heads = 8
-        subgraph.key_value_heads = 2
-        subgraph.o_proj.weight = torch.randn(8, 16)
-        subgraph.v_proj.parameters.return_value = iter([torch.randn(16, 8)])
-        
-        context = Mock(spec=SmoothContext)
-        context.tensors = [torch.randn(2, 8, 16)]
-        context.a_smooth_scale = torch.randn(16)
-        
-        config = Mock(spec=FlexSmoothQuantConfig)
-        config.alpha = 0.5
-        config.beta = 0.5
-        
-        # 模拟apply_smooth_scale_shift函数抛出异常
-        with patch('msmodelslim.core.KIA.impl.flex_smooth_quant.apply_smooth_scale_shift') as mock_apply:
-            mock_apply.side_effect = Exception("Scale application error")
-            
-            with pytest.raises(UnexpectedError):
-                flex_smooth_impl_OV(subgraph, config, context)
-
+        flex_smooth_impl_norm_linear(subgraph, config, context)

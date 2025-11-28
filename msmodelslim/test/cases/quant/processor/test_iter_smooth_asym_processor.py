@@ -22,70 +22,64 @@ RETURN_TENSOR_TYPE = "pt"
 
 def test_iter_smooth_processor_with_hooks():
     """
-    测试 IterSmoothProcessor 功能，包括统计钩子的收集和比较处理前后的区别
+    Test IterSmoothProcessor functionality, including hook collection and comparison before/after processing
     """
     
     try:
-        # 获取模型和分词器
+        # Get model and tokenizer
         model, tokenizer = get_fake_llama_model_and_tokenizer()
         
-        # 将模型设置为评估模式并禁用梯度计算
+        # Set model to evaluation mode and disable gradient computation
         model.eval()
         for param in model.parameters():
             param.requires_grad = False
         
-        # 创建测试提示词
+        # Create test prompt
         test_prompt = tokenizer(STR_TEST_PROMPT, return_tensors=RETURN_TENSOR_TYPE, padding=True, truncation=True)
         
-        # 创建 IterSmoothProcessorConfig
+        # Create IterSmoothProcessorConfig
         iter_smooth_config = IterSmoothProcessorConfig(
             type="iter_smooth",
             alpha=0.9,
             enable_subgraph_type=["norm-linear"],
             symmetric=False,
             include=[],
-            exclude=[],
-            subgraph_priority={
-                "up-down": 1,
-                "ov": 2,
-                "norm-linear": 3,
-                "linear-linear": 4
-            }
+            exclude=[]
         )
         
-        # 创建 ModelAdapter
+        # Create ModelAdapter
         class IterSmoothModelAdapter(IterSmoothInterface):
             def get_adapter_config_for_subgraph(self) -> List[AdapterConfig]:
                 adapter_config = []
                 for layer_idx in range(1):
-                    # Norm-Linear融合的映射配置1：输入层归一化到QKV投影
+                    # Norm-Linear mapping config 1: input layernorm to QKV projection
                     norm_linear_mapping_config1 = MappingConfig(
-                        source=f"model.layers.{layer_idx}.input_layernorm",  # 第一个LayerNorm
+                        source=f"model.layers.{layer_idx}.input_layernorm",
                         targets=[f"model.layers.{layer_idx}.self_attn.k_proj",
                                 f"model.layers.{layer_idx}.self_attn.q_proj",
-                                f"model.layers.{layer_idx}.self_attn.v_proj"]  # 注意力层的QKV投影
+                                f"model.layers.{layer_idx}.self_attn.v_proj"]
                     )
 
-                    # Norm-Linear融合的映射配置2：后注意力层归一化到MLP投影
+                    # Norm-Linear mapping config 2: post attention layernorm to MLP projection
                     norm_linear_mapping_config2 = MappingConfig(
-                        source=f"model.layers.{layer_idx}.post_attention_layernorm",  # 第二个LayerNorm
+                        source=f"model.layers.{layer_idx}.post_attention_layernorm",
                         targets=[f"model.layers.{layer_idx}.mlp.gate_proj",
-                                f"model.layers.{layer_idx}.mlp.up_proj"]  # MLP层的门控和上投影
+                                f"model.layers.{layer_idx}.mlp.up_proj"]
                     )
 
-                    # OV融合的映射配置（QKV到输出投影）
+                    # OV mapping config (QKV to output projection)
                     ov_mapping_config = MappingConfig(
-                        source=f"model.layers.{layer_idx}.self_attn.v_proj",  # V投影层
-                        targets=[f"model.layers.{layer_idx}.self_attn.o_proj"]  # 输出投影层
+                        source=f"model.layers.{layer_idx}.self_attn.v_proj",
+                        targets=[f"model.layers.{layer_idx}.self_attn.o_proj"]
                     )
 
-                    # Up-Down融合的映射配置
+                    # Up-Down mapping config
                     up_down_mapping_config = MappingConfig(
-                        source=f"model.layers.{layer_idx}.mlp.up_proj",  # 上投影层
-                        targets=[f"model.layers.{layer_idx}.mlp.down_proj"]  # 下投影层
+                        source=f"model.layers.{layer_idx}.mlp.up_proj",
+                        targets=[f"model.layers.{layer_idx}.mlp.down_proj"]
                     )
 
-                    # 为当前layer添加4个配置
+                    # Add 4 configs for current layer
                     adapter_config.extend([
                         AdapterConfig(
                             subgraph_type="norm-linear",
@@ -107,193 +101,222 @@ def test_iter_smooth_processor_with_hooks():
                 return adapter_config
 
         adapter = IterSmoothModelAdapter()
-        # 创建 IterSmoothProcessor 实例
+        # Create IterSmoothProcessor instance
         iter_smooth_processor = IterSmoothProcessor(model, iter_smooth_config, adapter)
         
-        msmodelslim_logger.info("IterSmoothProcessor 创建成功！")
-        msmodelslim_logger.info(f"处理器类型: {iter_smooth_processor.config.type}")
-        msmodelslim_logger.info(f"Alpha 值: {iter_smooth_processor.config.alpha}")
-        msmodelslim_logger.info(f"支持的子图类型: {iter_smooth_processor.config.enable_subgraph_type}")
+        msmodelslim_logger.info("IterSmoothProcessor created successfully!")
+        msmodelslim_logger.info("Processor type: %s", iter_smooth_processor.config.type)
+        msmodelslim_logger.info("Alpha value: %s", iter_smooth_processor.config.alpha)
+        msmodelslim_logger.info("Enabled subgraph types: %s", iter_smooth_processor.config.enable_subgraph_type)
         
-        # 检查模型是否设置了 anti_method 属性
+        # Check if model has anti_method attribute
         if hasattr(model, 'anti_method'):
-            msmodelslim_logger.info(f"模型 anti_method 属性: {model.anti_method}")
+            msmodelslim_logger.info("Model anti_method attribute: %s", model.anti_method)
         else:
-            msmodelslim_logger.warning("模型未设置 anti_method 属性")
+            msmodelslim_logger.warning("Model does not have anti_method attribute")
         
-        # 获取校准数据集
+        # Get calibration dataset
         dataset_calib = [[test_prompt[KEY_INPUT_IDS], test_prompt.data[KEY_ATTENTION_MASK]]]
         
-        # 测试pre_run阶段 - 加载全局子图配置
-        msmodelslim_logger.info("\n" + "="*50)
-        msmodelslim_logger.info("开始pre_run阶段 - 加载全局子图配置")
-        msmodelslim_logger.info("="*50)
+        # Test pre_run phase - load global subgraph configuration
+        msmodelslim_logger.info("\n" + "=" * 50)
+        msmodelslim_logger.info("Starting pre_run phase - loading global subgraph configuration")
+        msmodelslim_logger.info("=" * 50)
         
-        # 调用pre_run加载全局适配器配置
+        # Call pre_run to load global adapter configuration
         iter_smooth_processor.pre_run()
-        msmodelslim_logger.info("全局子图配置加载完成")
+        msmodelslim_logger.info("Global subgraph configuration loaded successfully")
         
-        # 测试preprocess阶段 - 安装统计钩子
-        msmodelslim_logger.info("\n" + "="*50)
-        msmodelslim_logger.info("开始preprocess阶段 - 安装统计钩子")
-        msmodelslim_logger.info("="*50)
+        # Test preprocess phase - install statistics hooks
+        msmodelslim_logger.info("\n" + "=" * 50)
+        msmodelslim_logger.info("Starting preprocess phase - installing statistics hooks")
+        msmodelslim_logger.info("=" * 50)
         
-        # 创建BatchProcessRequest - 使用与helper_test_anti_outlier_numeric相同的测试数据
+        # Create BatchProcessRequest - using same test data format as helper_test_anti_outlier_numeric
         request = BatchProcessRequest(
             module=model, 
             name="model.layers.0", 
-            datas=dataset_calib  # 使用相同的测试数据格式
+            datas=dataset_calib
         )
         
-        # 调用preprocess安装统计钩子
+        # Call preprocess to install statistics hooks
         iter_smooth_processor.preprocess(request)
-        msmodelslim_logger.info("统计钩子安装完成")
+        msmodelslim_logger.info("Statistics hooks installed successfully")
         
-        # 在preprocess之后再次禁用所有参数的梯度（preprocess会创建新的RMSNormBias模块）
+        # Disable all parameter gradients again after preprocess (preprocess creates new RMSNormBias modules)
         for param in model.parameters():
             param.requires_grad = False
         
-        # 检查是否成功安装了钩子
+        # Check if hooks were successfully installed
         hook_count = 0
         for name, module in model.named_modules():
             if isinstance(module, nn.Linear):
                 if hasattr(module, '_forward_hooks') and module._forward_hooks:
                     hook_count += len(module._forward_hooks)
-                    msmodelslim_logger.info(f"模块 {name} 已安装 {len(module._forward_hooks)} 个前向钩子")
+                    msmodelslim_logger.info(
+                        "Module %s has %d forward hooks installed",
+                        name, len(module._forward_hooks)
+                    )
         
-        msmodelslim_logger.info(f"总共安装了 {hook_count} 个统计钩子")
+        msmodelslim_logger.info("Total %d statistics hooks installed", hook_count)
         
-        # 测试前向推理 - 触发统计钩子收集统计信息
-        msmodelslim_logger.info("\n" + "="*50)
-        msmodelslim_logger.info("开始前向推理 - 触发统计钩子收集统计信息")
-        msmodelslim_logger.info("="*50)
+        # Test forward inference - trigger statistics hooks to collect stats
+        msmodelslim_logger.info("\n" + "=" * 50)
+        msmodelslim_logger.info("Starting forward inference - triggering statistics collection")
+        msmodelslim_logger.info("=" * 50)
 
-        output_logits_before_anti = model(test_prompt[KEY_INPUT_IDS]).logits
-        msmodelslim_logger.info(f"处理前输出形状: {output_logits_before_anti.shape}")
-        msmodelslim_logger.info(f"处理前输出统计: 均值={output_logits_before_anti.mean().item():.6f}, 标准差={output_logits_before_anti.std().item():.6f}")
+        with torch.no_grad():
+            output_logits_before_anti = model(test_prompt[KEY_INPUT_IDS]).logits
+        msmodelslim_logger.info("Output shape before processing: %s", output_logits_before_anti.shape)
+        msmodelslim_logger.info("Output stats before processing: mean=%.6f, std=%.6f",
+                              output_logits_before_anti.mean().item(),
+                              output_logits_before_anti.std().item())
 
         
-        # 检查收集的统计信息
-        msmodelslim_logger.info("\n" + "="*50)
-        msmodelslim_logger.info("检查收集的统计信息")
-        msmodelslim_logger.info("="*50)
+        # Check collected statistics
+        msmodelslim_logger.info("\n" + "=" * 50)
+        msmodelslim_logger.info("Checking collected statistics")
+        msmodelslim_logger.info("=" * 50)
         
-        if hasattr(iter_smooth_processor, 'act_stats') and iter_smooth_processor.act_stats:
-            msmodelslim_logger.info(f"成功收集了 {len(iter_smooth_processor.act_stats)} 个模块的统计信息")
-            for module_name, stats in iter_smooth_processor.act_stats.items():
-                msmodelslim_logger.info(f"模块 {module_name} 的统计信息:")
+        if (hasattr(iter_smooth_processor.stats_collector, 'act_stats') and
+                iter_smooth_processor.stats_collector.act_stats):
+            msmodelslim_logger.info(
+                "Successfully collected statistics from %d modules",
+                len(iter_smooth_processor.stats_collector.act_stats)
+            )
+            for module_name, stats in iter_smooth_processor.stats_collector.act_stats.items():
+                msmodelslim_logger.info("Statistics for module %s:", module_name)
                 for stat_key, stat_value in stats.items():
                     if isinstance(stat_value, torch.Tensor):
-                        msmodelslim_logger.info(f"  {stat_key}: 形状={stat_value.shape}, 设备={stat_value.device}")
+                        msmodelslim_logger.info(
+                            "  %s: shape=%s, device=%s",
+                            stat_key, stat_value.shape, stat_value.device
+                        )
                     else:
-                        msmodelslim_logger.info(f"  {stat_key}: {stat_value}")
+                        msmodelslim_logger.info("  %s: %s", stat_key, stat_value)
         else:
-            msmodelslim_logger.warning("未收集到统计信息")
+            msmodelslim_logger.warning("No statistics collected")
         
-        # 测试postprocess阶段 - 应用平滑处理
-        msmodelslim_logger.info("\n" + "="*50)
-        msmodelslim_logger.info("开始postprocess阶段 - 应用平滑处理")
-        msmodelslim_logger.info("="*50)
+        # Test postprocess phase - apply smooth processing
+        msmodelslim_logger.info("\n" + "=" * 50)
+        msmodelslim_logger.info("Starting postprocess phase - applying smooth processing")
+        msmodelslim_logger.info("=" * 50)
         
-        # 调用postprocess应用平滑处理
+        # Call postprocess to apply smooth processing
         iter_smooth_processor.postprocess(request)
-        msmodelslim_logger.info("平滑处理完成")
+        msmodelslim_logger.info("Smooth processing completed")
         
-        # 检查处理后的统计信息是否被清理
-        if hasattr(iter_smooth_processor, 'act_stats'):
-            if iter_smooth_processor.act_stats:
-                msmodelslim_logger.info(f"平滑处理后剩余统计信息: {len(iter_smooth_processor.act_stats)} 个模块")
+        # Check if statistics are cleaned up after processing
+        if hasattr(iter_smooth_processor.stats_collector, 'act_stats'):
+            if iter_smooth_processor.stats_collector.act_stats:
+                msmodelslim_logger.info(
+                    "Remaining statistics after smooth processing: %d modules",
+                    len(iter_smooth_processor.stats_collector.act_stats)
+                )
             else:
-                msmodelslim_logger.info("平滑处理后统计信息已清理")
+                msmodelslim_logger.info("Statistics cleaned up after smooth processing")
         
-        # 获取处理后的模型输出并比较
-        msmodelslim_logger.info("\n" + "="*50)
-        msmodelslim_logger.info("比较 IterSmoothProcessor 处理前后的模型输出")
-        msmodelslim_logger.info("="*50)
+        # Get model output after processing and compare
+        msmodelslim_logger.info("\n" + "=" * 50)
+        msmodelslim_logger.info("Comparing model outputs before and after IterSmoothProcessor")
+        msmodelslim_logger.info("=" * 50)
 
-        output_logits_after_anti = model(test_prompt[KEY_INPUT_IDS]).logits
-        msmodelslim_logger.info(f"处理后输出形状: {output_logits_after_anti.shape}")
-        msmodelslim_logger.info(f"处理后输出统计: 均值={output_logits_after_anti.mean().item():.6f}, 标准差={output_logits_after_anti.std().item():.6f}")
+        with torch.no_grad():
+            output_logits_after_anti = model(test_prompt[KEY_INPUT_IDS]).logits
+        msmodelslim_logger.info("Output shape after processing: %s", output_logits_after_anti.shape)
+        msmodelslim_logger.info("Output stats after processing: mean=%.6f, std=%.6f",
+                              output_logits_after_anti.mean().item(),
+                              output_logits_after_anti.std().item())
 
         
-        # 比较处理前后的输出差异
-        # 首先检查形状是否匹配
+        # Compare output differences before and after processing
+        # First check if shapes match
         if output_logits_before_anti.shape != output_logits_after_anti.shape:
-            error_msg = (f"处理前后输出形状不匹配: "
-                        f"处理前={output_logits_before_anti.shape}, "
-                        f"处理后={output_logits_after_anti.shape}")
+            error_msg = "Output shapes do not match: before=%s, after=%s" % (
+                output_logits_before_anti.shape, output_logits_after_anti.shape
+            )
             msmodelslim_logger.error(error_msg)
             raise AssertionError(error_msg)
         
-        # 计算绝对差异
+        # Calculate absolute differences
         abs_diff = torch.abs(output_logits_before_anti - output_logits_after_anti)
         max_diff = abs_diff.max().item()
         mean_diff = abs_diff.mean().item()
         std_diff = abs_diff.std().item()
         
-        msmodelslim_logger.info(f"输出差异统计:")
-        msmodelslim_logger.info(f"  最大绝对差异: {max_diff:.15f}")
-        msmodelslim_logger.info(f"  平均绝对差异: {mean_diff:.15f}")
-        msmodelslim_logger.info(f"  绝对差异标准差: {std_diff:.15f}")
+        msmodelslim_logger.info("Output difference statistics:")
+        msmodelslim_logger.info("  Maximum absolute difference: %.15f", max_diff)
+        msmodelslim_logger.info("  Mean absolute difference: %.15f", mean_diff)
+        msmodelslim_logger.info("  Absolute difference std: %.15f", std_diff)
         
-        # 检查是否在可接受范围内（非对称模式应该保持数值一致性）
+        # Check if within acceptable range (asymmetric mode should maintain numerical consistency)
         tolerance = 1e-5
         if torch.allclose(output_logits_before_anti, output_logits_after_anti, atol=tolerance):
-            msmodelslim_logger.info(f"✓ IterSmoothProcessor 处理前后输出差异在可接受范围内 (atol={tolerance})")
+            msmodelslim_logger.info(
+                "✓ IterSmoothProcessor output difference is within acceptable range (atol=%.1e)",
+                tolerance
+            )
         else:
-            msmodelslim_logger.error(f"✗ IterSmoothProcessor 处理前后输出差异超出可接受范围 (atol={tolerance})")
+            msmodelslim_logger.error(
+                "✗ IterSmoothProcessor output difference exceeds acceptable range (atol=%.1e)",
+                tolerance
+            )
             
-            # 计算相对差异
+            # Calculate relative differences
             relative_diff = abs_diff / (torch.abs(output_logits_before_anti) + 1e-8)
             max_rel_diff = relative_diff.max().item()
             mean_rel_diff = relative_diff.mean().item()
             
-            msmodelslim_logger.info(f"相对差异统计:")
-            msmodelslim_logger.info(f"  最大相对差异: {max_rel_diff:.6f}")
-            msmodelslim_logger.info(f"  平均相对差异: {mean_rel_diff:.6f}")
+            msmodelslim_logger.info("Relative difference statistics:")
+            msmodelslim_logger.info("  Maximum relative difference: %.6f", max_rel_diff)
+            msmodelslim_logger.info("  Mean relative difference: %.6f", mean_rel_diff)
             
-            error_msg = (f"IterSmoothProcessor非对称模式处理前后输出差异过大：\n"
-                        f"  最大差异={max_diff:.6e}, 平均差异={mean_diff:.6e}, "
-                        f"容差={tolerance}\n"
-                        f"  注意：非对称模式下应该保持数值一致性（纯线性变换）")
+            error_msg = ("IterSmoothProcessor asymmetric mode output difference is too large:\n"
+                        "  max_diff=%.6e, mean_diff=%.6e, tolerance=%.6e\n"
+                        "  Note: Asymmetric mode should maintain numerical consistency (pure linear transformation)" % (
+                            max_diff, mean_diff, tolerance
+                        ))
             msmodelslim_logger.error(error_msg)
             raise AssertionError(error_msg)
         
-        # 检查模型权重是否发生变化
-        msmodelslim_logger.info("\n" + "="*50)
-        msmodelslim_logger.info("检查模型权重变化")
-        msmodelslim_logger.info("="*50)
+        # Check model weight changes
+        msmodelslim_logger.info("\n" + "=" * 50)
+        msmodelslim_logger.info("Checking model weight changes")
+        msmodelslim_logger.info("=" * 50)
         
         return iter_smooth_processor
         
     except Exception as e:
-        msmodelslim_logger.error(f"测试 IterSmoothProcessor 失败: {e}")
+        msmodelslim_logger.error("Test IterSmoothProcessor failed: %s", e)
         import traceback
         traceback.print_exc()
-        # 重新抛出异常，让pytest能够识别测试失败
+        # Re-raise exception so pytest can recognize test failure
         raise
 
 if __name__ == "__main__":
     msmodelslim_logger.info("=" * 60)
-    msmodelslim_logger.info("LLaMA2-7B 模型 IterSmoothProcessor 功能测试开始")
+    msmodelslim_logger.info("LLaMA2-7B Model IterSmoothProcessor Functionality Test Started")
     msmodelslim_logger.info("=" * 60)
     
     try:
-        # 测试1: 完整的IterSmoothProcessor功能测试
-        msmodelslim_logger.info("\n1. 完整测试 IterSmoothProcessor 功能（包含统计钩子收集）...")
+        # Test 1: Complete IterSmoothProcessor functionality test
+        msmodelslim_logger.info(
+            "\n1. Complete test of IterSmoothProcessor functionality "
+            "(including statistics hook collection)..."
+        )
         iter_smooth_processor = test_iter_smooth_processor_with_hooks()
         
         if iter_smooth_processor:
-            msmodelslim_logger.info("✓ IterSmoothProcessor 完整功能测试成功")
+            msmodelslim_logger.info("✓ IterSmoothProcessor complete functionality test passed")
         else:
-            msmodelslim_logger.error("✗ IterSmoothProcessor 完整功能测试失败")
+            msmodelslim_logger.error("✗ IterSmoothProcessor complete functionality test failed")
 
         msmodelslim_logger.info("\n" + "=" * 60)
-        msmodelslim_logger.info("所有测试完成")
+        msmodelslim_logger.info("All tests completed")
         msmodelslim_logger.info("=" * 60)
 
     except Exception as e:
-        msmodelslim_logger.error(f"测试过程中发生错误: {e}")
+        msmodelslim_logger.error("Error occurred during test: %s", e)
         import traceback
         traceback.print_exc()
         raise e

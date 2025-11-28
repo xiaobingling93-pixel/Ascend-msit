@@ -7,7 +7,7 @@ import pytest
 import torch
 import torch.nn as nn
 
-from msmodelslim.quant.processor.anti_outlier.fused_linear import VirtualVModuleFromKVFused
+from msmodelslim.quant.processor.anti_outlier.common import VirtualVModuleFromKVFused
 from msmodelslim.utils.exception import SpecError
 
 
