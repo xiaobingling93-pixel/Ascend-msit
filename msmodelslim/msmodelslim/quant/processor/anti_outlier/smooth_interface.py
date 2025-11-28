@@ -11,7 +11,7 @@ class IterSmoothInterface(ABC):
         pass
 
 
-class FlexSmoothQuantInterface(ABC): 
+class FlexSmoothQuantInterface(ABC):
     @abstractmethod
     def get_adapter_config_for_subgraph(self) -> List[AdapterConfig]:
         pass

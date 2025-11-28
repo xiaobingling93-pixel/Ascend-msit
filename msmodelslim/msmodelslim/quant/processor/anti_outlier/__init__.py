@@ -13,12 +13,48 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+"""
+Anti-outlier processor module
+
+This module provides processors for outlier suppression algorithms.
+Config classes must be imported immediately for registration with AutoProcessorConfig.
+Processor classes are lazily loaded to avoid importing unused algorithms.
+"""
+
 __all__ = [
+    # Processors
     "IterSmoothProcessor",
     "IterSmoothProcessorConfig",
     "FlexSmoothQuantProcessor",
-    "FlexSmoothQuantProcessorConfig"
+    "FlexSmoothQuantProcessorConfig",
+    "FlexAWQSSZProcessor",
+    "FlexAWQSSZProcessorConfig",
+    "SubgraphRegistry",
+    "HookManager",
+    "StatsCollector"
 ]
 
-from .iter_smooth import IterSmoothProcessorConfig, IterSmoothProcessor
-from .flex_smooth_quant import FlexSmoothQuantProcessorConfig, FlexSmoothQuantProcessor
+
+from .common.smooth_components import HookManager, StatsCollector, SubgraphRegistry
+from .iter_smooth import IterSmoothProcessorConfig
+from .impl import iter_smooth
+
+from .flex_smooth import (
+    FlexSmoothQuantProcessorConfig,
+    FlexAWQSSZProcessorConfig
+)
+from .impl import flex_smooth_quant, flex_awq_ssz
+
+
+def __getattr__(name: str):
+    """Lazy import for processor classes."""
+    if name == "IterSmoothProcessor":
+        from .iter_smooth import IterSmoothProcessor
+        return IterSmoothProcessor
+    elif name == "FlexSmoothQuantProcessor":
+        from .flex_smooth import FlexSmoothQuantProcessor
+        return FlexSmoothQuantProcessor
+    elif name == "FlexAWQSSZProcessor":
+        from .flex_smooth import FlexAWQSSZProcessor
+        return FlexAWQSSZProcessor
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}") 

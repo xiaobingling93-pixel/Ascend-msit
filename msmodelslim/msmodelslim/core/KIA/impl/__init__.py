@@ -12,7 +12,6 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from . import iter_smooth, flex_smooth_quant
 from . import int_quantization
 from . import mx_quantization
 from . import kia_main

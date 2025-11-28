@@ -33,7 +33,7 @@ class VirtualVModuleBase(nn.Module):
 
 
 class VirtualVModuleFromQKVFused(VirtualVModuleBase):
-    """虚拟 V 模块，用于处理 QKV 融合的情况，支持 MHA、MQA 和 GQA 三种结构"""
+    """Virtual V module for handling QKV fusion, supports MHA, MQA and GQA"""
 
     def __init__(self, qkv_module: nn.Linear, num_attention_heads: int, num_key_value_heads: int):
         super().__init__()
@@ -41,35 +41,35 @@ class VirtualVModuleFromQKVFused(VirtualVModuleBase):
         self.num_attention_heads = num_attention_heads
         self.num_key_value_heads = num_key_value_heads
 
-        # 确定注意力机制类型
+        # Determine attention mechanism type
         self.attention_type = self._determine_attention_type()
 
-        # 计算 V 部分的权重和偏置
+        # Extract V part weights and bias
         self._extract_v_weights()
 
     def update_weights(self):
-        """将更新后的 V 权重更新回原始的 QKV 模块"""
+        """Update V weights back to the original QKV module"""
         qkv_weight = self.qkv_module.weight
         qkv_bias = getattr(self.qkv_module, 'bias', None)
 
-        # 计算每个头的维度
+        # Calculate head dimension
         head_dim = qkv_weight.shape[1] // self.num_attention_heads
 
-        # 根据注意力类型计算 V 部分的起始和结束索引
+        # Get V part indices based on attention type
         v_start, v_end = self._get_v_indices(head_dim)
 
-        # 更新 V 部分的权重
+        # Update V part weights
         with torch.no_grad():
             qkv_weight[v_start:v_end] = self.weight.data
 
-            # 处理bias更新：如果smooth后产生了bias，需要更新到qkv_module
+            # Handle bias update: if bias is produced after smoothing, update to qkv_module
             if hasattr(self, 'bias') and self.bias is not None:
                 if qkv_bias is not None:
-                    # 原始qkv_module有bias，直接更新V部分
+                    # Original qkv_module has bias, directly update V part
                     qkv_bias[v_start:v_end] = self.bias.data
                 else:
-                    # 原始qkv_module没有bias，但smooth后产生了bias，需要创建新的bias
-                    # 参考iter_smooth.py的模式：创建全零bias，然后更新V部分
+                    # Original qkv_module has no bias, but bias is produced after smoothing
+                    # Create zero bias, then update V part
                     device = qkv_weight.device
                     dtype = qkv_weight.dtype
                     new_bias = torch.zeros(qkv_weight.shape[0], device=device, dtype=dtype)
@@ -77,7 +77,7 @@ class VirtualVModuleFromQKVFused(VirtualVModuleBase):
                     self.qkv_module.bias = nn.Parameter(new_bias)
 
     def _determine_attention_type(self) -> str:
-        """确定注意力机制类型"""
+        """Determine attention mechanism type"""
         if self.num_key_value_heads == 1:
             return "MQA"  # Multi-Query Attention
         elif self.num_key_value_heads == self.num_attention_heads:
@@ -86,27 +86,27 @@ class VirtualVModuleFromQKVFused(VirtualVModuleBase):
               self.num_attention_heads % self.num_key_value_heads == 0):
             return "GQA"  # Grouped-Query Attention
         else:
-            get_logger().warning("InValid attention type, please check.")
+            get_logger().warning("Invalid attention type, please check.")
             return "UNKNOWN"
 
     def _get_v_indices(self, head_dim: int) -> tuple:
-        """根据注意力类型获取 V 部分的索引范围"""
+        """Get V part index range based on attention type"""
         if self.attention_type == "MHA":
-            # MHA: QKV 顺序为 [Q, K, V]，每个都有 num_attention_heads 个头
+            # MHA: QKV order is [Q, K, V], each has num_attention_heads heads
             q_size = self.num_attention_heads * head_dim
             k_size = self.num_attention_heads * head_dim
             v_start = q_size + k_size
             v_end = q_size + k_size + self.num_attention_heads * head_dim
 
         elif self.attention_type == "MQA":
-            # MQA: QKV 顺序为 [Q, K, V]，Q 有 num_attention_heads 个头，K/V 只有 1 个头
+            # MQA: QKV order is [Q, K, V], Q has num_attention_heads heads, K/V only has 1 head
             q_size = self.num_attention_heads * head_dim
             k_size = 1 * head_dim
             v_start = q_size + k_size
             v_end = q_size + k_size + 1 * head_dim
 
-        elif self.attention_type == "GQA":  # GQA
-            # GQA: QKV 顺序为 [Q, K, V]，Q 有 num_attention_heads 个头，K/V 有 num_key_value_heads 个头
+        elif self.attention_type == "GQA":
+            # GQA: QKV order is [Q, K, V], Q has num_attention_heads heads, K/V has num_key_value_heads heads
             q_size = self.num_attention_heads * head_dim
             k_size = self.num_key_value_heads * head_dim
             v_start = q_size + k_size
@@ -116,20 +116,20 @@ class VirtualVModuleFromQKVFused(VirtualVModuleBase):
         return v_start, v_end
 
     def _extract_v_weights(self):
-        """从 QKV 模块中提取 V 部分的权重和偏置"""
+        """Extract V part weights and bias from QKV module"""
         qkv_weight = self.qkv_module.weight
         qkv_bias = getattr(self.qkv_module, 'bias', None)
 
-        # 计算每个头的维度
+        # Calculate head dimension
         head_dim = qkv_weight.shape[1] // self.num_attention_heads
 
-        # 根据注意力类型获取 V 部分的索引范围
+        # Get V part index range based on attention type
         v_start, v_end = self._get_v_indices(head_dim)
 
-        # 提取 V 部分的权重
+        # Extract V part weights
         self.weight = nn.Parameter(qkv_weight[v_start:v_end].clone())
 
-        # 提取 V 部分的偏置
+        # Extract V part bias
         if qkv_bias is not None:
             self.bias = nn.Parameter(qkv_bias[v_start:v_end].clone())
         else:
@@ -137,9 +137,10 @@ class VirtualVModuleFromQKVFused(VirtualVModuleBase):
 
 
 class VirtualVModuleFromKVFused(VirtualVModuleBase):
-    """虚拟 V 模块，用于处理 DeepSeek V3 的 KV 融合（按 head 展开，行维度按 [K_nope, V] 拼接）。
-
-    假设 qk_nope_head_dim 与 v_head_dim 相等，并从权重的 out_features 自动推导每个 head 的尺寸。
+    """
+    Virtual V module for handling DeepSeek V3 KV fusion (expanded by head, row dimension concatenated as [K_nope, V])
+    
+    Assumes qk_nope_head_dim equals v_head_dim, and automatically derives each head size from weight out_features.
     """
 
     def __init__(self, kv_module: nn.Linear,
@@ -152,15 +153,17 @@ class VirtualVModuleFromKVFused(VirtualVModuleBase):
         self.qk_nope_head_dim = qk_nope_head_dim
         self.v_head_dim = v_head_dim
 
-        # 从权重维度推导每个 head 的行数，并强制 K_nope 与 V 等长
+        # Derive number of rows per head from weight dimension, enforce K_nope and V equal length
         out_features = self.kv_module.weight.data.size(0)
         per_head_out = out_features // self.num_attention_heads
         if per_head_out != self.qk_nope_head_dim + self.v_head_dim:
-            raise SpecError(f'KV-fused module weight dimension mismatch, please check.',
-                            action='Please ensure the weight out_features dimension '
-                                   'is (qk_nope_head_dim + v_head_dim) * num_attention_heads.')
+            raise SpecError(
+                'KV-fused module weight dimension mismatch, please check.',
+                action='Please ensure the weight out_features dimension '
+                       'is (qk_nope_head_dim + v_head_dim) * num_attention_heads.'
+            )
 
-        # 计算所有 V 行的索引：对每个 head，选择后半段的 v_head_dim 行
+        # Calculate all V row indices: for each head, select the latter v_head_dim rows
         kv_w = self.kv_module.weight.data.view(self.num_attention_heads, per_head_out, -1)
         v_w = kv_w[:, self.qk_nope_head_dim:, :].contiguous().view(-1, kv_w.size(-1))
         self.weight = nn.Parameter(v_w.clone())
@@ -170,28 +173,28 @@ class VirtualVModuleFromKVFused(VirtualVModuleBase):
             self.bias = nn.Parameter(v_b.clone())
 
     def update_weights(self):
-        """将更新后的 V 权重更新回原始的 QKV 模块"""
+        """Update V weights back to the original KV module"""
         with torch.no_grad():
             out_features = self.kv_module.weight.data.size(0)
             per_head_out = out_features // self.num_attention_heads
             kv_w = self.kv_module.weight.data.view(self.num_attention_heads, per_head_out, -1)
             kv_w[:, self.qk_nope_head_dim:, :] = self.weight.data.view(self.num_attention_heads, self.v_head_dim, -1)
 
-            # 处理bias更新：如果smooth后产生了bias，需要更新到kv_module
+            # Handle bias update: if bias is produced after smoothing, update to kv_module
             if hasattr(self, 'bias') and self.bias is not None:
                 if self.kv_module.bias is not None:
-                    # 原始kv_module有bias，直接更新V部分
+                    # Original kv_module has bias, directly update V part
                     kv_b = self.kv_module.bias.data.view(self.num_attention_heads, per_head_out)
-                    # self.bias是一维的，需要reshape为[num_attention_heads, v_head_dim]
+                    # self.bias is 1D, needs reshape to [num_attention_heads, v_head_dim]
                     v_bias_reshaped = self.bias.data.view(self.num_attention_heads, self.v_head_dim)
                     kv_b[:, self.qk_nope_head_dim:] = v_bias_reshaped
                 else:
-                    # 原始kv_module没有bias，但smooth后产生了bias，需要创建新的bias
-                    # 创建全零的bias，然后更新V部分
+                    # Original kv_module has no bias, but bias is produced after smoothing
+                    # Create zero bias, then update V part
                     new_bias = torch.zeros(out_features, device=self.kv_module.weight.device,
                                            dtype=self.kv_module.weight.dtype)
                     kv_b = new_bias.view(self.num_attention_heads, per_head_out)
-                    # self.bias是一维的，需要reshape为[num_attention_heads, v_head_dim]
+                    # self.bias is 1D, needs reshape to [num_attention_heads, v_head_dim]
                     v_bias_reshaped = self.bias.data.view(self.num_attention_heads, self.v_head_dim)
                     kv_b[:, self.qk_nope_head_dim:] = v_bias_reshaped
                     self.kv_module.bias = nn.Parameter(new_bias)
