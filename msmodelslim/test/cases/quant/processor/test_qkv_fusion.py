@@ -20,7 +20,7 @@ import pytest
 import torch
 import torch.nn as nn
 
-from msmodelslim.quant.processor.anti_outlier.fused_linear import VirtualVModuleFromQKVFused
+from msmodelslim.quant.processor.anti_outlier.common import VirtualVModuleFromQKVFused
 
 
 class TestVirtualVModule:

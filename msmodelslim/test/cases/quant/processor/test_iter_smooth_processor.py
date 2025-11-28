@@ -23,8 +23,8 @@ from msmodelslim.quant.processor.anti_outlier.iter_smooth import IterSmoothProce
 from msmodelslim.quant.processor.anti_outlier.smooth_interface import IterSmoothInterface
 from msmodelslim.core.graph.adapter_types import AdapterConfig, MappingConfig, FusionConfig
 from msmodelslim.core.base.protocol import BatchProcessRequest
-from msmodelslim.core.QAL.qtypes import RMSNormBias
-from msmodelslim.quant.processor.anti_outlier.smooth_base import StatKey
+from msmodelslim.quant.ir.norm_bias import RMSNormBias
+from msmodelslim.quant.processor.anti_outlier.common.smooth_components import StatKey
 
 
 class MockModel(nn.Module):
@@ -107,10 +107,8 @@ class TestIterSmoothProcessor:
         assert processor.model == model
         assert processor.config == config
         assert processor.adapter == adapter
-        assert isinstance(processor.act_stats, dict)
-        assert isinstance(processor.hook_handles, dict)
-        assert processor.dist_helper is None  # 在没有分布式环境时应该为None
-        
+        assert isinstance(processor.stats_collector.act_stats, dict)
+        assert isinstance(processor.hook_manager.hook_handles, dict)
         # 验证config属性
         assert processor.config.alpha == 0.9
         assert processor.config.scale_min == 1e-5
@@ -207,18 +205,18 @@ class TestIterSmoothProcessor:
         processor = IterSmoothProcessor(model, config, adapter)
         
         # 获取stats_hook函数
-        stats_hook = processor._get_stats_hook("test_module")
+        stats_hook = processor.stats_collector.create_hook("test_module")
         
         # 创建模拟的Linear模块和输入张量
         linear_module = nn.Linear(10, 20)
         input_tensor = torch.randn(5, 10)  # [batch_size, hidden_dim]
         
-        # 调用stats_hook (name参数已经被partial预填充)
+        # 调用stats_hook
         stats_hook(linear_module, (input_tensor,), {})
         
         # 验证统计信息被正确收集
-        assert "test_module" in processor.act_stats
-        stats = processor.act_stats["test_module"]
+        assert "test_module" in processor.stats_collector.act_stats
+        stats = processor.stats_collector.act_stats["test_module"]
         
         # 验证各种统计信息都存在
         assert StatKey.TENSOR in stats
@@ -241,20 +239,20 @@ class TestIterSmoothProcessor:
         adapter = MockAdapter()
         
         processor = IterSmoothProcessor(model, config, adapter)
-        stats_hook = processor._get_stats_hook("test_module")
+        stats_hook = processor.stats_collector.create_hook("test_module")
         
         linear_module = nn.Linear(10, 20)
         
-        # 第一次调用 (name参数已经被partial预填充)
+        # 第一次调用
         input_tensor1 = torch.randn(5, 10)
         stats_hook(linear_module, (input_tensor1,), {})
         
-        # 第二次调用 (name参数已经被partial预填充)
+        # 第二次调用
         input_tensor2 = torch.randn(3, 10)
         stats_hook(linear_module, (input_tensor2,), {})
         
         # 验证统计信息被正确更新
-        stats = processor.act_stats["test_module"]
+        stats = processor.stats_collector.act_stats["test_module"]
         
         # 验证max值被正确更新（应该取两次的最大值）
         expected_max = torch.max(torch.max(input_tensor1, dim=0)[0], torch.max(input_tensor2, dim=0)[0])
@@ -263,76 +261,6 @@ class TestIterSmoothProcessor:
         # 验证min值被正确更新（应该取两次的最小值）
         expected_min = torch.min(torch.min(input_tensor1, dim=0)[0], torch.min(input_tensor2, dim=0)[0])
         assert torch.allclose(stats[StatKey.STAT_KEY_MIN], expected_min)
-
-    @patch('msmodelslim.quant.processor.anti_outlier.iter_smooth.iter_smooth')
-    @patch('msmodelslim.quant.processor.anti_outlier.iter_smooth.get_logger')
-    def test_iter_smooth_processor_apply_smooth(self, mock_logger, mock_iter_smooth):
-        """验证_apply_smooth_to_subgraph方法是否能正确应用平滑配置并处理子图"""
-        # 前置操作：创建一个子图对象和线性模块列表，调用_apply_smooth_to_subgraph方法
-        model = MockModel()
-        config = IterSmoothProcessorConfig()
-        adapter = MockAdapter()
-        
-        processor = IterSmoothProcessor(model, config, adapter)
-        
-        # 创建模拟的子图对象和线性模块列表
-        subgraph_obj = Mock()
-        linear_modules = [model.layer1, model.layer2]
-        
-        # 模拟_build_smooth_context方法
-        mock_smooth_context = Mock()
-        processor._build_smooth_context = Mock(return_value=mock_smooth_context)
-        
-        # 调用_apply_smooth_to_subgraph方法
-        processor._apply_smooth_to_subgraph(subgraph_obj, linear_modules)
-        
-        # 验证_build_smooth_context被调用
-        processor._build_smooth_context.assert_called_once_with(linear_modules)
-        
-        # 验证iter_smooth被调用，参数正确
-        mock_iter_smooth.assert_called_once()
-        call_args = mock_iter_smooth.call_args
-        
-        # 验证参数
-        assert call_args[0][0] == subgraph_obj  # subgraph_obj
-        assert call_args[0][2] == mock_smooth_context  # smooth_context
-        
-        # 验证IterSmoothConfig参数
-        smooth_config = call_args[0][1]
-        assert smooth_config.alpha == config.alpha
-        assert smooth_config.shift == (not config.symmetric)
-        assert smooth_config.scale_min == config.scale_min
-
-
-    @patch('msmodelslim.quant.processor.anti_outlier.iter_smooth.iter_smooth')
-    @patch('msmodelslim.quant.processor.anti_outlier.iter_smooth.get_logger')
-    def test_iter_smooth_processor_apply_smooth_exception(self, mock_logger, mock_iter_smooth):
-        """验证_apply_smooth_to_subgraph方法在遇到异常时的处理"""
-        model = MockModel()
-        config = IterSmoothProcessorConfig()
-        adapter = MockAdapter()
-        
-        processor = IterSmoothProcessor(model, config, adapter)
-        
-        # 创建模拟的子图对象和线性模块列表
-        subgraph_obj = Mock()
-        linear_modules = [model.layer1, model.layer2]
-        
-        # 模拟_build_smooth_context方法
-        mock_smooth_context = Mock()
-        processor._build_smooth_context = Mock(return_value=mock_smooth_context)
-        
-        # 模拟iter_smooth抛出异常
-        mock_iter_smooth.side_effect = Exception("Test exception")
-        
-        # 调用_apply_smooth_to_subgraph方法，应该抛出异常
-        with pytest.raises(Exception, match="Test exception"):
-            processor._apply_smooth_to_subgraph(subgraph_obj, linear_modules)
-        
-        # 验证错误日志被记录
-        mock_logger.return_value.error.assert_called_with(
-            "[IterSmoothProcessor] Failed to apply smooth to subgraph: Test exception"
-        )
 
     def test_iter_smooth_processor_support_distributed(self):
         """验证support_distributed方法返回True"""

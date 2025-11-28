@@ -19,7 +19,7 @@ import torch.nn as nn
 from unittest.mock import patch, Mock
 import warnings
 
-from msmodelslim.quant.processor.anti_outlier.fused_linear import VirtualVModuleFromQKVFused
+from msmodelslim.quant.processor.anti_outlier.common import VirtualVModuleFromQKVFused
 
 
 class TestVirtualVModule:
@@ -29,7 +29,7 @@ class TestVirtualVModule:
     def qkv_module_with_bias(self):
         """创建带有偏置的QKV模块"""
         # MHA: 8个注意力头，每个头64维，总共512维
-        # QKV融合: [Q(8*64), K(8*64), V(8*64)] = [512, 512, 512] -> 输出1536维
+        # QKV融合: [Q(8 * 64), K(8 * 64), V(8 * 64)] = [512, 512, 512] -> 输出1536维
         qkv_module = nn.Linear(512, 1536, bias=True)
         return qkv_module
 
@@ -57,7 +57,7 @@ class TestVirtualVModule:
         # 验证V部分权重和偏置被正确提取
         assert virtual_v.weight is not None
         assert virtual_v.bias is not None
-        assert virtual_v.weight.shape == (512, 512)  # V部分: 8*64=512维
+        assert virtual_v.weight.shape == (512, 512)  # V部分: 8 * 64 = 512维
         assert virtual_v.bias.shape == (512,)
 
     def test_virtual_v_module_update_weights(self, qkv_module_with_bias):
@@ -106,7 +106,7 @@ class TestVirtualVModule:
 
     def test_virtual_v_module_determine_attention_type_mqa(self):
         """测试注意力类型识别为MQA"""
-        qkv_module = nn.Linear(512, 1024)  # MQA: 8*64 + 1*64 + 1*64 = 640
+        qkv_module = nn.Linear(512, 1024)  # MQA: 8 * 64 + 1 * 64 + 1 * 64 = 640
         virtual_v = VirtualVModuleFromQKVFused(
             qkv_module=qkv_module,
             num_attention_heads=8,
@@ -117,7 +117,7 @@ class TestVirtualVModule:
 
     def test_virtual_v_module_determine_attention_type_gqa(self):
         """测试注意力类型识别为GQA"""
-        qkv_module = nn.Linear(512, 1280)  # GQA: 8*64 + 4*64 + 4*64 = 1024
+        qkv_module = nn.Linear(512, 1280)  # GQA: 8 * 64 + 4 * 64 + 4 * 64 = 1024
         virtual_v = VirtualVModuleFromQKVFused(
             qkv_module=qkv_module,
             num_attention_heads=8,
@@ -137,8 +137,7 @@ class TestVirtualVModule:
         
         head_dim = 64
         v_start, v_end = virtual_v._get_v_indices(head_dim)
-        
-        # MHA: Q(8*64) + K(8*64) + V(8*64)
+
         expected_v_start = 8 * head_dim + 8 * head_dim  # 1024
         expected_v_end = expected_v_start + 8 * head_dim  # 1536
         
@@ -156,8 +155,7 @@ class TestVirtualVModule:
         
         head_dim = 64
         v_start, v_end = virtual_v._get_v_indices(head_dim)
-        
-        # MQA: Q(8*64) + K(1*64) + V(1*64)
+
         expected_v_start = 8 * head_dim + 1 * head_dim  # 576
         expected_v_end = expected_v_start + 1 * head_dim  # 640
         
@@ -194,7 +192,7 @@ class TestVirtualVModule:
         assert virtual_v.bias is not None
         
         # 验证权重形状
-        assert virtual_v.weight.shape == (512, 512)  # V部分: 8*64=512维
+        assert virtual_v.weight.shape == (512, 512)  # V部分: 8 * 64 = 512维
         assert virtual_v.bias.shape == (512,)
         
         # 验证提取的权重和偏置与原始QKV模块的V部分一致
@@ -218,7 +216,7 @@ class TestVirtualVModule:
         assert virtual_v.bias is None
         
         # 验证权重形状
-        assert virtual_v.weight.shape == (512, 512)  # V部分: 8*64=512维
+        assert virtual_v.weight.shape == (512, 512)  # V部分: 8 * 64 = 512维
         
         # 验证提取的权重与原始QKV模块的V部分一致
         head_dim = 64
@@ -258,7 +256,10 @@ class TestVirtualVModule:
         assert torch.allclose(virtual_v.qkv_module.bias[v_start:v_end], new_v_bias)
         
         # 验证Q和K部分的偏置为0
-        assert torch.allclose(virtual_v.qkv_module.bias[:v_start], torch.zeros_like(virtual_v.qkv_module.bias[:v_start]))
+        assert torch.allclose(
+            virtual_v.qkv_module.bias[:v_start],
+            torch.zeros_like(virtual_v.qkv_module.bias[:v_start])
+        )
 
     def test_virtual_v_module_update_weights_with_bias(self, qkv_module_with_bias):
         """测试更新权重（有原始偏置）"""

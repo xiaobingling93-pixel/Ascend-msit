@@ -6,32 +6,41 @@ iter_smooth.py 单元测试用例
 目标覆盖率：>80%
 """
 
+# 标准库导入
 import unittest
-import torch
-import torch.nn as nn
-import numpy as np
-from unittest.mock import Mock, patch
 from dataclasses import dataclass
 from typing import List, Dict, Any, Union
+from unittest.mock import Mock, patch
 
-from msmodelslim.core.KIA.impl.iter_smooth import (
-    compute_smooth_scale,
-    apply_smooth_scale_shift,
-    prepare_mqga_parameters,
-    reduce_scales_for_mqga,
-    iter_smooth_impl_OV,
-    iter_smooth_impl_UpDown,
-    iter_smooth_impl_LinearLinear,
-    iter_smooth_impl_NormLinear,
-)
+# 第三方库导入
+import numpy as np
+import torch
+import torch.nn as nn
+
+# 应用程序自定义模块导入
 from msmodelslim.core.QAL.qtypes import (
-    RMSNormBias,
-    NormLinearSubgraph,
     LinearLinearSubgraph,
+    NormLinearSubgraph,
     OVSubgraph,
     UpDownSubgraph,
-    SmoothContext,
+)
+from msmodelslim.quant.ir.norm_bias import RMSNormBias
+from msmodelslim.quant.processor.anti_outlier.common.smooth_types import (
     IterSmoothConfig,
+    IterSmoothContext,
+    SmoothContext,
+)
+from msmodelslim.quant.processor.anti_outlier.impl.common.scale_computation import (
+    IterSmoothScaleCalculator,
+    apply_smooth_scale_shift,
+    prepare_mqga_parameters,
+    reduce_scales_for_mqga_mean,
+)
+from msmodelslim.quant.processor.anti_outlier.impl.iter_smooth import (
+    iter_smooth_impl_linear_linear,
+    iter_smooth_impl_norm_linear,
+    iter_smooth_impl_ov,
+    iter_smooth_impl_up_down,
 )
 
 
@@ -47,7 +56,8 @@ class TestComputeSmoothScale(unittest.TestCase):
         w_scale = torch.tensor([[1.0, 2.0, 3.0], [0.5, 1.5, 2.5]], dtype=torch.float32)
         a_scale = torch.tensor([2.0, 1.0, 1.5], dtype=torch.float32)
         
-        result = compute_smooth_scale(w_scale, a_scale, self.config)
+        calculator = IterSmoothScaleCalculator(alpha=self.config.alpha, scale_min=self.config.scale_min)
+        result = calculator.compute_smooth_scale(a_scale, w_scale)
         
         # 验证结果形状
         self.assertEqual(result.shape, (3,))
@@ -62,7 +72,8 @@ class TestComputeSmoothScale(unittest.TestCase):
         w_scale = torch.tensor([[1e-6, 1e-7]], dtype=torch.float32)
         a_scale = torch.tensor([1.0, 1.0], dtype=torch.float32)
         
-        result = compute_smooth_scale(w_scale, a_scale, self.config)
+        calculator = IterSmoothScaleCalculator(alpha=self.config.alpha, scale_min=self.config.scale_min)
+        result = calculator.compute_smooth_scale(a_scale, w_scale)
         self.assertTrue(torch.all(result >= self.config.scale_min))
 
     def test_compute_smooth_scale_extreme_values(self):
@@ -71,7 +82,8 @@ class TestComputeSmoothScale(unittest.TestCase):
         w_scale = torch.tensor([[1e6, 1e7]], dtype=torch.float32)
         a_scale = torch.tensor([1e8, 1e9], dtype=torch.float32)
         
-        result = compute_smooth_scale(w_scale, a_scale, self.config)
+        calculator = IterSmoothScaleCalculator(alpha=self.config.alpha, scale_min=self.config.scale_min)
+        result = calculator.compute_smooth_scale(a_scale, w_scale)
         self.assertTrue(torch.all(torch.isfinite(result)))
 
     def test_compute_smooth_scale_different_dtypes(self):
@@ -85,7 +97,8 @@ class TestComputeSmoothScale(unittest.TestCase):
             w_scale = torch.tensor([[1.0, 2.0]], dtype=w_dtype)
             a_scale = torch.tensor([1.0, 1.0], dtype=a_dtype)
             
-            result = compute_smooth_scale(w_scale, a_scale, self.config)
+            calculator = IterSmoothScaleCalculator(alpha=self.config.alpha, scale_min=self.config.scale_min)
+            result = calculator.compute_smooth_scale(a_scale, w_scale)
             self.assertEqual(result.dtype, w_dtype)
 
 
@@ -193,7 +206,7 @@ class TestReduceScalesForMqga(unittest.TestCase):
         shape_ratio = 4
         num_attention_heads = 32
         
-        updated_scales, reduced_scales = reduce_scales_for_mqga(scales, shape_ratio, num_attention_heads)
+        updated_scales, reduced_scales = reduce_scales_for_mqga_mean(scales, shape_ratio, num_attention_heads)
         
         self.assertEqual(updated_scales.shape, scales.shape)
         self.assertEqual(reduced_scales.shape[0], 8 * 128)  # 8 kv_heads * 128 head_dim
@@ -205,14 +218,14 @@ class TestReduceScalesForMqga(unittest.TestCase):
         shape_ratio = 1
         num_attention_heads = 16
         
-        updated_scales, reduced_scales = reduce_scales_for_mqga(scales, shape_ratio, num_attention_heads)
+        updated_scales, reduced_scales = reduce_scales_for_mqga_mean(scales, shape_ratio, num_attention_heads)
         
         self.assertEqual(updated_scales.shape, scales.shape)
         self.assertEqual(reduced_scales.shape[0], 16 * 64)
 
 
 class TestIterSmoothImplOV(unittest.TestCase):
-    """测试iter_smooth_impl_OV函数"""
+    """测试iter_smooth_impl_ov函数"""
 
     def setUp(self):
         """测试前准备"""
@@ -231,13 +244,10 @@ class TestIterSmoothImplOV(unittest.TestCase):
             key_value_heads=num_key_value_heads
         )
         self.config = IterSmoothConfig(alpha=0.9, shift=False)
-        self.context = SmoothContext(
+        self.context = IterSmoothContext(
             version=1,
             a_smooth_scale=torch.randn(hidden_size),
-            w_smooth_scale=torch.randn(hidden_size),
-            tensors=[],
-            shift=torch.randn(hidden_size),
-            ext={}
+            shift=torch.randn(hidden_size)
         )
 
     def test_iter_smooth_impl_OV_standard(self):
@@ -245,7 +255,7 @@ class TestIterSmoothImplOV(unittest.TestCase):
         original_o_weight = self.o_proj.weight.clone()
         original_v_weight = self.v_proj.weight.clone()
         
-        iter_smooth_impl_OV(self.subgraph, self.config, self.context)
+        iter_smooth_impl_ov(self.subgraph, self.config, self.context)
         
         # 验证权重被修改
         self.assertFalse(torch.equal(self.o_proj.weight, original_o_weight))
@@ -260,7 +270,7 @@ class TestIterSmoothImplOV(unittest.TestCase):
         original_v_weight = self.v_proj.weight.clone()
         original_v_bias = self.v_proj.bias.clone()
         
-        iter_smooth_impl_OV(self.subgraph, self.config, self.context)
+        iter_smooth_impl_ov(self.subgraph, self.config, self.context)
         
         # 验证权重被修改
         self.assertFalse(torch.equal(self.o_proj.weight, original_o_weight))
@@ -287,7 +297,7 @@ class TestIterSmoothImplOV(unittest.TestCase):
         self.context.a_smooth_scale = torch.ones(512)
         
         # 执行smooth操作
-        iter_smooth_impl_OV(simple_subgraph, self.config, self.context)
+        iter_smooth_impl_ov(simple_subgraph, self.config, self.context)
         
         # 验证数学一致性（权重被正确缩放）
         self.assertTrue(torch.all(simple_o_proj.weight > 0))
@@ -295,7 +305,7 @@ class TestIterSmoothImplOV(unittest.TestCase):
 
 
 class TestIterSmoothImplUpDown(unittest.TestCase):
-    """测试iter_smooth_impl_UpDown函数"""
+    """测试iter_smooth_impl_up_down函数"""
 
     def setUp(self):
         """测试前准备"""
@@ -308,13 +318,10 @@ class TestIterSmoothImplUpDown(unittest.TestCase):
             gate_proj=self.gate_proj
         )
         self.config = IterSmoothConfig(alpha=0.9, shift=False)
-        self.context = SmoothContext(
+        self.context = IterSmoothContext(
             version=1,
             a_smooth_scale=torch.randn(2048),
-            w_smooth_scale=torch.randn(2048),
-            tensors=[],
-            shift=torch.randn(2048),
-            ext={}
+            shift=torch.randn(2048)
         )
 
     def test_iter_smooth_impl_UpDown_standard(self):
@@ -322,7 +329,7 @@ class TestIterSmoothImplUpDown(unittest.TestCase):
         original_up_weight = self.up_proj.weight.clone()
         original_down_weight = self.down_proj.weight.clone()
         
-        iter_smooth_impl_UpDown(self.subgraph, self.config, self.context)
+        iter_smooth_impl_up_down(self.subgraph, self.config, self.context)
         
         # 验证权重被修改
         self.assertFalse(torch.equal(self.up_proj.weight, original_up_weight))
@@ -337,7 +344,7 @@ class TestIterSmoothImplUpDown(unittest.TestCase):
         original_down_weight = self.down_proj.weight.clone()
         original_up_bias = self.up_proj.bias.clone()
         
-        iter_smooth_impl_UpDown(self.subgraph, self.config, self.context)
+        iter_smooth_impl_up_down(self.subgraph, self.config, self.context)
         
         # 验证权重被修改
         self.assertFalse(torch.equal(self.up_proj.weight, original_up_weight))
@@ -352,7 +359,7 @@ class TestIterSmoothImplUpDown(unittest.TestCase):
         self.down_proj.weight.data = torch.ones_like(self.down_proj.weight.data)
         self.context.a_smooth_scale = torch.ones(2048)
         
-        iter_smooth_impl_UpDown(self.subgraph, self.config, self.context)
+        iter_smooth_impl_up_down(self.subgraph, self.config, self.context)
         
         # 验证数学一致性
         self.assertTrue(torch.all(self.up_proj.weight > 0))
@@ -360,7 +367,7 @@ class TestIterSmoothImplUpDown(unittest.TestCase):
 
 
 class TestIterSmoothImplLinearLinear(unittest.TestCase):
-    """测试iter_smooth_impl_LinearLinear函数"""
+    """测试iter_smooth_impl_linear_linear函数"""
 
     def setUp(self):
         """测试前准备"""
@@ -371,13 +378,10 @@ class TestIterSmoothImplLinearLinear(unittest.TestCase):
             linear2=self.linear2
         )
         self.config = IterSmoothConfig(alpha=0.9, shift=False)
-        self.context = SmoothContext(
+        self.context = IterSmoothContext(
             version=1,
             a_smooth_scale=torch.randn(2048),
-            w_smooth_scale=torch.randn(2048),
-            tensors=[],
-            shift=torch.randn(2048),
-            ext={}
+            shift=torch.randn(2048)
         )
 
     def test_iter_smooth_impl_LinearLinear_standard(self):
@@ -385,7 +389,7 @@ class TestIterSmoothImplLinearLinear(unittest.TestCase):
         original_linear1_weight = self.linear1.weight.clone()
         original_linear2_weight = self.linear2.weight.clone()
         
-        iter_smooth_impl_LinearLinear(self.subgraph, self.config, self.context)
+        iter_smooth_impl_linear_linear(self.subgraph, self.config, self.context)
         
         # 验证权重被修改
         self.assertFalse(torch.equal(self.linear1.weight, original_linear1_weight))
@@ -400,7 +404,7 @@ class TestIterSmoothImplLinearLinear(unittest.TestCase):
         original_linear2_weight = self.linear2.weight.clone()
         original_linear1_bias = self.linear1.bias.clone()
         
-        iter_smooth_impl_LinearLinear(self.subgraph, self.config, self.context)
+        iter_smooth_impl_linear_linear(self.subgraph, self.config, self.context)
         
         # 验证权重被修改
         self.assertFalse(torch.equal(self.linear1.weight, original_linear1_weight))
@@ -415,7 +419,7 @@ class TestIterSmoothImplLinearLinear(unittest.TestCase):
         self.linear2.weight.data = torch.ones_like(self.linear2.weight.data)
         self.context.a_smooth_scale = torch.ones(2048)
         
-        iter_smooth_impl_LinearLinear(self.subgraph, self.config, self.context)
+        iter_smooth_impl_linear_linear(self.subgraph, self.config, self.context)
         
         # 验证数学一致性
         self.assertTrue(torch.all(self.linear1.weight > 0))
@@ -423,7 +427,7 @@ class TestIterSmoothImplLinearLinear(unittest.TestCase):
 
 
 class TestIterSmoothImplNormLinear(unittest.TestCase):
-    """测试iter_smooth_impl_NormLinear函数"""
+    """测试iter_smooth_impl_norm_linear函数"""
 
     def setUp(self):
         """测试前准备"""
@@ -445,13 +449,10 @@ class TestIterSmoothImplNormLinear(unittest.TestCase):
             linears=[self.linear1, self.linear2]
         )
         self.config = IterSmoothConfig(alpha=0.9, shift=False)
-        self.context = SmoothContext(
+        self.context = IterSmoothContext(
             version=1,
             a_smooth_scale=torch.randn(512),
-            w_smooth_scale=torch.randn(512),
-            tensors=[],
-            shift=torch.randn(512),
-            ext={}
+            shift=torch.randn(512)
         )
 
     def test_iter_smooth_impl_NormLinear_standard(self):
@@ -460,7 +461,7 @@ class TestIterSmoothImplNormLinear(unittest.TestCase):
         original_linear1_weight = self.linear1.weight.clone()
         original_linear2_weight = self.linear2.weight.clone()
         
-        iter_smooth_impl_NormLinear(self.subgraph, self.config, self.context)
+        iter_smooth_impl_norm_linear(self.subgraph, self.config, self.context)
         
         # 验证权重被修改
         self.assertFalse(torch.equal(self.norm.weight, original_norm_weight))
@@ -476,7 +477,7 @@ class TestIterSmoothImplNormLinear(unittest.TestCase):
         original_linear2_weight = self.linear2.weight.clone()
         original_norm_bias = self.norm.bias.clone()
         
-        iter_smooth_impl_NormLinear(self.subgraph, self.config, self.context)
+        iter_smooth_impl_norm_linear(self.subgraph, self.config, self.context)
         
         # 验证权重被修改
         self.assertFalse(torch.equal(self.norm.weight, original_norm_weight))
@@ -492,7 +493,7 @@ class TestIterSmoothImplNormLinear(unittest.TestCase):
         self.linear2.weight.data = torch.ones_like(self.linear2.weight.data)	
         self.context.a_smooth_scale = torch.ones(512)
 
-        iter_smooth_impl_NormLinear(self.subgraph, self.config, self.context)
+        iter_smooth_impl_norm_linear(self.subgraph, self.config, self.context)
         
         # 验证数学一致性
         self.assertTrue(torch.all(self.linear1.weight > 0))
@@ -510,12 +511,14 @@ class TestIterSmoothEdgeCases(unittest.TestCase):
         w_scale = torch.tensor([[1e10, 1e20]], dtype=torch.float32)
         a_scale = torch.tensor([1.0, 1.0], dtype=torch.float32)
         
-        result = compute_smooth_scale(w_scale, a_scale, config)
+        calculator = IterSmoothScaleCalculator(alpha=config.alpha, scale_min=config.scale_min)
+        result = calculator.compute_smooth_scale(a_scale, w_scale)
         self.assertTrue(torch.all(torch.isfinite(result)))
         
         # 测试极小值
         w_scale = torch.tensor([[1e-10, 1e-20]], dtype=torch.float32)
-        result = compute_smooth_scale(w_scale, a_scale, config)
+        calculator = IterSmoothScaleCalculator(alpha=config.alpha, scale_min=config.scale_min)
+        result = calculator.compute_smooth_scale(a_scale, w_scale)
         self.assertTrue(torch.all(result >= config.scale_min))
 
     def test_nan_and_inf_values(self):
@@ -528,7 +531,8 @@ class TestIterSmoothEdgeCases(unittest.TestCase):
         
         # 检查函数是否能处理NaN输入
         try:
-            result = compute_smooth_scale(w_scale, a_scale, config)
+            calculator = IterSmoothScaleCalculator(alpha=config.alpha, scale_min=config.scale_min)
+            result = calculator.compute_smooth_scale(a_scale, w_scale)
             # 如果能正常执行，检查结果是否包含NaN
             self.assertTrue(torch.any(torch.isnan(result)) or torch.all(torch.isfinite(result)))
         except Exception:
@@ -545,7 +549,8 @@ class TestIterSmoothEdgeCases(unittest.TestCase):
         
         # 检查函数是否能处理空张量（可能返回空结果或抛出异常）
         try:
-            result = compute_smooth_scale(w_scale, a_scale, config)
+            calculator = IterSmoothScaleCalculator(alpha=config.alpha, scale_min=config.scale_min)
+            result = calculator.compute_smooth_scale(a_scale, w_scale)
             # 如果能正常执行，验证结果是空的
             self.assertEqual(result.shape[0], 0)
         except Exception:
@@ -562,7 +567,8 @@ class TestIterSmoothEdgeCases(unittest.TestCase):
         
         # 检查函数是否能处理维度不匹配的情况
         try:
-            result = compute_smooth_scale(w_scale, a_scale, config)
+            calculator = IterSmoothScaleCalculator(alpha=config.alpha, scale_min=config.scale_min)
+            result = calculator.compute_smooth_scale(a_scale, w_scale)
             # 如果能正常执行，验证结果形状合理
             self.assertIsInstance(result, torch.Tensor)
         except Exception:
@@ -575,7 +581,8 @@ class TestIterSmoothEdgeCases(unittest.TestCase):
         w_scale = torch.tensor([[1.0, 2.0]], dtype=torch.float32)
         a_scale = torch.tensor([1.0, 1.0], dtype=torch.float32)
         
-        result = compute_smooth_scale(w_scale, a_scale, config)
+        calculator = IterSmoothScaleCalculator(alpha=config.alpha, scale_min=config.scale_min)
+        result = calculator.compute_smooth_scale(a_scale, w_scale)
         self.assertTrue(torch.all(torch.isfinite(result)))
 
     def test_alpha_one(self):
@@ -584,7 +591,8 @@ class TestIterSmoothEdgeCases(unittest.TestCase):
         w_scale = torch.tensor([[1.0, 2.0]], dtype=torch.float32)
         a_scale = torch.tensor([1.0, 1.0], dtype=torch.float32)
         
-        result = compute_smooth_scale(w_scale, a_scale, config)
+        calculator = IterSmoothScaleCalculator(alpha=config.alpha, scale_min=config.scale_min)
+        result = calculator.compute_smooth_scale(a_scale, w_scale)
         self.assertTrue(torch.all(torch.isfinite(result)))
 
 

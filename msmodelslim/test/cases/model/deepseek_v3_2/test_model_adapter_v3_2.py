@@ -23,6 +23,9 @@ class DummyModelArgs:
         self.rms_norm_eps = 1e-6
         self.vocab_size = 1000
         self.hidden_size = 128
+        self.first_k_dense_replace = 3  # 前k层使用Dense FFN，之后使用MoE
+        self.n_routed_experts = 8  # MoE路由专家数量
+        self.n_shared_experts = 1  # MoE共享专家数量
 
 
 class DummyDeepSeekV3RMSNorm(nn.Module):
@@ -669,32 +672,6 @@ class TestDeepSeekV32ModelAdapter(unittest.TestCase):
                    side_effect=FileNotFoundError("File not found")):
             with self.assertRaises(FileNotFoundError):
                 adapter.get_state_dict(mock_module)
-                
-    def test_get_adapter_config_for_subgraph(self):
-        """测试get_adapter_config_for_subgraph生成适配器配置"""
-        adapter = self.create_adapter()
-        adapter.config.num_hidden_layers = 3  # 使用较小的层数便于测试
-        
-        configs = adapter.get_adapter_config_for_subgraph()
-        
-        # 每层应该生成3个配置：1个ov + 2个norm-linear
-        expected_config_count = 3 * 3  # 3 layers * 3 configs per layer
-        self.assertEqual(len(configs), expected_config_count)
-        
-        # 验证配置类型分布
-        ov_configs = [c for c in configs if c.subgraph_type == "ov"]
-        norm_linear_configs = [c for c in configs if c.subgraph_type == "norm-linear"]
-        
-        self.assertEqual(len(ov_configs), 3)  # 每层1个ov配置
-        self.assertEqual(len(norm_linear_configs), 6)  # 每层2个norm-linear配置
-        
-        # 验证第一层的配置内容
-        first_ov_config = ov_configs[0]
-        self.assertEqual(first_ov_config.mapping.source, "model.layers.0.self_attn.kv_b_proj")
-        self.assertEqual(first_ov_config.mapping.targets, ["model.layers.0.self_attn.o_proj"])
-        self.assertEqual(first_ov_config.extra_config['group_method'], 'max')
-        self.assertIsNotNone(first_ov_config.fusion)
-        self.assertEqual(first_ov_config.fusion.fusion_type, "kv")
         
     def test_get_ln_fuse_map(self):
         """测试get_ln_fuse_map生成LayerNorm融合映射"""

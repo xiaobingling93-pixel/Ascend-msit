@@ -28,6 +28,6 @@ __all__ = [
 
 from .KIA import KIAManager
 from .QAL import QDType, QParam, QStorage
-from .api import calculate_qparam, quantize, dequantize, fake_quantize, iter_smooth
+from .api import calculate_qparam, quantize, dequantize, fake_quantize
 KIAManager.init_module()
 KIAManager.check_version()
