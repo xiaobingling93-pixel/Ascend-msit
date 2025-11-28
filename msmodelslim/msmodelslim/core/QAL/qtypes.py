@@ -15,31 +15,13 @@
 
 
 from dataclasses import dataclass
-from typing import Union, List, Dict, Any, Optional
+from typing import Union, List, Dict, Any, Optional, TYPE_CHECKING
 
-import torch
 from torch import nn as nn
 
-
-class RMSNormBias(nn.Module):
-    def __init__(self, hidden_size, eps=1e-6):
-        """
-        LlamaRMSNorm is equivalent to T5LayerNorm
-        """
-        super().__init__()
-        self.weight = nn.Parameter(torch.ones(hidden_size))
-        self.variance_epsilon = eps
-        self.bias = nn.Parameter(torch.zeros(hidden_size))
-
-    def forward(self, hidden_states):
-        variance = hidden_states.to(torch.float32).pow(2).mean(-1, keepdim=True)
-        hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)
-
-        # convert into half-precision if necessary
-        if self.weight.dtype in [torch.float16, torch.bfloat16]:
-            hidden_states = hidden_states.to(self.weight.dtype)
-
-        return self.weight * hidden_states + self.bias
+if TYPE_CHECKING:
+    from msmodelslim.quant.quantizer.linear import LinearQConfig
+    from msmodelslim.quant.ir.norm_bias import RMSNormBias
 
 
 class Subgraph:
@@ -59,7 +41,7 @@ class NormLinearSubgraph(Subgraph):
 
     """
 
-    norm: Union[RMSNormBias]
+    norm: Union["RMSNormBias"]
     linears: List[nn.Linear]
 
 
@@ -113,46 +95,3 @@ class UpDownSubgraph(Subgraph):
     up_proj: nn.Linear
     down_proj: nn.Linear
     gate_proj: nn.Linear
-
-
-@dataclass
-class SmoothContext:
-    version: int
-    a_smooth_scale: torch.Tensor
-    w_smooth_scale: torch.Tensor
-    tensors: List[torch.Tensor]
-    shift: torch.Tensor
-    ext: Dict[str, Any]
-
-
-@dataclass
-class IterSmoothConfig:
-    """
-
-    iter_smooth算法的配置项。
-    允许后续扩展配置项，但仅可新增新字段，且不得修改已有字段，
-    version用于指定配置版本号，每次修改后，版本号需要加1。
-
-    """
-
-    version: int = 1
-    alpha: float = 0.9
-    shift: bool = False
-    scale_min: float = 1e-5
-
-
-@dataclass
-class FlexSmoothQuantConfig:
-    """
-
-    flex_smooth_quant算法的配置项。
-    允许后续扩展配置项，但仅可新增新字段，且不得修改已有字段，
-    version用于指定配置版本号，每次修改后，版本号需要加1。
-
-    """
-
-    version: int = 1
-    alpha: Optional[float] = None
-    beta: Optional[float] = None
-    extra_config: Optional[Dict[str, Any]] = None
-

@@ -1,4 +1,4 @@
-#  Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
+#  Copyright c) Huawei Technologies Co. Ltd. 2025-2025
 #  #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -184,6 +184,11 @@ class DeepSeekV32ModelAdapter(TransformersModel,
 
     def get_adapter_config_for_subgraph(self) -> List[AdapterConfig]:
         adapter_config = []
+        if hasattr(self.config, 'num_experts'):
+            expert_num = self.config.num_experts
+        elif hasattr(self.config, 'n_routed_experts') and hasattr(self.config, 'n_shared_experts'):
+            expert_num = self.config.n_routed_experts
+
         for layer_idx in range(self.config.num_hidden_layers):
             # OKV_b融合的映射配置：o_proj -> kv_b_proj
             okv_b_mapping_config = MappingConfig(
@@ -192,16 +197,19 @@ class DeepSeekV32ModelAdapter(TransformersModel,
             )
 
             # Norm-Linear融合的映射配置1：q_a_proj, kv_a_proj_with_mqa -> input_layernorm
-            norm_linear_mapping_config1 = MappingConfig(
+            input_norm_mapping_config = MappingConfig(
                 source=f"model.layers.{layer_idx}.input_layernorm",  # 第一个LayerNorm
                 targets=[f"model.layers.{layer_idx}.self_attn.q_a_proj",
-                         f"model.layers.{layer_idx}.self_attn.kv_a_proj_with_mqa"]  # 注意力层的Q_a,KV_a投影
+                         f"model.layers.{layer_idx}.self_attn.kv_a_proj_with_mqa",
+                         f"model.layers.{layer_idx}.self_attn.indexer.wk",
+                         f"model.layers.{layer_idx}.self_attn.indexer.weights_proj"]  # 注意力层的Q_a,KV_a投影
             )
 
             # Norm-Linear融合的映射配置2：q_b_proj -> q_a_layernorm
-            norm_linear_mapping_config2 = MappingConfig(
+            qa_norm_mapping_config = MappingConfig(
                 source=f"model.layers.{layer_idx}.self_attn.q_a_layernorm",  # q_a_layernorm
-                targets=[f"model.layers.{layer_idx}.self_attn.q_b_proj"]  # q_b投影
+                targets=[f"model.layers.{layer_idx}.self_attn.q_b_proj",
+                         f"model.layers.{layer_idx}.self_attn.indexer.wq_b"]  # q_b投影
             )
 
             # 为当前layer添加4个配置
@@ -224,13 +232,86 @@ class DeepSeekV32ModelAdapter(TransformersModel,
                 ),
                 AdapterConfig(
                     subgraph_type="norm-linear",
-                    mapping=norm_linear_mapping_config1
+                    mapping=input_norm_mapping_config
                 ),
                 AdapterConfig(
                     subgraph_type="norm-linear",
-                    mapping=norm_linear_mapping_config2
+                    mapping=qa_norm_mapping_config
                 ),
             ])
+
+            # 根据层类型添加不同的FFN配置
+            post_layernorm = 'model.layers.' + str(layer_idx) + '.post_attention_layernorm'
+            post_layernorm_targets = []
+            if layer_idx < self.config.first_k_dense_replace:
+                # Dense FFN 层
+                up_proj = 'model.layers.' + str(layer_idx) + '.mlp.up_proj'
+                gate_proj = 'model.layers.' + str(layer_idx) + '.mlp.gate_proj'
+                down_proj = 'model.layers.' + str(layer_idx) + '.mlp.down_proj'
+                up_down_mapping_config = MappingConfig(
+                    source=up_proj,  # 上投影层
+                    targets=[down_proj]  # 下投影层
+                )
+                dense_post_norm_mapping_config = MappingConfig(
+                    source=post_layernorm,
+                    targets=[gate_proj, up_proj]
+                )
+                adapter_config.extend([
+                    AdapterConfig(
+                        subgraph_type="up-down",
+                        mapping=up_down_mapping_config
+                    ),
+                    AdapterConfig(
+                        subgraph_type="norm-linear",
+                        mapping=dense_post_norm_mapping_config
+                    ),
+                ])
+            else:
+                # MOE FFN 层：Shared Experts
+                expert_up_proj = 'model.layers.' + str(layer_idx) + '.mlp.shared_experts.up_proj'
+                expert_gate_proj = 'model.layers.' + str(layer_idx) + '.mlp.shared_experts.gate_proj'
+                expert_down_proj = 'model.layers.' + str(layer_idx) + '.mlp.shared_experts.down_proj'
+
+                gate_proj = 'model.layers.' + str(layer_idx) + '.mlp.gate'
+                post_layernorm_targets.extend([expert_gate_proj, expert_up_proj, gate_proj])
+                up_down_mapping_config_shared = MappingConfig(
+                    source=expert_up_proj,
+                    targets=[expert_down_proj]
+                )
+                adapter_config.extend([
+                    AdapterConfig(
+                        subgraph_type="up-down",
+                        mapping=up_down_mapping_config_shared
+                    )
+                ])
+
+                # MOE FFN 层：Routed Experts
+                for expert in range(expert_num):
+                    up_proj = 'model.layers.' + str(layer_idx) + '.mlp.experts.' + str(expert) + '.up_proj'
+                    gate_proj = 'model.layers.' + str(layer_idx) + '.mlp.experts.' + str(expert) + '.gate_proj'
+                    down_proj = 'model.layers.' + str(layer_idx) + '.mlp.experts.' + str(expert) + '.down_proj'
+                    up_down_mapping_config_expert = MappingConfig(
+                        source=up_proj,
+                        targets=[down_proj]
+                    )
+                    adapter_config.extend([
+                        AdapterConfig(
+                            subgraph_type="up-down",
+                            mapping=up_down_mapping_config_expert
+                        )
+                    ])
+                    post_layernorm_targets.extend([gate_proj, up_proj])
+                
+                post_layernorm_mapping_config = MappingConfig(
+                    source=post_layernorm,
+                    targets=post_layernorm_targets
+                )
+                adapter_config.extend([
+                    AdapterConfig(
+                        subgraph_type="norm-linear",
+                        mapping=post_layernorm_mapping_config
+                    )
+                ])
 
         return adapter_config
 

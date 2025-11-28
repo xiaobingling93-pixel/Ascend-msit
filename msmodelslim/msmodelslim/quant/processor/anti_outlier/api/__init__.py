@@ -13,21 +13,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-__all__ = [
-    "KIAManager",
+"""
+Anti-outlier API module
 
-    "QDType",
-    "QParam",
-    "QStorage",
+This module provides APIs for outlier suppression algorithms including:
+- iter_smooth: Iterative Smooth algorithm
+- flex_smooth_quant: Flex Smooth Quantization algorithm
+- flex_awq_ssz: Flex AWQ SSZ algorithm
+"""
 
-    "calculate_qparam",
-    "quantize",
-    "dequantize",
-    "fake_quantize"
-]
-
-from .KIA import KIAManager
-from .QAL import QDType, QParam, QStorage
-from .api import calculate_qparam, quantize, dequantize, fake_quantize, iter_smooth
-KIAManager.init_module()
-KIAManager.check_version()

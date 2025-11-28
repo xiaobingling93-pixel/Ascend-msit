@@ -35,7 +35,7 @@ __all__ = [
     "QuaRotProcessor"
 ]
 
-from .anti_outlier.iter_smooth import IterSmoothProcessorConfig, IterSmoothProcessor
+
 from .base import AutoProcessorConfig
 from .container.group import GroupProcessorConfig, GroupProcessor
 from .memory.load import LoadProcessorConfig, LoadProcessor
@@ -45,3 +45,9 @@ from .quant.fa3 import FA3QuantProcessorConfig, FA3QuantProcessor
 from .quant.linear import LinearProcessorConfig, LinearQuantProcessor
 from .sparse.float_sparse import FloatSparseProcessorConfig, FloatSparseProcessor
 from .quarot import QuaRotProcessor, QuaRotProcessorConfig
+
+from .anti_outlier import (
+    IterSmoothProcessorConfig,
+    FlexSmoothQuantProcessorConfig,
+    FlexAWQSSZProcessorConfig
+)
