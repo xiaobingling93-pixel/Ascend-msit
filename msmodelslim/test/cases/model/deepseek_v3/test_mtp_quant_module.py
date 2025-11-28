@@ -1,5 +1,9 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+import os
+import tempfile
 import unittest
+from unittest.mock import patch
+import shutil
 
 import torch
 import torch.nn as nn
@@ -10,6 +14,8 @@ from msmodelslim.model.deepseek_v3.mtp_quant_module import (
     DeepseekV3RMSNorm,
     SharedHead,
     MTPLayer,
+    get_mtp_layer,
+    wrap_mtp_decoder,
 )
 
 
@@ -218,3 +224,130 @@ class TestMTPLayer(unittest.TestCase):
         # 验证嵌入层配置
         self.assertEqual(mtp_layer.embed_tokens.num_embeddings, self.config.vocab_size)
         self.assertEqual(mtp_layer.embed_tokens.embedding_dim, self.config.hidden_size)
+
+
+class TestMTPModuleFunctions(unittest.TestCase):
+
+    def setUp(self):
+        torch.manual_seed(42)
+        self.config = DummyConfig()
+        # 创建临时目录用于模拟模型路径
+        self.temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        # 及时删除临时目录
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_get_mtp_layer_when_called_then_return_initialized_mtp_layer(self):
+        """测试get_mtp_layer方法：调用时应返回初始化后的MTPLayer"""
+        # 创建模拟的权重文件
+        safetensor_path = os.path.join(self.temp_dir, "model-00163-of-000163.safetensors")
+        
+        # 创建模拟的权重数据，确保包含所有必要的键
+        mock_weights = {
+            'model.layers.61.enorm.weight': torch.ones(self.config.hidden_size),
+            'model.layers.61.hnorm.weight': torch.ones(self.config.hidden_size),
+            'model.layers.61.eh_proj.weight': torch.ones((self.config.hidden_size, self.config.hidden_size * 2)),
+            'model.layers.61.embed_tokens.weight': torch.ones((self.config.vocab_size, self.config.hidden_size)),
+            'model.layers.61.shared_head.head.weight': torch.ones((self.config.vocab_size, self.config.hidden_size)),
+            'model.layers.61.shared_head.norm.weight': torch.ones(self.config.hidden_size)
+        }
+
+        with patch('msmodelslim.model.deepseek_v3.mtp_quant_module.load_file') as mock_load, \
+             patch('msmodelslim.model.deepseek_v3.mtp_quant_module.get_valid_read_path') as mock_get_path, \
+             patch('msmodelslim.model.deepseek_v3.mtp_quant_module.get_logger'):
+
+            # 设置mock返回值
+            mock_get_path.return_value = safetensor_path
+            mock_load.return_value = mock_weights
+            
+            # 调用函数
+            result = get_mtp_layer(self.config, self.temp_dir)
+
+            # 验证返回类型
+            self.assertIsInstance(result, MTPLayer)
+            # 验证相关函数被调用
+            mock_get_path.assert_called_once()
+            mock_load.assert_called_once_with(safetensor_path, device="cpu")
+
+    def test_get_mtp_layer_when_weights_exist_then_load_correctly(self):
+        """测试get_mtp_layer方法：权重存在时应正确加载"""
+        # 创建模拟权重数据
+        mock_weights = {
+            'model.layers.61.enorm.weight': torch.ones(self.config.hidden_size),
+            'model.layers.61.hnorm.weight': torch.ones(self.config.hidden_size),
+            'model.layers.61.eh_proj.weight': torch.ones((self.config.hidden_size, self.config.hidden_size * 2)),
+            'model.layers.61.embed_tokens.weight': torch.ones((self.config.vocab_size, self.config.hidden_size)),
+            'model.layers.61.shared_head.head.weight': torch.ones((self.config.vocab_size, self.config.hidden_size)),
+            'model.layers.61.shared_head.norm.weight': torch.ones(self.config.hidden_size)
+        }
+
+        safetensor_path = os.path.join(self.temp_dir, "model-00163-of-000163.safetensors")
+
+        with patch('msmodelslim.model.deepseek_v3.mtp_quant_module.load_file') as mock_load, \
+             patch('msmodelslim.model.deepseek_v3.mtp_quant_module.get_valid_read_path') as mock_get_path, \
+             patch('msmodelslim.model.deepseek_v3.mtp_quant_module.get_logger'):
+
+            mock_get_path.return_value = safetensor_path
+            mock_load.return_value = mock_weights
+
+            result = get_mtp_layer(self.config, self.temp_dir)
+
+            # 验证MTPLayer被正确创建和加载
+            self.assertIsInstance(result, MTPLayer)
+            # 验证权重被正确加载
+            self.assertTrue(hasattr(result, 'enorm'))
+            self.assertTrue(hasattr(result, 'hnorm'))
+            self.assertTrue(hasattr(result, 'eh_proj'))
+            self.assertTrue(hasattr(result, 'embed_tokens'))
+            self.assertTrue(hasattr(result, 'shared_head'))
+
+    def test_wrap_mtp_decoder_when_called_then_transfer_components(self):
+        """测试wrap_mtp_decoder方法：调用时应正确传输组件"""
+        # 创建MTPLayer和decoder
+        mtp_layer = MTPLayer(self.config)
+        decoder = DummyDecoderLayer(self.config.hidden_size)
+
+        # 初始时decoder的属性为None
+        self.assertIsNone(decoder.enorm)
+        self.assertIsNone(decoder.hnorm)
+        self.assertIsNone(decoder.shared_head)
+        self.assertIsNone(decoder.eh_proj)
+        self.assertIsNone(decoder.embed_tokens)
+
+        # 调用wrap函数
+        with patch('msmodelslim.model.deepseek_v3.mtp_quant_module.get_logger'):
+            wrap_mtp_decoder(decoder, mtp_layer)
+
+        # 验证组件被正确传输
+        self.assertIs(decoder.enorm, mtp_layer.enorm)
+        self.assertIs(decoder.hnorm, mtp_layer.hnorm)
+        self.assertIs(decoder.shared_head, mtp_layer.shared_head)
+        self.assertIs(decoder.eh_proj, mtp_layer.eh_proj)
+        self.assertIs(decoder.embed_tokens, mtp_layer.embed_tokens)
+
+    def test_wrap_mtp_decoder_when_called_then_preserve_references(self):
+        """测试wrap_mtp_decoder方法：调用时应保持引用关系"""
+        mtp_layer = MTPLayer(self.config)
+        decoder = DummyDecoderLayer(self.config.hidden_size)
+
+        # 获取MTPLayer组件的原始引用
+        original_enorm = mtp_layer.enorm
+        original_hnorm = mtp_layer.hnorm
+        original_shared_head = mtp_layer.shared_head
+        original_eh_proj = mtp_layer.eh_proj
+        original_embed_tokens = mtp_layer.embed_tokens
+
+        with patch('msmodelslim.model.deepseek_v3.mtp_quant_module.get_logger'):
+            wrap_mtp_decoder(decoder, mtp_layer)
+
+        # 验证引用保持不变（不是拷贝）
+        self.assertIs(decoder.enorm, original_enorm)
+        self.assertIs(decoder.hnorm, original_hnorm)
+        self.assertIs(decoder.shared_head, original_shared_head)
+        self.assertIs(decoder.eh_proj, original_eh_proj)
+        self.assertIs(decoder.embed_tokens, original_embed_tokens)
+
+
+if __name__ == '__main__':
+    unittest.main()
