@@ -13,8 +13,8 @@ import torch
 from torch import nn, distributed as dist
 from tqdm import tqdm
 
-from msmodelslim.app.base.const import DeviceType
 from msmodelslim.core.base.protocol import ProcessRequest
+from msmodelslim.core.const import DeviceType
 from msmodelslim.model.base import BaseModelAdapter
 from msmodelslim.model.common.layer_wise_forward import TransformersForwardBreak, \
     generated_decoder_layer_visit_func_with_keyword

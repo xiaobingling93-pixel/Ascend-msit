@@ -13,16 +13,17 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+import functools
 import os
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock, call
-import functools
+
 import pytest
 
+from msmodelslim.app.quant_service.interface import BaseQuantConfig
 from msmodelslim.app.quant_service.multimodal_sd_v1.quant_service import (
     MultimodalSDModelslimV1QuantService,
     MultimodalSDModelslimV1QuantConfig,
-    BaseQuantConfig,
     MultimodalPipelineInterface,
     DeviceType,
     SchemaValidateError

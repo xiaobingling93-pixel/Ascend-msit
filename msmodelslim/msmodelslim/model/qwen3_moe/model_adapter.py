@@ -1,18 +1,18 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 
-from typing import List, Any, Optional, Generator, Tuple
+from typing import List, Any, Generator
 
 from torch import nn
 
-from msmodelslim.app import DeviceType
 from msmodelslim.core.base.protocol import ProcessRequest
+from msmodelslim.core.const import DeviceType
 from msmodelslim.core.graph import AdapterConfig, MappingConfig
-from msmodelslim.utils.logging import logger_setter
 from msmodelslim.quant.processor.quarot import QuaRotInterface
+from msmodelslim.utils.logging import logger_setter
 from ..common.layer_wise_forward import generated_decoder_layer_visit_func, transformers_generated_forward_func
+from ..common.transformers import TransformersModel
 from ..interface_hub import ModelInfoInterface, ModelSlimPipelineInterfaceV0, ModelSlimPipelineInterfaceV1, \
     IterSmoothInterface, FlexSmoothQuantInterface
-from ..common.transformers import TransformersModel
 
 
 @logger_setter()
@@ -160,7 +160,7 @@ def qwen3_moe_get_rotate_map(config, block_size):
         # expert gate
         right_rot[f"model.layers.{layer_idx}.mlp.gate"] = rot
     rot_pairs['rot'] = QuaRotInterface.RotatePair(left_rot=left_rot, right_rot=right_rot)
-    
+
     # rot_uv
     left_rot_uv = {}
     right_rot_uv = {}
@@ -168,5 +168,5 @@ def qwen3_moe_get_rotate_map(config, block_size):
         left_rot_uv[f"model.layers.{layer_idx}.self_attn.v_proj"] = rot_uv
         right_rot_uv[f"model.layers.{layer_idx}.self_attn.o_proj"] = rot_uv
     rot_pairs["rot_uv"] = QuaRotInterface.RotatePair(left_rot=left_rot_uv, right_rot=right_rot_uv)
-    
+
     return pre_run, rot_pairs, rot, rot_uv

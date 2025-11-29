@@ -1,20 +1,20 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 
-from typing import List, Any, Generator, Optional, Tuple
+from typing import List, Any, Generator
 
 from torch import nn
 from transformers import PreTrainedTokenizerBase
 
-from msmodelslim.app import DeviceType
 from msmodelslim.core.base.protocol import ProcessRequest
+from msmodelslim.core.const import DeviceType
 from msmodelslim.quant.processor.kv_smooth import KVSmoothFusedType, KVSmoothFusedUnit
 from msmodelslim.utils.exception import InvalidModelError
 from msmodelslim.utils.logging import logger_setter
 from msmodelslim.utils.security.model import SafeGenerator
 from ..common.layer_wise_forward import generated_decoder_layer_visit_func, transformers_generated_forward_func
+from ..common.transformers import TransformersModel
 from ..interface_hub import ModelInfoInterface, ModelSlimPipelineInterfaceV0, ModelSlimPipelineInterfaceV1, \
     AnalyzePipelineInterface, KVSmoothFusedInterface
-from ..common.transformers import TransformersModel
 
 
 @logger_setter()

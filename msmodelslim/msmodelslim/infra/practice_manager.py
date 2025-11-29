@@ -3,8 +3,8 @@ from abc import ABC
 from pathlib import Path
 from typing import Dict, Generator, Optional
 
-from msmodelslim.app.base import BaseQuantConfig
-from msmodelslim.app.naive_quantization import PracticeManagerInterface as nqpm
+from msmodelslim.app.naive_quantization import PracticeManagerInfra as nqpm
+from msmodelslim.app.practice.interface import PracticeConfig
 from msmodelslim.utils.exception import SecurityError, UnsupportedError
 from msmodelslim.utils.security import get_valid_read_path
 from msmodelslim.utils.yaml_database import YamlDatabase
@@ -34,7 +34,7 @@ class PracticeManager(nqpm, ABC):
         model_pedigree = model_pedigree.lower()
         return model_pedigree in self.custom_databases or model_pedigree in self.official_databases
 
-    def get_config_by_id(self, model_pedigree: str, config_id: str) -> BaseQuantConfig:
+    def get_config_by_id(self, model_pedigree: str, config_id: str) -> PracticeConfig:
         model_pedigree = model_pedigree.lower()
         if model_pedigree in self.custom_databases and config_id in self.custom_databases[model_pedigree]:
             value = self.custom_databases[model_pedigree][config_id]
@@ -44,21 +44,21 @@ class PracticeManager(nqpm, ABC):
             raise UnsupportedError(f"Practice {config_id} of ModelType {model_pedigree} not found",
                                    action='Please check the practice id and model type')
 
-        quant_config = BaseQuantConfig.from_dict(value)
+        quant_config = PracticeConfig.from_dict(value)
 
         if config_id != quant_config.metadata.config_id:
             raise SecurityError(f"name {config_id} not match config_id {quant_config.metadata.config_id}",
                                 action='Please make sure the practice is not tampered')
         return quant_config
 
-    def iter_config(self, model_pedigree) -> Generator[BaseQuantConfig, None, None]:
+    def iter_config(self, model_pedigree) -> Generator[PracticeConfig, None, None]:
         tasks = []
         if model_pedigree in self.custom_databases:
             for value in self.custom_databases[model_pedigree].values():
-                tasks.append(BaseQuantConfig.from_dict(value))
+                tasks.append(PracticeConfig.from_dict(value))
         if model_pedigree in self.official_databases:
             for value in self.official_databases[model_pedigree].values():
-                tasks.append(BaseQuantConfig.from_dict(value))
+                tasks.append(PracticeConfig.from_dict(value))
 
         if not tasks:
             raise UnsupportedError(f"Model type {model_pedigree} not found in practice repository",

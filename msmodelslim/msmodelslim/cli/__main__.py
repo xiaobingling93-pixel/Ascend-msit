@@ -2,10 +2,8 @@
 import argparse
 
 import msmodelslim # do NOT remove, to trigger the patches
-from msmodelslim.app.base import DeviceType, QuantType
 from msmodelslim.app.analysis.application import AnalysisMetrics
-from msmodelslim.cli.analysis.__main__ import main as analysis_main
-from msmodelslim.cli.naive_quantization.__main__ import main as quant_main
+from msmodelslim.core.const import DeviceType, QuantType
 from msmodelslim.utils.config import msmodelslim_config
 from msmodelslim.utils.logging import set_logger_level
 from msmodelslim.utils.validation.conversion import convert_to_bool
@@ -56,9 +54,9 @@ def main():
                                  nargs='*',
                                  default=['*'],
                                  help='Pattern list to analyze (default is ["*"], means all match)')
-    analysis_parser.add_argument('--metrics', 
-                                 type=AnalysisMetrics, 
-                                 default=AnalysisMetrics.KURTOSIS, 
+    analysis_parser.add_argument('--metrics',
+                                 type=AnalysisMetrics,
+                                 default=AnalysisMetrics.KURTOSIS,
                                  choices=AnalysisMetrics,
                                  help='Analysis metrics to use: std, quantile, kurtosis (default: kurtosis)')
     analysis_parser.add_argument('--calib_dataset', type=str, default='boolq.jsonl',
@@ -73,8 +71,10 @@ def main():
     args = parser.parse_args()
 
     if args.command == 'quant':
+        from msmodelslim.cli.naive_quantization.__main__ import main as quant_main
         quant_main(args)
     elif args.command == 'analyze':
+        from msmodelslim.cli.analysis.__main__ import main as analysis_main
         analysis_main(args)
     else:
         # 可扩展其他组件

@@ -12,7 +12,6 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from abc import abstractmethod
 from typing import List, Optional, Any, Generator
 
 import torch
@@ -20,8 +19,8 @@ from torch import distributed as dist
 from torch import nn
 from torch.utils.data import DataLoader, DistributedSampler
 
-from msmodelslim.app import DeviceType
 from msmodelslim.core.base.protocol import ProcessRequest, BatchProcessRequest, DataUnit
+from msmodelslim.core.const import DeviceType
 from msmodelslim.core.runner.base import BaseRunner
 from msmodelslim.core.runner.pipeline_interface import PipelineInterface
 from msmodelslim.quant.processor import AutoProcessorConfig

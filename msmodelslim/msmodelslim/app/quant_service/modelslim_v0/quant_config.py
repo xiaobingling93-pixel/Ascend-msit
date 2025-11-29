@@ -3,36 +3,35 @@ from dataclasses import dataclass
 
 from typing_extensions import Self
 
-from msmodelslim.app.base.quant_config import BaseQuantConfig
+from msmodelslim.app.quant_service.interface import BaseQuantConfig
 from msmodelslim.utils.exception import SchemaValidateError
 
 
 @dataclass
 class QuantSpec:
     # anti
-    anti_cfg: dict = None # anti-outlier config
-    anti_params: dict = None # anti-outlier params
+    anti_cfg: dict = None  # anti-outlier config
+    anti_params: dict = None  # anti-outlier params
 
     # calib
-    calib_cfg: dict = None # calib config
-    calib_params: dict = None # calib params
-    calib_save_params: dict = None # calib save params
+    calib_cfg: dict = None  # calib config
+    calib_params: dict = None  # calib params
+    calib_save_params: dict = None  # calib save params
 
     # quantization parameters
-    batch_size: int = 4 # batch size
-    anti_dataset: str = None # anti-outlier dataset
-    calib_dataset: str = None # calib dataset
+    batch_size: int = 4  # batch size
+    anti_dataset: str = None  # anti-outlier dataset
+    calib_dataset: str = None  # calib dataset
 
 
 @dataclass
 class ModelslimV0QuantConfig(BaseQuantConfig):
-    spec: QuantSpec # quantization config specification
+    spec: QuantSpec  # quantization config specification
 
     @classmethod
     def from_base(cls, quant_config: BaseQuantConfig) -> Self:
         return cls(
             apiversion=quant_config.apiversion,
-            metadata=quant_config.metadata,
             spec=load_specific_config(quant_config.spec),
         )
 

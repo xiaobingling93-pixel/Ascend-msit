@@ -19,7 +19,7 @@ from typing import Dict, Any, Union
 from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Self, Literal
 
-from msmodelslim.app.base.quant_config import BaseQuantConfig
+from msmodelslim.app.quant_service.interface import BaseQuantConfig
 from msmodelslim.app.quant_service.modelslim_v1.quant_config import ModelslimV1QuantConfig, ModelslimV1ServiceConfig
 from msmodelslim.utils.exception import SchemaValidateError
 from msmodelslim.utils.exception_decorator import exception_handler
@@ -68,7 +68,6 @@ class MultimodalSDModelslimV1QuantConfig(ModelslimV1QuantConfig):
     def from_base(cls, quant_config: BaseQuantConfig) -> Self:
         return cls(
             apiversion=quant_config.apiversion,
-            metadata=quant_config.metadata,
             spec=load_specific_config(quant_config.spec),
         )
 

@@ -15,8 +15,8 @@ from safetensors import safe_open
 from torch import distributed as dist
 from tqdm import tqdm
 
-from msmodelslim.app import DeviceType
 from msmodelslim.core.base.protocol import ProcessRequest
+from msmodelslim.core.const import DeviceType
 from msmodelslim.core.graph import AdapterConfig, MappingConfig, FusionConfig
 from msmodelslim.model.common.layer_wise_forward import generated_decoder_layer_visit_func, \
     TransformersForwardBreak
@@ -379,9 +379,9 @@ class DeepSeekV3ModelAdapter(TransformersModel,
         return [], []
 
     def get_rotate_map(self, block_size):
-        pre_run, rot_pairs, _ = get_rotate_map(self.config, 
-                                                block_size, 
-                                                num_hidden_layers=self.config.num_hidden_layers)
+        pre_run, rot_pairs, _ = get_rotate_map(self.config,
+                                               block_size,
+                                               num_hidden_layers=self.config.num_hidden_layers)
         return [pre_run], [pair for pair in rot_pairs.values()]
 
     @lru_cache(maxsize=1)

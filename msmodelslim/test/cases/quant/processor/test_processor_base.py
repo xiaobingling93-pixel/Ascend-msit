@@ -8,8 +8,8 @@ import torch
 from resources.fake_llama.fake_llama import get_fake_llama_model_and_tokenizer
 from transformers import PreTrainedModel, PreTrainedTokenizer
 
-from msmodelslim.app import DeviceType
 from msmodelslim.core.base.protocol import ProcessRequest
+from msmodelslim.core.const import DeviceType
 from msmodelslim.core.runner.generated_runner import GeneratedRunner
 from msmodelslim.core.runner.pipeline_parallel_runner import PPRunner
 from msmodelslim.quant.processor import AutoProcessorConfig

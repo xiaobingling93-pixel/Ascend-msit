@@ -15,29 +15,36 @@
 import functools
 import os
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional
 
-from msmodelslim.app import DeviceType
-from msmodelslim.app.base.const import RunnerType
-from msmodelslim.app.quant_service.base import BaseQuantConfig, BaseQuantService
-from msmodelslim.app.quant_service.dataset_interface import DatasetLoaderInterface
+from msmodelslim.app.quant_service.base import BaseQuantService
+from msmodelslim.app.quant_service.dataset_loader_infra import DatasetLoaderInfra
+from msmodelslim.core.const import DeviceType
+from msmodelslim.core.const import RunnerType
 from msmodelslim.core.runner.layer_wise_runner import LayerWiseRunner
+from msmodelslim.model import IModel
 from msmodelslim.utils.cache import load_cached_data, to_device
 from msmodelslim.utils.exception import SchemaValidateError
 from msmodelslim.utils.logging import get_logger, logger_setter
 from .pipeline_interface import MultimodalPipelineInterface
 from .quant_config import MultimodalSDModelslimV1QuantConfig
+from ..interface import BaseQuantConfig
 
 
 @logger_setter(prefix='msmodelslim.app.quant_service.multimodal_sd_v1')
 class MultimodalSDModelslimV1QuantService(BaseQuantService):
     backend_name: str = "multimodal_sd_modelslim_v1"
 
-    def __init__(self, dataset_loader: DatasetLoaderInterface):
+    def __init__(self, dataset_loader: DatasetLoaderInfra):
         super().__init__(dataset_loader)
 
-    def quantize(self, quant_config: BaseQuantConfig, model_adapter: Any, save_path: Optional[Path] = None,
-                 device: DeviceType = DeviceType.NPU):
+    def quantize(
+            self,
+            quant_config: BaseQuantConfig,
+            model_adapter: IModel,
+            save_path: Optional[Path] = None,
+            device: DeviceType = DeviceType.NPU,
+    ) -> None:
         if not isinstance(quant_config, BaseQuantConfig):
             raise SchemaValidateError("task must be a BaseTask")
         if not isinstance(model_adapter, MultimodalPipelineInterface):
@@ -91,7 +98,7 @@ class MultimodalSDModelslimV1QuantService(BaseQuantService):
 
         if quant_config.spec.runner != "layer_wise":
             get_logger().warning(f"runner for multimodal_sd_v1 is not layer_wise, will be converted to layer_wise.")
-        
+
         runner = LayerWiseRunner(adapter=model_adapter)
 
         for process_cfg in final_process_cfg:

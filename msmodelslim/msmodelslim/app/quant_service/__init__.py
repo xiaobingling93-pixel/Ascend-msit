@@ -1,13 +1,12 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 __all__ = [
+    "IQuantService",
     'BaseQuantService',
     'QuantServiceProxy',
-    'DatasetLoaderInterface',
-    'load_plugins',
-    'load_quant_service_cls',
+    'DatasetLoaderInfra',
 ]
 
 from .base import BaseQuantService
-from .dataset_interface import DatasetLoaderInterface
-from .plugin import load_plugins, load_quant_service_cls
+from .dataset_loader_infra import DatasetLoaderInfra
+from .interface import IQuantService
 from .proxy import QuantServiceProxy

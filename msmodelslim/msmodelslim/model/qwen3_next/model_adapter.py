@@ -4,20 +4,20 @@ from typing import List, Any, Optional, Generator, Tuple
 
 from torch import nn
 
-from msmodelslim.app import DeviceType
 from msmodelslim.core.base.protocol import ProcessRequest
+from msmodelslim.core.const import DeviceType
 from msmodelslim.utils.logging import logger_setter
 from ..common.layer_wise_forward import generated_decoder_layer_visit_func, transformers_generated_forward_func
-from ..interface_hub import ModelInfoInterface, ModelSlimPipelineInterfaceV0, ModelSlimPipelineInterfaceV1
 from ..common.transformers import TransformersModel
+from ..interface_hub import ModelInfoInterface, ModelSlimPipelineInterfaceV0, ModelSlimPipelineInterfaceV1
 
 
 @logger_setter()
 class Qwen3NextModelAdapter(TransformersModel,
-                           ModelInfoInterface,
-                           ModelSlimPipelineInterfaceV0,
-                           ModelSlimPipelineInterfaceV1
-                           ):
+                            ModelInfoInterface,
+                            ModelSlimPipelineInterfaceV0,
+                            ModelSlimPipelineInterfaceV1
+                            ):
     def get_model_type(self) -> str:
         return self.model_type
 
@@ -51,4 +51,3 @@ class Qwen3NextModelAdapter(TransformersModel,
 
     def enable_kv_cache(self, model: nn.Module, need_kv_cache: bool) -> None:
         return self._enable_kv_cache(model, need_kv_cache)
-

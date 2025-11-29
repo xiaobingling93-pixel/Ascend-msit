@@ -13,12 +13,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 
-from msmodelslim.utils.exception import UnsupportedError
+from msmodelslim.model import IModel
 
 
-class ModelInfoInterface(ABC):
+class ModelInfoInterface(IModel):
     """
     Interface for getting model information to assist best practice selection.
     """
@@ -32,9 +32,7 @@ class ModelInfoInterface(ABC):
         Returns:
             str: The pedigree of the model.
         """
-        raise UnsupportedError(
-            "This model does not support get model pedigree.",
-            action="Please implement get_model_pedigree in ModelInfoInterface for naive quantization.")
+        ...
 
     @abstractmethod
     def get_model_type(self) -> str:
@@ -45,6 +43,4 @@ class ModelInfoInterface(ABC):
         Returns:
             str: The type of the model.
         """
-        raise UnsupportedError(
-            "This model does not support get model type.",
-            action="Please implement get_model_type in ModelInfoInterface for naive quantization.")
+        ...

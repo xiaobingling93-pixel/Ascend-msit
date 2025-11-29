@@ -2,14 +2,14 @@
 from pathlib import Path
 from typing import List, Any
 
-from msmodelslim.app.quant_service.dataset_interface import DatasetLoaderInterface
+from msmodelslim.app.quant_service.dataset_loader_infra import DatasetLoaderInfra
 from msmodelslim.utils.exception import InvalidDatasetError, SchemaValidateError
 from msmodelslim.utils.security import get_valid_read_path
 from msmodelslim.utils.security.model import SafeGenerator
 from msmodelslim.utils.security.path import json_safe_load
 
 
-class FileDatasetLoader(DatasetLoaderInterface):
+class FileDatasetLoader(DatasetLoaderInfra):
     def __init__(self, dataset_dir: Path):
         self.dir = dataset_dir
 

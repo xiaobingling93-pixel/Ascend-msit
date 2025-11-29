@@ -16,12 +16,12 @@
 from dataclasses import dataclass
 
 from pydantic import BaseModel, Field
-from typing_extensions import Self, Literal
+from typing_extensions import Self
 
-from msmodelslim.app.base.const import RunnerType
-from msmodelslim.app.base.quant_config import BaseQuantConfig
+from msmodelslim.core.const import RunnerType
 from msmodelslim.quant.processor.base import AutoProcessorConfigList
 from .save.saver import AutoSaverConfigList
+from ..interface import BaseQuantConfig
 
 
 class ModelslimV1ServiceConfig(BaseModel):
@@ -39,7 +39,6 @@ class ModelslimV1QuantConfig(BaseQuantConfig):
     def from_base(cls, quant_config: BaseQuantConfig) -> Self:
         return cls(
             apiversion=quant_config.apiversion,
-            metadata=quant_config.metadata,
             spec=load_specific_config(quant_config.spec),
         )
 

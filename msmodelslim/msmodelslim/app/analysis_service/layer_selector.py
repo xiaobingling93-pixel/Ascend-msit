@@ -7,13 +7,13 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 
+from msmodelslim.core.const import DeviceType
 from msmodelslim.utils.exception import SchemaValidateError
 from msmodelslim.utils.logging import logger_setter, get_logger, clean_output
 from .analysis_methods import AnalysisMethodFactory, AnalysisTargetMatcher
 from .base import BaseAnalysisService
 from .pipeline_interface import PipelineInterface
-from .. import DeviceType
-from ..quant_service.dataset_interface import DatasetLoaderInterface
+from ..quant_service.dataset_loader_infra import DatasetLoaderInfra
 
 
 class AnalysisResult:
@@ -44,7 +44,7 @@ def get_tokenized_data(tokenizer, calib_list, device,
 class LayerSelectorAnalysisService(BaseAnalysisService):
     """Analysis service for layer sensitivity evaluation using various methods"""
 
-    def __init__(self, dataset_loader: DatasetLoaderInterface):
+    def __init__(self, dataset_loader: DatasetLoaderInfra):
         super().__init__(dataset_loader)
 
     def analyze(self,

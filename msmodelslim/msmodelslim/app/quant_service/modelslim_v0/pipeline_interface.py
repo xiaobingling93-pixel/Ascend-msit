@@ -18,7 +18,7 @@ from typing import Any, List
 
 from torch import nn
 
-from msmodelslim.app import DeviceType
+from msmodelslim.core.const import DeviceType
 from msmodelslim.model import IModel
 from msmodelslim.utils.exception import UnsupportedError
 

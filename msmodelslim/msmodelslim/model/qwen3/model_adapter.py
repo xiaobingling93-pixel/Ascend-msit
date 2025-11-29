@@ -1,26 +1,23 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 
-from typing import List, Any, Optional, Generator, Tuple
+from typing import List, Any, Generator
 
 from torch import nn
 
-from msmodelslim.app import DeviceType
 from msmodelslim.core.base.protocol import ProcessRequest
+from msmodelslim.core.const import DeviceType
 from msmodelslim.core.graph.adapter_types import AdapterConfig, MappingConfig
 from msmodelslim.quant.processor.kv_smooth import KVSmoothFusedType, KVSmoothFusedUnit
+from msmodelslim.quant.processor.quarot import (
+    QuaRotInterface,
+    QuaRotOnlineInterface
+)
 from msmodelslim.utils.exception import InvalidModelError
 from msmodelslim.utils.logging import logger_setter, get_logger
-from msmodelslim.quant.processor.quarot import (
-                                                QuaRotInterface, 
-                                                QuaRotOnlineInterface, 
-                                                RotatePair, 
-                                                create_rot, 
-                                                QuaRotMode
-                                                )
 from ..common.layer_wise_forward import generated_decoder_layer_visit_func, transformers_generated_forward_func
+from ..common.transformers import TransformersModel
 from ..interface_hub import ModelInfoInterface, ModelSlimPipelineInterfaceV0, ModelSlimPipelineInterfaceV1, \
     AnalyzePipelineInterface, KVSmoothFusedInterface, IterSmoothInterface, FlexSmoothQuantInterface
-from ..common.transformers import TransformersModel
 
 
 @logger_setter()
@@ -201,10 +198,10 @@ class Qwen3ModelAdapter(TransformersModel,
 
     def get_ln_fuse_map(self):
         return {}, qwen3_get_ln_fuse_map(self.config)
-    
+
     def get_bake_names(self):
         return [], []
-    
+
     def get_rotate_map(self, block_size):
         pre_run, rot_pairs, _, _ = qwen3_get_rotate_map(self.config, block_size)
         return [pre_run], [pair for pair in rot_pairs.values()]
@@ -261,7 +258,7 @@ def qwen3_get_rotate_map(config, block_size):
         right_rot[f"model.layers.{layer_idx}.mlp.up_proj"] = rot
         left_rot[f"model.layers.{layer_idx}.mlp.down_proj"] = rot
     rot_pairs['rot'] = QuaRotInterface.RotatePair(left_rot=left_rot, right_rot=right_rot)
-    
+
     # rot_uv
     left_rot_uv = {}
     right_rot_uv = {}
@@ -269,5 +266,5 @@ def qwen3_get_rotate_map(config, block_size):
         left_rot_uv[f"model.layers.{layer_idx}.self_attn.v_proj"] = rot_uv
         right_rot_uv[f"model.layers.{layer_idx}.self_attn.o_proj"] = rot_uv
     rot_pairs["rot_uv"] = QuaRotInterface.RotatePair(left_rot=left_rot_uv, right_rot=right_rot_uv)
-    
+
     return pre_run, rot_pairs, rot, rot_uv

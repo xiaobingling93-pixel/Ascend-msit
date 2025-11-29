@@ -20,13 +20,13 @@ from typing import List
 from unittest.mock import patch, MagicMock
 
 import torch
+from resources.fake_llama.fake_llama import get_fake_llama_model_and_tokenizer
 from torch import nn
 from transformers import PretrainedConfig, PreTrainedTokenizerBase
 
-from msmodelslim.app import DeviceType
+from msmodelslim.core.const import DeviceType
 from msmodelslim.model.qwen3.model_adapter import Qwen3ModelAdapter
 from msmodelslim.quant.processor.kv_smooth import KVSmoothFusedUnit, KVSmoothFusedType
-from resources.fake_llama.fake_llama import get_fake_llama_model_and_tokenizer
 
 
 @lru_cache(maxsize=1)
@@ -107,7 +107,7 @@ def invoke_test(config_name: str, model_save_path: str, device: str = 'cpu', off
 
         # 使用patch来模拟copy_files调用并拦截model_adapter
         with patch(
-            "msmodelslim.model.plugin_factory.entry_points"
+                "msmodelslim.model.plugin_factory.entry_points"
         ) as mock_entry_points, patch(
             "msmodelslim.app.quant_service.modelslim_v1.save.ascendv1.copy_files"
         ) as mock_copy_files:
