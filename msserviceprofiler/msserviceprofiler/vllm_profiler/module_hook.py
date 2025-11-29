@@ -16,11 +16,14 @@ import traceback
 import importlib
 import inspect
 import functools
+from contextlib import closing
 from abc import ABC, abstractmethod
 from typing import Union, Tuple, List, Optional, Callable, Any
 from packaging.version import Version
 from .logger import logger
 from .registry import add_to_hook_registry
+
+MAX_HOOK_FAILURES = 5
 
 
 def import_object_from_string(import_path: str, module_path: str) -> Any:
@@ -143,13 +146,15 @@ class HookHelper:
         Raises:
             Exception: 当替换失败时抛出
         """
-        if all([self.ori_function, self.location, self.attr_name, self.new_function]):
-            try:
-                setattr(self.location, self.attr_name, self._get_method(self.new_function))
-                logger.debug(f"Successfully replaced {self.attr_name} in {self.location}")
-            except Exception as e:
-                logger.error(f"Failed to replace {self.attr_name} in {self.location}: {e}")
-                raise
+        if not self._has_valid_attributes():
+            return
+
+        try:
+            setattr(self.location, self.attr_name, self._get_method(self.new_function))
+            logger.debug(f"Successfully replaced {self.attr_name} in {self.location}")
+        except Exception as e:
+            logger.error(f"Failed to replace {self.attr_name} in {self.location}: {e}")
+            raise
 
     def recover(self):
         """恢复原始函数。
@@ -157,13 +162,15 @@ class HookHelper:
         Raises:
             Exception: 当恢复失败时抛出
         """
-        if all([self.ori_function, self.location, self.attr_name, self.new_function]):
-            try:
-                setattr(self.location, self.attr_name, self._get_method(self.ori_function))
-                logger.debug(f"Successfully recovered {self.attr_name} in {self.location}")
-            except Exception as e:
-                logger.error(f"Failed to recover {self.attr_name} in {self.location}: {e}")
-                raise
+        if not self._has_valid_attributes():
+            return
+
+        try:
+            setattr(self.location, self.attr_name, self._get_method(self.ori_function))
+            logger.debug(f"Successfully recovered {self.attr_name} in {self.location}")
+        except Exception as e:
+            logger.error(f"Failed to recover {self.attr_name} in {self.location}: {e}")
+            raise
 
     def _get_method(self, func):
         """获取适当的方法类型（staticmethod 或 classmethod）。
@@ -182,6 +189,18 @@ class HookHelper:
             except AttributeError:
                 pass
         return func
+    
+    def _has_valid_attributes(self) -> bool:
+        """检查替换/恢复所需的关键属性是否齐全。"""
+        for attr in (
+            self.ori_function,
+            self.location,
+            self.attr_name,
+            self.new_function,
+        ):
+            if attr is None:
+                return False
+        return True
 
 
 def get_parents_name(ori_func, index=1):
@@ -194,13 +213,16 @@ def get_parents_name(ori_func, index=1):
     Returns:
         Optional[str]: 父级函数名，失败时返回 None
     """
-    gen = traceback.walk_stack(None)
+    frame = None
     try:
-        for _ in range(index + 1):
-            f = next(gen)
-        return f[0].f_code.co_name
+        with closing(traceback.walk_stack(None)) as gen:
+            for _ in range(index + 1):
+                frame, _ = next(gen)
+            return frame.f_code.co_name if frame else None
     except StopIteration:
         return None
+    finally:
+        frame = None
 
 
 class TrackableOriginalFunc:
@@ -398,7 +420,7 @@ class VLLMHookerBase(ABC):
         
         功能特性：
         - 任一 hook 执行抛异常时，不影响业务逻辑：返回原始函数结果
-        - 连续失败达到 5 次，自动回退为原始函数（若提供 on_recover 则调用以执行恢复）
+        - 连续失败达到 MAX_HOOK_FAILURES 次，自动回退为原始函数（若提供 on_recover 则调用以执行恢复）
         - 支持 context manager 的特殊处理
         - 避免重复执行原函数：如果 hook 函数内部已调用原函数，异常处理时不会重复调用
         
@@ -495,7 +517,9 @@ class VLLMHookerBase(ABC):
             failures: 失败次数
         """
         ori_func = trackable_ori_func.original_func
-        logger.error(f"Hook execution failed ({failures}/5) for {ori_func}: {e}")
+        logger.error(
+            f"Hook execution failed ({failures}/{MAX_HOOK_FAILURES}) for {ori_func}: {e}"
+        )
         logger.error(f"Exception details: {type(e).__name__}: {str(e)}")
         logger.error(f"Traceback: {traceback.format_exc()}")
 
@@ -547,11 +571,13 @@ class VLLMHookerBase(ABC):
             failures: 失败次数
         """
         ori_func = trackable_ori_func.original_func
-        if failures >= 5:
+        if failures >= MAX_HOOK_FAILURES:
             try:
                 if callable(on_recover):
                     on_recover()
-                logger.warning(f"Hook permanently reverted to original for {ori_func} after 5 failures")
+                logger.warning(
+                    f"Hook permanently reverted to original for {ori_func} after {MAX_HOOK_FAILURES} failures"
+                )
             except Exception as re:
                 logger.error(f"Failed to recover original function for {ori_func}: {re}")
 
@@ -581,7 +607,7 @@ class VLLMHookerBase(ABC):
                 return await trackable_ori_func(*args, **kwargs)
 
             nonlocal failures
-            if failures >= 5:
+            if failures >= MAX_HOOK_FAILURES:
                 return await trackable_ori_func(*args, **kwargs)
 
             try:
@@ -640,7 +666,7 @@ class VLLMHookerBase(ABC):
                 return trackable_ori_func(*args, **kwargs)
 
             nonlocal failures
-            if failures >= 5:
+            if failures >= MAX_HOOK_FAILURES:
                 return trackable_ori_func(*args, **kwargs)
 
             try:
