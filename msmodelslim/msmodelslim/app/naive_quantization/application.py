@@ -1,10 +1,11 @@
 # Copyright Huawei Technologies Co., Ltd. 2025. All rights reserved.
 import re
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Optional
 
-from msmodelslim.app.base import QuantType
-from msmodelslim.model import IModelFactory
+from msmodelslim.core.const import DeviceType
+from msmodelslim.core.const import QuantType
+from msmodelslim.model import IModelFactory, IModel
 from msmodelslim.utils.exception import SchemaValidateError, ToDoError, UnsupportedError
 from msmodelslim.utils.exception_decorator import exception_catcher
 from msmodelslim.utils.logging import logger_setter, get_logger
@@ -12,15 +13,13 @@ from msmodelslim.utils.security import yaml_safe_load
 from msmodelslim.utils.validation.conversion import (
     convert_to_readable_file,
     convert_to_writable_dir,
-    convert_to_bool,
     convert_to_readable_dir
 )
 from msmodelslim.utils.validation.value import validate_str_length
 from .model_info_interface import ModelInfoInterface
-from .practice_interface import PracticeManagerInterface
-from ..base import BaseQuantConfig, DeviceType
-from ..quant_service import BaseQuantService
-
+from .practice_manager_infra import PracticeManagerInfra
+from ..practice.interface import PracticeConfig
+from ..quant_service import IQuantService
 
 DEFAULT_PEDIGREE = 'default'
 DEFAULT_CONFIG_ID = 'default'
@@ -30,10 +29,10 @@ DEFAULT_CONFIG_ID = 'default'
 class NaiveQuantizationApplication:
 
     def __init__(
-        self,
-        practice_manager: PracticeManagerInterface,
-        quant_service: BaseQuantService,
-        model_factory: IModelFactory,
+            self,
+            practice_manager: PracticeManagerInfra,
+            quant_service: IQuantService,
+            model_factory: IModelFactory,
     ):
         self.practice_manager = practice_manager
         self.quant_service = quant_service
@@ -55,7 +54,7 @@ class NaiveQuantizationApplication:
     def get_default_practice(self,
                              prompt="No configuration found.",
                              error_msg="The corresponding configuration is not currently supported"
-                             ) -> BaseQuantConfig:
+                             ) -> PracticeConfig:
         user_input = input(
             prompt +
             " Default configuration will be used. (Enter y to continue, otherwise it will exit): ").strip().lower()[:3]
@@ -65,18 +64,25 @@ class NaiveQuantizationApplication:
         return self.practice_manager.get_config_by_id(DEFAULT_PEDIGREE, DEFAULT_CONFIG_ID)
 
     def get_best_practice(self,
-                          model_type: str,
-                          model_pedigree: str,
+                          model_adapter: IModel,
                           quant_type: Optional[QuantType] = None,
                           config_path: Optional[Path] = None,
-                          ) -> BaseQuantConfig:
+                          ) -> PracticeConfig:
 
         # Handle explicit config path
         if config_path is not None:
             config_dict = yaml_safe_load(str(config_path))
-            config = BaseQuantConfig.from_dict(config_dict)
+            config = PracticeConfig.from_dict(config_dict)
             get_logger().info(f"Naive Quant apply config_path: {config_path}")
             return config
+
+        if not isinstance(model_adapter, ModelInfoInterface):
+            raise ToDoError(f"Model adapter {model_adapter.__class__.__name__} "
+                            f"does NOT implement ModelInfoInterface",
+                            action="Please implement ModelInfoInterface to support get best practice.")
+
+        model_type = model_adapter.get_model_type()
+        model_pedigree = model_adapter.get_model_pedigree()
 
         # Handle unknown model
         if model_pedigree not in self.practice_manager:
@@ -189,22 +195,16 @@ class NaiveQuantizationApplication:
         get_logger().info(f"Using model adapter {model_adapter.__class__.__name__}.")
 
         get_logger().info(f"===========GET BEST PRACTICE===========")
-        if not isinstance(model_adapter, ModelInfoInterface):
-            raise ToDoError(f"Model adapter {model_adapter.__class__.__name__} "
-                            f"does NOT implement ModelInfoInterface",
-                            action="Please implement ModelInfoInterface to support get best practice.")
-
-        quant_config = self.get_best_practice(
-            model_type=model_adapter.get_model_type(),
-            model_pedigree=model_adapter.get_model_pedigree(),
+        practice_config = self.get_best_practice(
+            model_adapter=model_adapter,
             quant_type=quant_type,
             config_path=config_path
         )
-        get_logger().info(f"Get best practice {quant_config.metadata.config_id} success.")
+        get_logger().info(f"Get best practice {practice_config.metadata.config_id} success.")
 
         get_logger().info(f"===========QUANTIZE MODEL===========")
         self.quant_service.quantize(
-            quant_config=quant_config,
+            quant_config=practice_config.extract_quant_config(),
             model_adapter=model_adapter,
             save_path=save_path,
             device=device

@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import torch.nn as nn
 
-from msmodelslim.app import DeviceType
+from msmodelslim.core.const import DeviceType
 from msmodelslim.model.qwen3.model_adapter import Qwen3ModelAdapter
 from msmodelslim.utils.exception import InvalidModelError
 
@@ -35,12 +35,12 @@ class TestQwen3ModelAdapterLoadModel(unittest.TestCase):
                 model_type=self.model_type,
                 model_path=self.model_path
             )
-            
+
             mock_model = nn.Linear(10, 10)
             adapter._load_model = MagicMock(return_value=mock_model)
-            
+
             result = adapter.load_model(device=DeviceType.NPU)
-            
+
             # 验证返回的是模型
             self.assertIs(result, mock_model)
             # 验证_load_model被正确调用
@@ -64,9 +64,9 @@ class TestQwen3ModelAdapterGetHeadDim(unittest.TestCase):
             )
             adapter.config = DummyConfig()
             adapter.config.head_dim = 64
-            
+
             result = adapter.get_head_dim()
-            
+
             # 验证返回config中的head_dim
             self.assertEqual(result, 64)
 
@@ -82,13 +82,13 @@ class TestQwen3ModelAdapterGetHeadDim(unittest.TestCase):
                 'hidden_size': 128,
                 'num_attention_heads': 8
             })()
-            
+
             with patch('msmodelslim.model.qwen3.model_adapter.get_logger') as mock_logger:
                 result = adapter.get_head_dim()
-                
+
                 # 验证计算结果：128 // 8 = 16
                 self.assertEqual(result, 16)
-                
+
                 # 验证警告被记录
                 mock_logger().warning.assert_called_once()
                 warning_msg = mock_logger().warning.call_args[0][0]
@@ -103,10 +103,10 @@ class TestQwen3ModelAdapterGetHeadDim(unittest.TestCase):
             )
             # 创建没有head_dim和hidden_size的config
             adapter.config = type('Config', (), {})()
-            
+
             with self.assertRaises(InvalidModelError) as context:
                 adapter.get_head_dim()
-            
+
             # 验证异常消息
             self.assertIn("hidden_size is not found", str(context.exception))
 
@@ -119,10 +119,10 @@ class TestQwen3ModelAdapterGetHeadDim(unittest.TestCase):
             )
             # 创建有hidden_size但没有num_attention_heads的config
             adapter.config = type('Config', (), {'hidden_size': 128})()
-            
+
             with self.assertRaises(InvalidModelError) as context:
                 adapter.get_head_dim()
-            
+
             # 验证异常消息
             self.assertIn("num_attention_heads is not found", str(context.exception))
 
@@ -137,10 +137,10 @@ class TestQwen3ModelAdapterGetHeadDim(unittest.TestCase):
                 'hidden_size': 128,
                 'num_attention_heads': 0
             })()
-            
+
             with self.assertRaises(InvalidModelError) as context:
                 adapter.get_head_dim()
-            
+
             # 验证异常消息
             self.assertIn("num_attention_heads is 0", str(context.exception))
 
@@ -162,9 +162,9 @@ class TestQwen3ModelAdapterGetNumKeyValueGroups(unittest.TestCase):
             )
             adapter.config = DummyConfig()
             adapter.model_path = self.model_path
-            
+
             result = adapter.get_num_key_value_groups()
-            
+
             # 验证计算结果：num_attention_heads=8, num_key_value_heads=4, groups=2
             expected = adapter.config.num_attention_heads // adapter.config.num_key_value_heads
             self.assertEqual(result, expected)
@@ -179,10 +179,10 @@ class TestQwen3ModelAdapterGetNumKeyValueGroups(unittest.TestCase):
             )
             adapter.config = type('Config', (), {})()
             adapter.model_path = self.model_path
-            
+
             with self.assertRaises(InvalidModelError) as context:
                 adapter.get_num_key_value_groups()
-            
+
             # 验证异常消息
             self.assertIn("num_attention_heads is not found", str(context.exception))
 
@@ -195,10 +195,10 @@ class TestQwen3ModelAdapterGetNumKeyValueGroups(unittest.TestCase):
             )
             adapter.config = type('Config', (), {'num_attention_heads': 8})()
             adapter.model_path = self.model_path
-            
+
             with self.assertRaises(InvalidModelError) as context:
                 adapter.get_num_key_value_groups()
-            
+
             # 验证异常消息
             self.assertIn("num_key_value_heads is not found", str(context.exception))
 
@@ -214,10 +214,10 @@ class TestQwen3ModelAdapterGetNumKeyValueGroups(unittest.TestCase):
                 'num_key_value_heads': 0
             })()
             adapter.model_path = self.model_path
-            
+
             with self.assertRaises(InvalidModelError) as context:
                 adapter.get_num_key_value_groups()
-            
+
             # 验证异常消息
             self.assertIn("num_key_value_heads is 0", str(context.exception))
 
@@ -229,7 +229,7 @@ class TestQwen3ModelAdapterGetNumKeyValueGroups(unittest.TestCase):
                 model_path=self.model_path
             )
             adapter.model_path = self.model_path
-            
+
             # 测试场景1: 16 / 2 = 8组
             adapter.config = type('Config', (), {
                 'num_attention_heads': 16,
@@ -237,7 +237,7 @@ class TestQwen3ModelAdapterGetNumKeyValueGroups(unittest.TestCase):
             })()
             result = adapter.get_num_key_value_groups()
             self.assertEqual(result, 8)
-            
+
             # 测试场景2: 32 / 8 = 4组
             adapter.config = type('Config', (), {
                 'num_attention_heads': 32,
@@ -245,7 +245,7 @@ class TestQwen3ModelAdapterGetNumKeyValueGroups(unittest.TestCase):
             })()
             result = adapter.get_num_key_value_groups()
             self.assertEqual(result, 4)
-            
+
             # 测试场景3: 12 / 12 = 1组（MHA情况）
             adapter.config = type('Config', (), {
                 'num_attention_heads': 12,

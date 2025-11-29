@@ -14,27 +14,29 @@
 #  limitations under the License.
 
 from pathlib import Path
-from typing import Optional, Literal, Any
+from typing import Optional, Literal
 
 import torch
 
-from msmodelslim.app.base.const import RunnerType, DeviceType
-from msmodelslim.app.quant_service.base import BaseQuantConfig, BaseQuantService
-from msmodelslim.app.quant_service.dataset_interface import DatasetLoaderInterface
+from msmodelslim.app.quant_service.base import BaseQuantService
+from msmodelslim.app.quant_service.dataset_loader_infra import DatasetLoaderInfra
+from msmodelslim.core.const import RunnerType, DeviceType
 from msmodelslim.core.runner.layer_wise_runner import LayerWiseRunner
 from msmodelslim.core.runner.pipeline_interface import PipelineInterface
 from msmodelslim.core.runner.pipeline_parallel_runner import PPRunner
+from msmodelslim.model import IModel
 from msmodelslim.utils.exception import SchemaValidateError, UnsupportedError
 from msmodelslim.utils.logging import get_logger, logger_setter
 from msmodelslim.utils.seed import seed_all
 from .quant_config import ModelslimV1QuantConfig
+from ..interface import BaseQuantConfig
 
 
 @logger_setter(prefix='msmodelslim.app.quant_service.modelslim_v1')
 class ModelslimV1QuantService(BaseQuantService):
     backend_name: str = "modelslim_v1"
 
-    def __init__(self, dataset_loader: DatasetLoaderInterface):
+    def __init__(self, dataset_loader: DatasetLoaderInfra):
         super().__init__(dataset_loader)
 
     @staticmethod
@@ -61,8 +63,13 @@ class ModelslimV1QuantService(BaseQuantService):
         get_logger().info("Runner type not detected, using layer-wise pipeline.")
         return RunnerType.LAYER_WISE
 
-    def quantize(self, quant_config: BaseQuantConfig, model_adapter: Any, save_path: Optional[Path] = None,
-                 device: DeviceType = DeviceType.NPU, ):
+    def quantize(
+            self,
+            quant_config: BaseQuantConfig,
+            model_adapter: IModel,
+            save_path: Optional[Path] = None,
+            device: DeviceType = DeviceType.NPU,
+    ) -> None:
         if not isinstance(quant_config, BaseQuantConfig):
             raise SchemaValidateError("task is NOT BaseQuantConfig",
                                       action="Please make sure the task is a BaseQuantConfig")

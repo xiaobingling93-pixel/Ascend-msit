@@ -1,10 +1,12 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 import os
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional
 
 import torch
 
+from msmodelslim.core.const import DeviceType
+from msmodelslim.model import IModel
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlier, AntiOutlierConfig
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 from msmodelslim.utils.exception import SchemaValidateError
@@ -13,8 +15,8 @@ from msmodelslim.utils.security import safe_copy_file
 from .pipeline_interface import PipelineInterface
 from .quant_config import ModelslimV0QuantConfig
 from ..base import BaseQuantService
-from ..dataset_interface import DatasetLoaderInterface
-from ...base import DeviceType, BaseQuantConfig
+from ..dataset_loader_infra import DatasetLoaderInfra
+from ..interface import BaseQuantConfig
 
 
 def copy_files(input_path, output_path):
@@ -40,17 +42,22 @@ def copy_files(input_path, output_path):
 class ModelslimV0QuantService(BaseQuantService):
     backend_name: str = "modelslim_v0"
 
-    def __init__(self, dataset_loader: DatasetLoaderInterface):
+    def __init__(self, dataset_loader: DatasetLoaderInfra):
         super().__init__(dataset_loader)
 
-    def quantize(self, quant_config: BaseQuantConfig, model_adapter: Any, save_path: Optional[Path] = None,
-                 device: DeviceType = DeviceType.NPU):
+    def quantize(
+            self,
+            quant_config: BaseQuantConfig,
+            model_adapter: IModel,
+            save_path: Optional[Path] = None,
+            device: DeviceType = DeviceType.NPU,
+    ) -> None:
         if not isinstance(quant_config, BaseQuantConfig):
             raise SchemaValidateError("task must be a BaseTask",
                                       action='Please make sure the task is a BaseTask')
         if not isinstance(model_adapter, PipelineInterface):
-            raise SchemaValidateError("model must be a BaseModelAdapter",
-                                      action='Please make sure the model is a BaseModelAdapter')
+            raise SchemaValidateError("model must be a PipelineInterface",
+                                      action='Please make sure the model is a PipelineInterface')
         if save_path is not None and not isinstance(save_path, Path):
             raise SchemaValidateError("save_path must be a Path or None",
                                       action='Please make sure the save_path is a Path or None')

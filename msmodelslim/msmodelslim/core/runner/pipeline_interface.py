@@ -14,13 +14,13 @@
 #  limitations under the License.
 
 from abc import abstractmethod
-from typing import Generator, Any, Optional, Tuple, List
+from typing import Generator, Any, List
 
 from torch import nn
 
-from msmodelslim.app import DeviceType
-from msmodelslim.model import IModel
 from msmodelslim.core.base.protocol import ProcessRequest
+from msmodelslim.core.const import DeviceType
+from msmodelslim.model import IModel
 from msmodelslim.utils.exception import ToDoError
 
 

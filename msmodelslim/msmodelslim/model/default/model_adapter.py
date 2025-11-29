@@ -1,19 +1,19 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 from pathlib import Path
-from typing import List, Any, Optional, Tuple, Generator
+from typing import List, Any, Generator
 
 import torch.nn as nn
 
-from msmodelslim.app.base.const import DeviceType
 from msmodelslim.core.base.protocol import ProcessRequest
+from msmodelslim.core.const import DeviceType
 from msmodelslim.model.common.layer_wise_forward import transformers_generated_forward_func, \
     generated_decoder_layer_visit_func
 from msmodelslim.utils.exception import InvalidModelError
 from msmodelslim.utils.exception_decorator import exception_handler
 from msmodelslim.utils.logging import logger_setter, get_logger
+from ..common.transformers import TransformersModel
 from ..interface_hub import ModelInfoInterface, ModelSlimPipelineInterfaceV0, ModelSlimPipelineInterfaceV1, \
     AnalyzePipelineInterface
-from ..common.transformers import TransformersModel
 
 
 @logger_setter()

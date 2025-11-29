@@ -1,17 +1,18 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, patch, Mock
+from unittest.mock import MagicMock, patch
 
 import torch
 
-from msmodelslim.app.base.const import DeviceType
+from msmodelslim.core.const import DeviceType
 from msmodelslim.model.common.transformers import TransformersModel
 from msmodelslim.utils.exception import SchemaValidateError
 
 
 class DummyConfig:
     """模拟配置对象"""
+
     def __init__(self):
         self.model_type = 'DummyModel'
         self.num_hidden_layers = 3
@@ -29,13 +30,13 @@ class TestTransformersModelLoadConfig(unittest.TestCase):
         """测试_load_config方法：应委托给SafeGenerator"""
         mock_config = DummyConfig()
         mock_get_config.return_value = mock_config
-        
+
         with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             adapter.model_path = self.model_path
-            
+
             result = adapter._load_config(trust_remote_code=False)
-            
+
             self.assertEqual(result, mock_config)
             mock_get_config.assert_called_once_with(
                 model_path=str(self.model_path),
@@ -47,13 +48,13 @@ class TestTransformersModelLoadConfig(unittest.TestCase):
         """测试_load_config方法：trust_remote_code=True时应正确传递"""
         mock_config = DummyConfig()
         mock_get_config.return_value = mock_config
-        
+
         with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             adapter.model_path = self.model_path
-            
+
             result = adapter._load_config(trust_remote_code=True)
-            
+
             mock_get_config.assert_called_once_with(
                 model_path=str(self.model_path),
                 trust_remote_code=True
@@ -72,13 +73,13 @@ class TestTransformersModelLoadTokenizer(unittest.TestCase):
         """测试_load_tokenizer方法：应委托给SafeGenerator"""
         mock_tokenizer = MagicMock()
         mock_get_tokenizer.return_value = mock_tokenizer
-        
+
         with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             adapter.model_path = self.model_path
-            
+
             result = adapter._load_tokenizer(trust_remote_code=False)
-            
+
             self.assertEqual(result, mock_tokenizer)
             mock_get_tokenizer.assert_called_once_with(
                 model_path=str(self.model_path),
@@ -92,13 +93,13 @@ class TestTransformersModelLoadTokenizer(unittest.TestCase):
         """测试_load_tokenizer方法：trust_remote_code=True时应正确传递"""
         mock_tokenizer = MagicMock()
         mock_get_tokenizer.return_value = mock_tokenizer
-        
+
         with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             adapter.model_path = self.model_path
-            
+
             result = adapter._load_tokenizer(trust_remote_code=True)
-            
+
             mock_get_tokenizer.assert_called_once_with(
                 model_path=str(self.model_path),
                 use_fast=False,
@@ -119,15 +120,15 @@ class TestTransformersModelLoadModel(unittest.TestCase):
         """测试_load_model方法：NPU设备时应使用auto device_map"""
         mock_model = MagicMock()
         mock_get_model.return_value = mock_model
-        
+
         with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             adapter.model_path = self.model_path
             adapter.config = DummyConfig()
             adapter.trust_remote_code = False
-            
+
             result = adapter._load_model(device=DeviceType.NPU)
-            
+
             self.assertEqual(result, mock_model)
             # 验证device_map为"auto"
             call_kwargs = mock_get_model.call_args[1]
@@ -138,15 +139,15 @@ class TestTransformersModelLoadModel(unittest.TestCase):
         """测试_load_model方法：CPU设备时应使用cpu device_map"""
         mock_model = MagicMock()
         mock_get_model.return_value = mock_model
-        
+
         with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             adapter.model_path = self.model_path
             adapter.config = DummyConfig()
             adapter.trust_remote_code = False
-            
+
             result = adapter._load_model(device=DeviceType.CPU)
-            
+
             # 验证device_map为"cpu"
             call_kwargs = mock_get_model.call_args[1]
             self.assertEqual(call_kwargs['device_map'], 'cpu')
@@ -161,9 +162,9 @@ class TestTransformersModelGetModelType(unittest.TestCase):
             adapter = TransformersModel.__new__(TransformersModel)
             adapter.config = DummyConfig()
             adapter.config.model_type = 'ConfigModelType'
-            
+
             result = adapter._get_model_type(None)
-            
+
             self.assertEqual(result, 'ConfigModelType')
 
     def test_get_model_type_with_value_when_called_then_return_input_value(self):
@@ -171,9 +172,9 @@ class TestTransformersModelGetModelType(unittest.TestCase):
         with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             adapter.config = DummyConfig()
-            
+
             result = adapter._get_model_type('CustomModelType')
-            
+
             self.assertEqual(result, 'CustomModelType')
 
 
@@ -186,9 +187,9 @@ class TestTransformersModelGetModelPedigree(unittest.TestCase):
             adapter = TransformersModel.__new__(TransformersModel)
             adapter.config = DummyConfig()
             adapter.config.model_type = 'Qwen2'
-            
+
             result = adapter._get_model_pedigree(None)
-            
+
             self.assertEqual(result, 'Qwen2')
 
     def test_get_model_pedigree_with_valid_name_when_called_then_extract_prefix(self):
@@ -196,11 +197,11 @@ class TestTransformersModelGetModelPedigree(unittest.TestCase):
         with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             adapter.config = DummyConfig()
-            
+
             # 测试场景1: Llama3-8B
             result = adapter._get_model_pedigree('Llama3-8B')
             self.assertEqual(result, 'llama')
-            
+
             # 测试场景2: DeepSeek-V3
             result = adapter._get_model_pedigree('DeepSeek-V3')
             self.assertEqual(result, 'deepseek')
@@ -210,11 +211,11 @@ class TestTransformersModelGetModelPedigree(unittest.TestCase):
         with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
             adapter.config = DummyConfig()
-            
+
             # 测试没有字母开头的名称
             with self.assertRaises(SchemaValidateError) as context:
                 adapter._get_model_pedigree('123-invalid')
-            
+
             self.assertIn("Invalid model_name", str(context.exception))
 
 
@@ -229,11 +230,11 @@ class TestTransformersModelGetTokenizedData(unittest.TestCase):
         """测试_get_tokenized_data方法：非列表输入时应抛出SchemaValidateError"""
         with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
-            
+
             # 测试字符串输入
             with self.assertRaises(SchemaValidateError) as context:
                 adapter._get_tokenized_data('not_a_list', DeviceType.CPU)
-            
+
             self.assertIn("calib_list must be a list", str(context.exception))
 
 
@@ -248,20 +249,20 @@ class TestTransformersModelGetBatchTokenizedData(unittest.TestCase):
         """测试_get_batch_tokenized_data方法：有效列表时应返回批量数据"""
         with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
-            
+
             # Mock _get_padding_data方法
             mock_batch1 = [torch.tensor([[1, 2, 3]])]
             mock_batch2 = [torch.tensor([[4, 5, 6]])]
             adapter._get_padding_data = MagicMock(side_effect=[mock_batch1, mock_batch2])
-            
+
             calib_list = ['text1', 'text2', 'text3', 'text4']
             result = adapter._get_batch_tokenized_data(calib_list, batch_size=2, device=DeviceType.CPU)
-            
+
             # 验证返回列表
             self.assertIsInstance(result, list)
             # 4个数据，batch_size=2，应该有2个batch
             self.assertEqual(len(result), 2)
-            
+
             # 验证_get_padding_data被调用两次
             self.assertEqual(adapter._get_padding_data.call_count, 2)
 
@@ -269,11 +270,11 @@ class TestTransformersModelGetBatchTokenizedData(unittest.TestCase):
         """测试_get_batch_tokenized_data方法：非列表输入时应抛出SchemaValidateError"""
         with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
-            
+
             # 测试字符串输入
             with self.assertRaises(SchemaValidateError) as context:
                 adapter._get_batch_tokenized_data('not_a_list', batch_size=2, device=DeviceType.CPU)
-            
+
             self.assertIn("calib_list must be a list", str(context.exception))
 
 
@@ -288,7 +289,7 @@ class TestTransformersModelGetPaddingData(unittest.TestCase):
         """测试_get_padding_data方法：相同长度时不需要padding"""
         with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
-            
+
             # 创建模拟tokenizer，返回相同长度的输入
             mock_tokenizer = MagicMock()
             mock_inputs1 = MagicMock()
@@ -297,12 +298,12 @@ class TestTransformersModelGetPaddingData(unittest.TestCase):
             mock_inputs2.data = {'input_ids': torch.tensor([[4, 5, 6]])}
             mock_tokenizer.side_effect = [mock_inputs1, mock_inputs2]
             adapter.tokenizer = mock_tokenizer
-            
+
             import torch.nn.functional as F_torch
             with patch('msmodelslim.model.common.transformers.F', F_torch):
                 calib_list = ['text1', 'text2']
                 result = adapter._get_padding_data(calib_list, DeviceType.CPU)
-                
+
                 # 验证返回列表
                 self.assertIsInstance(result, list)
                 self.assertEqual(len(result), 1)  # 返回一个concatenated tensor的列表
@@ -311,7 +312,7 @@ class TestTransformersModelGetPaddingData(unittest.TestCase):
         """测试_get_padding_data方法：不同长度时应应用padding"""
         with patch('msmodelslim.model.common.transformers.TransformersModel.__init__', return_value=None):
             adapter = TransformersModel.__new__(TransformersModel)
-            
+
             # 创建模拟tokenizer，返回不同长度的输入
             mock_tokenizer = MagicMock()
             mock_inputs1 = MagicMock()
@@ -320,12 +321,12 @@ class TestTransformersModelGetPaddingData(unittest.TestCase):
             mock_inputs2.data = {'input_ids': torch.tensor([[4, 5, 6, 7]])}
             mock_tokenizer.side_effect = [mock_inputs1, mock_inputs2]
             adapter.tokenizer = mock_tokenizer
-            
+
             import torch.nn.functional as F_torch
             with patch('msmodelslim.model.common.transformers.F', F_torch):
                 calib_list = ['short', 'longer text']
                 result = adapter._get_padding_data(calib_list, DeviceType.CPU)
-                
+
                 # 验证返回列表
                 self.assertIsInstance(result, list)
                 # 验证第一个输入被padding到max_len=4

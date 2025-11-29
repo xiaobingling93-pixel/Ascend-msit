@@ -23,9 +23,9 @@ from torch import distributed as dist
 from torch import nn
 from tqdm import tqdm
 
-from msmodelslim.app import DeviceType
 from msmodelslim.app.naive_quantization.model_info_interface import ModelInfoInterface
 from msmodelslim.core.base.protocol import ProcessRequest
+from msmodelslim.core.const import DeviceType
 from msmodelslim.core.graph import AdapterConfig, MappingConfig, FusionConfig
 from msmodelslim.model.deepseek_v3.quarot import get_ln_fuse_map, get_rotate_map
 from msmodelslim.quant.processor.anti_outlier.smooth_interface import FlexSmoothQuantInterface
@@ -37,8 +37,8 @@ from .convert_fp8_to_bf16 import auto_convert_module_fp8_to_bf16
 from .model import Transformer, ModelArgs
 from .mtp_quant_module import get_mtp_layer, wrap_mtp_decoder, remove_zero_and_shift
 from ..common.layer_wise_forward import generated_decoder_layer_visit_func, TransformersForwardBreak
-from ..interface_hub import ModelSlimPipelineInterfaceV1
 from ..common.transformers import TransformersModel
+from ..interface_hub import ModelSlimPipelineInterfaceV1
 
 
 @logger_setter("msmodelslim.model.deepseek_v3_2")
@@ -301,7 +301,7 @@ class DeepSeekV32ModelAdapter(TransformersModel,
                         )
                     ])
                     post_layernorm_targets.extend([gate_proj, up_proj])
-                
+
                 post_layernorm_mapping_config = MappingConfig(
                     source=post_layernorm,
                     targets=post_layernorm_targets

@@ -1,5 +1,5 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
-__all__ = ['NaiveQuantizationApplication', 'PracticeManagerInterface']
+__all__ = ['NaiveQuantizationApplication', 'PracticeManagerInfra']
 
 try:
     import torch_npu
@@ -7,4 +7,4 @@ try:
 except ImportError:
     pass
 from .application import NaiveQuantizationApplication
-from .practice_interface import PracticeManagerInterface
+from .practice_manager_infra import PracticeManagerInfra

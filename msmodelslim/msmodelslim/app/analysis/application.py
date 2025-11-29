@@ -1,22 +1,18 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
-from enum import Enum
 from pathlib import Path
-from typing import List, Callable, Union
+from typing import List
 
+from msmodelslim.core.const import DeviceType, ExtendedEnum
 from msmodelslim.model import IModelFactory
 from msmodelslim.utils.exception import SchemaValidateError, UnsupportedError
 from msmodelslim.utils.exception_decorator import exception_catcher
 from msmodelslim.utils.logging import logger_setter, get_logger
 from msmodelslim.utils.validation.conversion import (
-    convert_to_readable_dir,
-    convert_to_readable_file,
-    convert_to_writable_dir,
-    convert_to_bool
+    convert_to_readable_dir
 )
 from msmodelslim.utils.validation.value import validate_str_length
 from ..analysis_service import BaseAnalysisService
 from ..analysis_service.pipeline_interface import PipelineInterface
-from ..base import DeviceType, ExtendedEnum
 
 
 class AnalysisMetrics(ExtendedEnum):
@@ -31,9 +27,9 @@ class LayerAnalysisApplication:
     """Application for analyzing model layer sensitivity"""
 
     def __init__(
-        self,
-        analysis_service: BaseAnalysisService,
-        model_factory: IModelFactory,
+            self,
+            analysis_service: BaseAnalysisService,
+            model_factory: IModelFactory,
     ):
         self.analysis_service = analysis_service
         self.model_factory = model_factory
@@ -78,7 +74,7 @@ class LayerAnalysisApplication:
             raise SchemaValidateError(f"model_path must be a Path, but got {type(model_path)}")
         if not isinstance(patterns, list):
             raise SchemaValidateError(f"pattern must be a list, but got {type(patterns)}")
-        if not isinstance(device, DeviceType):	
+        if not isinstance(device, DeviceType):
             raise SchemaValidateError(f"device must be a DeviceType")
         if not isinstance(metrics, AnalysisMetrics):
             raise SchemaValidateError(f"metrics must be a AnalysisMetrics")
@@ -137,7 +133,7 @@ class LayerAnalysisApplication:
         )
         if not isinstance(model_adapter, PipelineInterface):
             raise UnsupportedError(f'Model adapter {model_adapter.__class__.__name__} does NOT support analyze',
-                                   action='Please implement PipelineInterface for model analyzing')             
+                                   action='Please implement PipelineInterface for model analyzing')
 
         result = self.analysis_service.analyze(
             device=device,

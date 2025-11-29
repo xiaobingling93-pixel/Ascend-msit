@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from typing import List
 
 
-class DatasetLoaderInterface(ABC):
+class DatasetLoaderInfra(ABC):
     @abstractmethod
     def get_dataset_by_name(self, dataset_id: str) -> List[str]:
         """Get configuration by ID"""

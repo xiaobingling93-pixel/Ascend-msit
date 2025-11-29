@@ -2,15 +2,15 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
 
-from .. import DeviceType
-from ..quant_service.dataset_interface import DatasetLoaderInterface
+from msmodelslim.core.const import DeviceType
+from ..quant_service.dataset_loader_infra import DatasetLoaderInfra
 from ...core.runner.pipeline_interface import PipelineInterface
 
 
 class BaseAnalysisService(ABC):
     """Base class for model analysis services"""
 
-    def __init__(self, dataset_loader: DatasetLoaderInterface):
+    def __init__(self, dataset_loader: DatasetLoaderInfra):
         self.dataset_loader = dataset_loader
 
     @abstractmethod

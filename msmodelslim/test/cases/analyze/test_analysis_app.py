@@ -8,7 +8,6 @@ import os
 import shutil
 import tempfile
 import unittest
-from argparse import Namespace
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -19,11 +18,8 @@ from testing_utils.mock import mock_init_config
 from msmodelslim.app.analysis_service.layer_selector import AnalysisResult  # 替换为实际的 AnalysisResult 类
 from msmodelslim.app.analysis_service.layer_selector import \
     LayerSelectorAnalysisService  # 替换为实际包含 _print_analysis_results 的类
-
-from msmodelslim.app.base import DeviceType
+from msmodelslim.core.const import DeviceType
 from msmodelslim.utils.exception import SchemaValidateError
-from msmodelslim.utils.logging import clean_output
-from msmodelslim.model.interface import IModelFactory
 
 mock_init_config()
 
@@ -385,8 +381,8 @@ class TestAnalysisServiceModule(TestComprehensiveAnalysisCoverage):
         # 模拟方法调用
         with patch.object(service, '_prepare_calibration_data', return_value=None) as mock_prep:
             with patch.object(service, '_get_target_layers', return_value=['layer1']) as mock_get_layers:
-                with patch.object(service, '_run_analysis', 
-                                    return_value=[{'name': 'layer1', 'score': 1.0}]) as mock_run:
+                with patch.object(service, '_run_analysis',
+                                  return_value=[{'name': 'layer1', 'score': 1.0}]) as mock_run:
                     result = service.analyze(
                         model_adapter=mock_model_adapter,
                         patterns=["*"],
@@ -521,7 +517,7 @@ class TestAnalysisServiceModule(TestComprehensiveAnalysisCoverage):
         mock_analysis_method = MagicMock()
         mock_hook = MagicMock()
         mock_analysis_method.get_hook.return_value = mock_hook
-        
+
         # 模拟hook注册
         mock_hook_handle = MagicMock()
         mock_layer.register_forward_hook.return_value = mock_hook_handle
@@ -694,7 +690,7 @@ class TestGetTokenizedDataFunction(unittest.TestCase):
         # 验证结果
         self.assertEqual(len(result), 2)
         self.assertEqual(len(result[0]), 2)  # input_ids and attention_mask
-        
+
         # 验证tokenizer被正确调用
         self.assertEqual(mock_tokenizer.call_count, 2)
 
@@ -716,8 +712,8 @@ class TestGetTokenizedDataFunction(unittest.TestCase):
         device = torch.device('cpu')
 
         result = get_tokenized_data(
-            mock_tokenizer, 
-            calib_list, 
+            mock_tokenizer,
+            calib_list,
             device,
             input_ids_name='custom_input_ids',
             attention_mask_name='custom_attention_mask'

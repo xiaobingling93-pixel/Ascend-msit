@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import torch.nn as nn
 
-from msmodelslim.app import DeviceType
+from msmodelslim.core.const import DeviceType
 from msmodelslim.model.qwen2_5.model_adapter import Qwen25ModelAdapter
 from msmodelslim.quant.processor.kv_smooth import KVSmoothFusedType, KVSmoothFusedUnit
 from msmodelslim.utils.exception import InvalidModelError
@@ -325,7 +325,7 @@ class TestQwen25ModelAdapter(unittest.TestCase):
 
             with patch(
                     'msmodelslim.model.qwen2_5.model_adapter.'
-                    'SafeGenerator.get_tokenizer_from_pretrained')as mock_get_tokenizer:
+                    'SafeGenerator.get_tokenizer_from_pretrained') as mock_get_tokenizer:
                 mock_tokenizer = MagicMock()
                 mock_get_tokenizer.return_value = mock_tokenizer
 

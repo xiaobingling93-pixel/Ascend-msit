@@ -14,16 +14,16 @@
 #  limitations under the License.
 
 import pytest
-from msmodelslim.utils.exception import SchemaValidateError
 
+from msmodelslim.app.quant_service.interface import BaseQuantConfig
 from msmodelslim.app.quant_service.multimodal_sd_v1.quant_config import (
     DumpConfig,
     MultimodalSDConfig,
     MultimodalSDServiceConfig,
     MultimodalSDModelslimV1QuantConfig,
-    load_specific_config,
-    BaseQuantConfig
+    load_specific_config
 )
+from msmodelslim.utils.exception import SchemaValidateError
 
 
 def test_dump_config_default():
@@ -109,7 +109,6 @@ def test_multimodal_sd_modelslim_v1_quant_config_from_base():
     class MockBaseQuantConfig(BaseQuantConfig):
         def __init__(self):
             self.apiversion = "v1"
-            self.metadata = {"key": "value"}
             self.spec = {
                 "multimodal_sd_config": {
                     "dump_config": {
@@ -123,6 +122,5 @@ def test_multimodal_sd_modelslim_v1_quant_config_from_base():
     quant_config = MultimodalSDModelslimV1QuantConfig.from_base(base_config)
 
     assert quant_config.apiversion == "v1"
-    assert quant_config.metadata == {"key": "value"}
     assert isinstance(quant_config.spec, MultimodalSDServiceConfig)
     assert quant_config.spec.multimodal_sd_config.dump_config.dump_data_dir == "/test"
