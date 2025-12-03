@@ -32,8 +32,11 @@ def main():
                               help="Path to the original model")
     quant_parser.add_argument('--save_path', required=True, type=str,
                               help="Path to save quantized model")
-    quant_parser.add_argument('--device', type=DeviceType, default=DeviceType.NPU, choices=DeviceType,
-                              help="Target device type for quantization")
+    quant_parser.add_argument('--device', type=str, default='npu',
+                              help="Target device specification for quantization. "
+                                   "Format: 'device_type' or 'device_type:index1,index2,...' "
+                                   "(e.g., 'npu', 'npu:0,1,2,3', 'cpu'). "
+                                   "Default: 'npu' (single device)")
     quant_parser.add_argument('--config_path', type=str,
                               help="Explicit path to quantization config file")
     quant_parser.add_argument('--quant_type', type=QuantType, choices=QuantType,

@@ -18,7 +18,7 @@
 from typing import Any, Optional
 
 import torch
-from torch import nn
+from torch import nn, distributed as dist
 
 from msmodelslim.utils.logging import get_logger
 
@@ -88,7 +88,7 @@ def _align_input_to_module_device(module: Optional[nn.Module], input_data: Any, 
             "device memory: allocated=%r, reserved=%r",
             module.__class__.__name__,
             moved_tensors_count,
-            module_device.type,
+            module_device,
             format_memory_size(total_moved_bytes),
             format_memory_size(get_device_allocated_memory()),
             format_memory_size(get_device_reserved_memory())
@@ -98,7 +98,7 @@ def _align_input_to_module_device(module: Optional[nn.Module], input_data: Any, 
             "Device alignment hook for %r: no tensors moved (already on device %r), "
             "device memory: allocated=%r, reserved=%r",
             module.__class__.__name__,
-            module_device.type,
+            module_device,
             format_memory_size(get_device_allocated_memory()),
             format_memory_size(get_device_reserved_memory())
         )
@@ -250,7 +250,7 @@ def get_module_param_size(module: nn.Module) -> int:
     return total_size
 
 
-def get_device_allocated_memory(device_id: int = 0) -> int:
+def get_device_allocated_memory() -> int:
     """
     获取设备已分配内存大小，自动检测设备类型
 
@@ -262,13 +262,15 @@ def get_device_allocated_memory(device_id: int = 0) -> int:
     """
     # 自动检测设备类型
     if hasattr(torch, 'cuda') and torch.cuda.is_available():
+        device_id = torch.cuda.current_device()
         return torch.cuda.memory_allocated(device_id)
     elif hasattr(torch, 'npu') and torch.npu.is_available():
+        device_id = torch.npu.current_device()
         return torch.npu.memory_allocated(device_id)
     return 0
 
 
-def get_device_reserved_memory(device_id: int = 0) -> int:
+def get_device_reserved_memory() -> int:
     """
     获取设备已申请内存大小，自动检测设备类型
 
@@ -280,8 +282,10 @@ def get_device_reserved_memory(device_id: int = 0) -> int:
     """
     # 自动检测设备类型
     if hasattr(torch, 'npu') and torch.npu.is_available():
+        device_id = torch.npu.current_device()
         return torch.npu.memory_reserved(device_id)
     elif hasattr(torch, 'cuda') and torch.cuda.is_available():
+        device_id = torch.cuda.current_device()
         return torch.cuda.memory_reserved(device_id)
     return 0
 

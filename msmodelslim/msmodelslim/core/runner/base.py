@@ -47,7 +47,7 @@ class BaseRunner:
 
     @abc.abstractmethod
     def run(self, model: Optional[nn.Module] = None, calib_data: Optional[List[Any]] = None,
-            device: DeviceType = DeviceType.NPU):
+            device: DeviceType = DeviceType.NPU, device_indices: Optional[List[int]] = None):
         """
         执行推理调度流程。
         

@@ -48,7 +48,7 @@ class ActPerTensorMinmax(AutoActQuantizer):
         self.q_param: Optional[QParam] = None
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        self.minmax_observer.update(x)
+        self.minmax_observer.update(x, self.sync)
         min_val, max_val = self.minmax_observer.get_min_max()
         self.q_param = calculate_qparam(
             min_val=min_val,
@@ -87,7 +87,7 @@ class ActPerTokenMinmax(AutoActQuantizer):
         x_shape = x.shape
         x_reshaped = x.reshape(-1, x.shape[-1])
         self.minmax_observer.reset()
-        self.minmax_observer.update(x_reshaped)
+        self.minmax_observer.update(x_reshaped, self.sync)
         min_val, max_val = self.minmax_observer.get_min_max()
         self.q_param = calculate_qparam(
             min_val=min_val,
@@ -124,7 +124,7 @@ class ActPerChannelMinmax(AutoActQuantizer):
         x_shape = x.shape
         x_reshaped = x.reshape(-1, x.shape[-1])
         self.minmax_observer.reset()
-        self.minmax_observer.update(x_reshaped)
+        self.minmax_observer.update(x_reshaped, self.sync)
         min_val, max_val = self.minmax_observer.get_min_max()
         self.q_param = calculate_qparam(
             min_val=min_val,
@@ -160,7 +160,7 @@ class ActPDMixMinmax(AutoActQuantizer):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # calculate decoding static param
-        self.decoding_observer.update(x)
+        self.decoding_observer.update(x, self.sync)
         min_val, max_val = self.decoding_observer.get_min_max()
         self.q_param = calculate_qparam(
             min_val=min_val,
@@ -174,7 +174,7 @@ class ActPDMixMinmax(AutoActQuantizer):
         x_shape = x.shape
         x_reshaped = x.reshape(-1, x.shape[-1])
         self.prefilling_observer.reset()
-        self.prefilling_observer.update(x_reshaped)
+        self.prefilling_observer.update(x_reshaped, self.sync)
         min_val, max_val = self.prefilling_observer.get_min_max()
         tmp_q_param = calculate_qparam(
             min_val=min_val,
@@ -215,7 +215,7 @@ class WeightPerChannelMinmax(AutoWeightQuantizer):
     def forward(self, x: Optional[torch.Tensor] = None) -> torch.Tensor:
         if self.weight is None:
             raise SpecError("No weight was set", action="please call init_weight first")
-        self.minmax_observer.update(self.weight.T.value)
+        self.minmax_observer.update(self.weight.T.value, self.sync)
         min_val, max_val = self.minmax_observer.get_min_max()
         self.w_q_param = calculate_qparam(
             min_val=min_val,
@@ -287,7 +287,7 @@ class MXWeightPerBlockMinmax(AutoWeightQuantizer):
         weight_value, axes_, orig_shape, padded_shape = reshape_to_blocks(weight_value, axes, self.block_size)
         shared_exp_axes = [x + 1 for x in axes_] if self.block_size > 0 else axes_
 
-        minmax_block_observer.update(weight_value, shared_exp_axes=shared_exp_axes)
+        minmax_block_observer.update(weight_value, sync=self.sync, shared_exp_axes=shared_exp_axes)
 
         min_val, max_val = minmax_block_observer.get_min_max()
 

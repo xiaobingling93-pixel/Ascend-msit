@@ -1,7 +1,7 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 import torch
 
@@ -51,6 +51,7 @@ class ModelslimV0QuantService(BaseQuantService):
             model_adapter: IModel,
             save_path: Optional[Path] = None,
             device: DeviceType = DeviceType.NPU,
+            device_indices: Optional[List[int]] = None,
     ) -> None:
         if not isinstance(quant_config, BaseQuantConfig):
             raise SchemaValidateError("task must be a BaseTask",

@@ -16,6 +16,7 @@ from typing import List, Optional, Literal
 
 from pydantic import Field, ConfigDict
 from torch import nn
+from torch import distributed as dist
 
 from msmodelslim.core.QAL import QScope, QDType
 from msmodelslim.core.QAL.qregistry import QABCRegistry
@@ -24,6 +25,7 @@ from msmodelslim.quant.processor.base import AutoSessionProcessor, AutoProcessor
 from msmodelslim.quant.quantizer.linear import LinearQuantizer, LinearQConfig
 from msmodelslim.utils.config_map import ConfigSet
 from msmodelslim.utils.logging import get_logger, logger_setter
+from msmodelslim.utils.distributed import DistHelper
 
 
 class LinearProcessorConfig(AutoProcessorConfig):
@@ -56,6 +58,11 @@ class LinearQuantProcessor(AutoSessionProcessor):
         self.config = config
         self.include = ConfigSet(config.include)
         self.exclude = ConfigSet(config.exclude)
+        
+        # 初始化分布式辅助类（如果分布式已启动）
+        self.dist_helper = None
+        if dist.is_initialized():
+            self.dist_helper = DistHelper(model)
 
     def is_data_free(self) -> bool:
         if self.config.qconfig.act.scope == QScope.PER_TOKEN:
@@ -69,7 +76,16 @@ class LinearQuantProcessor(AutoSessionProcessor):
             return False 
 
     def support_distributed(self) -> bool:
-        return True
+        """
+        判断是否支持分布式
+        通过检查 LinearQuantizer 是否支持分布式来判断
+        
+        Returns:
+            bool: 是否支持分布式
+        """
+        # 创建一个临时的 LinearQuantizer 实例来检查是否支持分布式
+        temp_quantizer = LinearQuantizer(self.config.qconfig)
+        return temp_quantizer.support_distributed()
 
     def post_run(self) -> None:
         _warning_unmatched_pattern("include", self.include)
@@ -101,6 +117,22 @@ class LinearQuantProcessor(AutoSessionProcessor):
                 self.model.set_submodule(name, submodule.deploy())
 
     def _process_linear(self, full_name: str, module: nn.Linear) -> None:
+        """
+        处理线性层，判断是否需要启用同步操作
+        
+        同步操作的启用条件：
+        1. 分布式已启动 (dist.is_initialized())
+        2. 该模块是共享的 (is_shared)
+        
+        Args:
+            full_name: 模块全名
+            module: 线性层模块
+        """
         quantizer = LinearQuantizer(self.config.qconfig)
+        
+        # 判断是否需要启用同步操作
+        if self.dist_helper is not None and self.dist_helper.is_shared(full_name):
+            quantizer.enable_sync()
+        
         quantizer.setup(module)
         self.model.set_submodule(full_name, quantizer)

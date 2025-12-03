@@ -70,3 +70,6 @@ class GroupProcessor(AutoSessionProcessor):
 
     def need_kv_cache(self):
         return any(processor.need_kv_cache() for processor in self.processors)
+    
+    def support_distributed(self) -> bool:
+        return any(processor.support_distributed() for processor in self.processors)

@@ -1,7 +1,8 @@
 # Copyright Huawei Technologies Co., Ltd. 2025. All rights reserved.
 import re
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional, List, Tuple
+import torch
 
 from msmodelslim.core.const import DeviceType
 from msmodelslim.core.const import QuantType
@@ -50,6 +51,110 @@ class NaiveQuantizationApplication:
         if use_kv_cache ^ label.get('kv_cache', False):
             return False
         return True
+    
+    @staticmethod
+    def validate_device_index(device_index: Optional[List[int]], device_type: DeviceType):
+        """
+        Validate device_index parameter.
+        
+        Args:
+            device_index: Device indices to validate
+            device_type: Device type for context validation
+            
+        Raises:
+            SchemaValidateError: If device_index is invalid
+        """
+        
+        # Value validation: check if indices are non-negative
+        if any(idx < 0 for idx in device_index):
+            negative_indices = [idx for idx in device_index if idx < 0]
+            raise SchemaValidateError(
+                f"Device indices must be non-negative integers, "
+                f"but got negative values: {negative_indices}"
+            )
+        
+        # Value validation: check for duplicates
+        if len(device_index) != len(set(device_index)):
+            duplicates = [idx for idx in set(device_index) if device_index.count(idx) > 1]
+            raise SchemaValidateError(
+                f"Device indices must be unique, but found duplicates: {duplicates}"
+            )
+        
+        # CPU does not support multi-device
+        if device_type == DeviceType.CPU and len(device_index) > 1:
+            get_logger().warning(
+                f"CPU does not support multi-device configuration. "
+                f"Device indices {device_index} will be ignored. Using single CPU device."
+            )
+            return
+        
+        # Value validation: check device availability
+        if device_type == DeviceType.NPU:
+            max_device_count = torch.npu.device_count()
+        else:
+            # CPU doesn't need device count validation
+            max_device_count = None
+        
+        # Check if indices exceed available devices
+        if max_device_count is not None:
+            invalid_indices = [idx for idx in device_index if idx >= max_device_count]
+            if invalid_indices:
+                raise SchemaValidateError(
+                    f"Device indices {invalid_indices} exceed maximum available device index "
+                    f"({max_device_count - 1}). Available device indices: 0 to {max_device_count - 1}"
+                )
+
+    @staticmethod
+    def validate_device_index(device_index: Optional[List[int]], device_type: DeviceType):
+        """
+        Validate device_index parameter.
+
+        Args:
+            device_index: Device indices to validate
+            device_type: Device type for context validation
+
+        Raises:
+            SchemaValidateError: If device_index is invalid
+        """
+
+        # Value validation: check if indices are non-negative
+        if any(idx < 0 for idx in device_index):
+            negative_indices = [idx for idx in device_index if idx < 0]
+            raise SchemaValidateError(
+                f"Device indices must be non-negative integers, "
+                f"but got negative values: {negative_indices}"
+            )
+
+        # Value validation: check for duplicates
+        if len(device_index) != len(set(device_index)):
+            duplicates = [idx for idx in set(device_index) if device_index.count(idx) > 1]
+            raise SchemaValidateError(
+                f"Device indices must be unique, but found duplicates: {duplicates}"
+            )
+
+        # CPU does not support multi-device
+        if device_type == DeviceType.CPU and len(device_index) > 1:
+            get_logger().warning(
+                f"CPU does not support multi-device configuration. "
+                f"Device indices {device_index} will be ignored. Using single CPU device."
+            )
+            return
+
+        # Value validation: check device availability
+        if device_type == DeviceType.NPU:
+            max_device_count = torch.npu.device_count()
+        else:
+            # CPU doesn't need device count validation
+            max_device_count = None
+
+        # Check if indices exceed available devices
+        if max_device_count is not None:
+            invalid_indices = [idx for idx in device_index if idx >= max_device_count]
+            if invalid_indices:
+                raise SchemaValidateError(
+                    f"Device indices {invalid_indices} exceed maximum available device index "
+                    f"({max_device_count - 1}). Available device indices: 0 to {max_device_count - 1}"
+                )
 
     def get_default_practice(self,
                              prompt="No configuration found.",
@@ -119,7 +224,8 @@ class NaiveQuantizationApplication:
               model_type: str,
               model_path: str,
               save_path: str,
-              device: DeviceType = DeviceType.NPU,
+              device_type: DeviceType = DeviceType.NPU,
+              device_index: Optional[List[int]] = None,
               quant_type: Optional[QuantType] = None,
               config_path: Optional[str] = None,
               trust_remote_code: bool = False):
@@ -129,8 +235,12 @@ class NaiveQuantizationApplication:
             model_type: str, the type of the model
             model_path: str, the path of the model
             save_path: str, the path to save the quantized model
-            device: str, the device to run the quantization, only 'npu' and 'cpu' are supported
-            quant_type: Optional[str], the type of quantization, config_path and quant_type only one can be provided
+            device_type: DeviceType, the type of device (e.g., DeviceType.NPU, DeviceType.CPU)
+                        Default: DeviceType.NPU
+            device_index: Optional[List[int]], list of device indices to use (e.g., [0, 1, 2, 3])
+                         If None, uses single default device
+                         Default: None
+            quant_type: Optional[QuantType], the quantization type, config_path and quant_type only one can be provided
             config_path: Optional[str], the path to config file, config_path and quant_type only one can be provided
             trust_remote_code: bool, whether to trust the remote code
         """
@@ -151,8 +261,10 @@ class NaiveQuantizationApplication:
         save_path = convert_to_writable_dir(save_path)
         if not isinstance(save_path, Path):
             raise SchemaValidateError(f"save_path must be a Path, but got {type(save_path)}")
-        if not isinstance(device, DeviceType):
-            raise SchemaValidateError(f"device must be a DeviceType")
+        if not isinstance(device_type, DeviceType):
+            raise SchemaValidateError(f"device_type must be a DeviceType, but got {type(device_type)}")
+        if device_index is not None:
+            self.validate_device_index(device_index, device_type)
         if config_path is not None:
             validate_str_length(input_str=config_path, str_name='config_path')
             config_path = convert_to_readable_file(config_path)
@@ -165,25 +277,39 @@ class NaiveQuantizationApplication:
         if not isinstance(trust_remote_code, bool):
             raise SchemaValidateError(f"trust_remote_code must be a bool")
 
+        # Log parameters
         get_logger().info(f'quantization with following parameters:')
         get_logger().info(f"model_type: {model_type}")
         get_logger().info(f"model_path: {model_path}")
         get_logger().info(f"save_path: {save_path}")
-        get_logger().info(f"device: {device}")
+        get_logger().info(f"device_type: {device_type}")
+        if device_index is not None and len(device_index) > 1:
+            device_list = ','.join(map(str, device_index))
+            get_logger().info(
+                f"using {len(device_index)} devices: {device_type.value}:{device_list}"
+            )
+        elif device_index is not None and len(device_index) == 1:
+            get_logger().info(f"using single device: {device_type.value}:{device_index[0]}")
+        else:
+            get_logger().info(f"using single device (default): {device_type.value}")
         if quant_type is not None:
             get_logger().info(f"quant_type: {quant_type}")
         if config_path is not None:
             get_logger().info(f"config_path: {config_path}")
         get_logger().info(f"trust_remote_code: {trust_remote_code}")
 
-        self._quant(model_type, model_path, save_path, device, quant_type, config_path, trust_remote_code)
+        self._quant(
+            model_type, model_path, save_path, device_type,
+            device_index, quant_type, config_path, trust_remote_code
+        )
 
     def _quant(
             self,
             model_type: str,
             model_path: Path,
             save_path: Path,
-            device: DeviceType = DeviceType.NPU,
+            device_type: DeviceType = DeviceType.NPU,
+            device_index: Optional[List[int]] = None,
             quant_type: Optional[QuantType] = None,
             config_path: Optional[Path] = None,
             trust_remote_code: bool = False
@@ -207,6 +333,7 @@ class NaiveQuantizationApplication:
             quant_config=practice_config.extract_quant_config(),
             model_adapter=model_adapter,
             save_path=save_path,
-            device=device
+            device=device_type,
+            device_indices=device_index
         )
         get_logger().info(f"===========SUCCESS===========")

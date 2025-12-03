@@ -61,6 +61,9 @@ class LoadProcessor(AutoSessionProcessor):
     def __repr__(self) -> str:
         return f"LoadProcessor(device={self.device}, non_blocking={self.non_blocking})"
 
+    def support_distributed(self) -> bool:
+        return True
+        
     def preprocess(self, request: BatchProcessRequest) -> None:
         if self.config.mode == "load":
             self.to_device(request=request)

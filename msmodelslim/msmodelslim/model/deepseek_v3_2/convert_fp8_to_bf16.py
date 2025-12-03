@@ -5,6 +5,7 @@ from functools import lru_cache
 from typing import Dict
 
 import torch
+import torch.distributed as dist
 from safetensors import safe_open
 from torch import nn
 from tqdm import tqdm
@@ -64,7 +65,21 @@ def get_inv_tensor(tensor_name, fp8_path, weight_map):
     file_name = weight_map[tensor_name]
     file_path = os.path.join(fp8_path, file_name)
     file_path = get_valid_read_path(file_path, 'safetensors', size_max=MAX_READ_FILE_SIZE_32G)
-    with safe_open(file_path, framework='pt', device='cpu') as f:
+    
+    # 自动检测设备类型
+    if dist.is_initialized():
+        if hasattr(torch, 'cuda') and torch.cuda.is_available():
+            current_device_idx = torch.cuda.current_device()
+            device = f"cuda:{current_device_idx}"
+        elif hasattr(torch, 'npu') and torch.npu.is_available():
+            current_device_idx = torch.npu.current_device()
+            device = f"npu:{current_device_idx}"
+        else:
+            device = 'cpu'
+    else:
+        device = 'cpu'
+    
+    with safe_open(file_path, framework='pt', device=device) as f:
         return f.get_tensor(tensor_name + WEIGHT_SCALE_INV)
 
 

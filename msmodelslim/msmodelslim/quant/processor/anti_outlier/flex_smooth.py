@@ -17,7 +17,6 @@
 
 from typing import Callable, Any, Literal, Annotated, List, Optional, Dict
 
-import torch
 import torch.distributed as dist
 import torch.nn as nn
 from pydantic import AfterValidator, Field
@@ -70,8 +69,12 @@ class FlexStatsCollector(StatsCollector):
     
     def __init__(self):
         super().__init__()
+        self.sync = False
         # 为每个模块名称创建observer，用于收集channel_max统计
         self.observers: Dict[str, MsMinMaxObserver] = {}
+    
+    def enable_sync(self):
+        self.sync = True
     
     def create_hook(self, name: str, subgraph_type: str = None) -> Callable:
         def stats_hook(module: nn.Linear, input_tensor: tuple, output: Any) -> None:
@@ -99,7 +102,7 @@ class FlexStatsCollector(StatsCollector):
                 observer_config = MinMaxObserverConfig(dim=0, keepdim=False)
                 self.observers[name] = MsMinMaxObserver(observer_config)
             abs_tensor = tensor.abs()
-            self.observers[name].update(abs_tensor)
+            self.observers[name].update(abs_tensor, sync=self.sync)
             _, channel_max = self.observers[name].get_min_max()
             statis_dict[StatKey.STAT_KEY_SMOOTH_SCALE] = channel_max
 
@@ -124,12 +127,18 @@ class FlexSmoothBaseProcessor(BaseSmoothProcessor):
         self.config = config
         self._validate_parameters()
         self.stats_collector = FlexStatsCollector()
+        
+        if self.support_distributed() and dist.is_initialized():
+            self.stats_collector.enable_sync()
 
 
 @QABCRegistry.register(dispatch_key=FlexSmoothQuantProcessorConfig, abc_class=AutoSessionProcessor)
 @logger_setter()
 class FlexSmoothQuantProcessor(FlexSmoothBaseProcessor):
     """FlexSmoothQuant Processor"""
+
+    def support_distributed(self) -> bool:
+        return True
     
     def apply_smooth_algorithm(self, subgraph_obj: Any, linear_names: List[str]) -> None:
         """Apply FlexSmoothQuant algorithm"""
