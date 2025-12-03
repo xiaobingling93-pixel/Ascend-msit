@@ -26,7 +26,7 @@ from msmodelslim.core.QAL.qregistry import QABCRegistry
 from msmodelslim.model import IModel
 from msmodelslim.core.base.protocol import BatchProcessRequest
 from msmodelslim.quant.processor.base import AutoSessionProcessor
-from msmodelslim.utils.dist import DistHelper
+from msmodelslim.utils.distributed import DistHelper
 from msmodelslim.utils.exception import UnsupportedError, SchemaValidateError
 from msmodelslim.utils.logging import logger
 from msmodelslim.utils.security import safe_copy_file

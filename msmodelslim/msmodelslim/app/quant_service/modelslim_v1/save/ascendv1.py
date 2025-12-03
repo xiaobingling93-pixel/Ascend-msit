@@ -15,7 +15,9 @@
 
 import functools
 import inspect
+import json
 import os
+import shutil
 from typing import Dict, Any, Optional, List, Literal
 
 import torch
@@ -29,7 +31,7 @@ from msmodelslim.model import IModel
 from msmodelslim.core.base.protocol import BatchProcessRequest
 from msmodelslim.quant import ir as qir
 from msmodelslim.quant.processor.base import AutoSessionProcessor
-from msmodelslim.utils.dist import DistHelper
+from msmodelslim.utils.distributed import DistHelper
 from msmodelslim.utils.exception import ToDoError, SchemaValidateError
 from msmodelslim.utils.security import safe_copy_file
 from msmodelslim.utils.logging import get_logger, logger_setter
@@ -128,48 +130,6 @@ ASCENDV1_DESC_JSON_NAME = "quant_model_description.json"
 ASCENDV1_SAFETENSORS_NAME = "quant_model_weights.safetensors"
 
 
-def save_this_rank_only():
-    """
-
-    该函数用于装饰on_xxx系列方法，用于在分布式模式下，过滤掉不应属于当前rank的保存动作。
-
-    example:
-
-    @save_this_rank_only
-    def on_w8a8_static(self, prefix: str, module: qir.W8A8StaticFakeQuantLinear):
-        pass
-
-    该装饰器会自动入参判断是否属于当前rank，若不属于当前rank，则不会调用被装饰的函数。
-
-    """
-
-    def decorator(func):
-        # check function signature
-        if inspect.signature(func).parameters.keys() != {'self', 'prefix', 'module'}:
-            raise ValueError(
-                f"Function {func.__name__} has incorrect signature that cannot be decorated by save_this_rank_only")
-
-        @functools.wraps(func)
-        def wrapper(self_instance: 'AscendV1Saver', prefix: str, module: nn.Module) -> None:
-            if not dist.is_initialized():
-                func(self_instance, prefix, module)
-                return
-
-            is_local_only = self_instance.dist_helper.is_local_only(prefix)
-            is_in_shared_modules_slice = prefix in self_instance.shared_modules_slice
-            save_on_this_rank = is_local_only or is_in_shared_modules_slice
-
-            if not save_on_this_rank:
-                return
-
-            func(self_instance, prefix, module)
-            return
-
-        return wrapper
-
-    return decorator
-
-
 @QABCRegistry.register(dispatch_key=AscendV1Config, abc_class=AutoSessionProcessor)
 @logger_setter(prefix='msmodelslim.app.quant_service.modelslim_v1')
 class AscendV1Saver(AutoSaverProcessor):
@@ -189,7 +149,7 @@ class AscendV1Saver(AutoSaverProcessor):
         self.json_append = dict()
         self.metadata = dict()
         self.save_directory = self.get_rank_save_directory() if dist.is_initialized() else config.save_directory
-        self.json_writer = JsonWriter(config.save_directory, ASCENDV1_DESC_JSON_NAME)
+        self.json_writer = JsonWriter(self.save_directory, ASCENDV1_DESC_JSON_NAME)
         self.safetensors_writer = self.get_safetensors_writer(config)
         self.dist_helper: Optional[DistHelper] = None
         self.shared_modules_slice: Optional[List[str]] = None
@@ -204,7 +164,8 @@ class AscendV1Saver(AutoSaverProcessor):
 
     def post_run(self) -> None:
 
-        super().post_run()
+        for name, sub_module in self.model.named_modules(memo=self.processed_modules):
+            self.on_float_module(name, sub_module)
 
         for key, val in self.json_append.items():
             self.json_writer.write(key, val)
@@ -229,21 +190,6 @@ class AscendV1Saver(AutoSaverProcessor):
         if isinstance(self.adapter, AscendV1SaveInterface):
             self.adapter.ascendv1_save_postprocess(self.model, self.config.save_directory)
 
-    def preprocess(self, request: BatchProcessRequest) -> None:
-        if dist.is_initialized():
-            self.prepare_for_distributed(request)
-
-    def postprocess(self, request: BatchProcessRequest) -> None:
-        super().postprocess(request)
-        self.cleanup_for_distributed()
-
-    def prepare_for_distributed(self, request: BatchProcessRequest) -> None:
-        self.dist_helper = DistHelper(request.module)
-        self.shared_modules_slice = self.dist_helper.get_shared_modules_slice(prefix=request.name)
-
-    def cleanup_for_distributed(self) -> None:
-        self.dist_helper = None
-
     def get_safetensors_writer(self, config: AscendV1Config) -> SafetensorsWriter:
         if config.part_file_size > 0:
             return BufferedSafetensorsWriter(
@@ -265,12 +211,6 @@ class AscendV1Saver(AutoSaverProcessor):
         self.json_writer.write(prefix, desc)
         self.safetensors_writer.write(prefix, tensor)
 
-    def merge_ranks(self) -> None:
-        if dist.get_rank() != 0:
-            return
-        raise NotImplementedError("merge_ranks for ascendV1 format is not implemented now")
-
-    @save_this_rank_only()
     def on_w8a8_static(self, prefix: str, module: qir.W8A8StaticFakeQuantLinear):
         self.update_quant_type("W8A8")
 
@@ -295,7 +235,6 @@ class AscendV1Saver(AutoSaverProcessor):
             if module.bias is not None:
                 self.write_tensor(prefix + ".bias", "W8A8", module.bias.to(torch.float32))
 
-    @save_this_rank_only()
     def on_w8a8_dynamic_per_channel(self, prefix: str, module: qir.W8A8DynamicPerChannelFakeQuantLinear):
         self.update_quant_type("W8A8_DYNAMIC")
 
@@ -308,7 +247,6 @@ class AscendV1Saver(AutoSaverProcessor):
             if module.bias is not None:
                 self.write_tensor(prefix + ".bias", "W8A8_DYNAMIC", module.bias.to(torch.float32))
 
-    @save_this_rank_only()
     def on_w8a8_pd_mix(self, prefix: str, module: qir.W8A8PDMixFakeQuantLinear):
         self.update_quant_type("W8A8_MIX")
 
@@ -338,7 +276,6 @@ class AscendV1Saver(AutoSaverProcessor):
             if module.bias is not None:
                 self.write_tensor(prefix + ".bias", "W8A8_MIX", module.bias.to(torch.float32))
 
-    @save_this_rank_only()
     def on_w8a8_dynamic_per_group(self, prefix: str, module: qir.W8A8DynamicPerGroupFakeQuantLinear):
         self.update_quant_type("W8A8_DYNAMIC")
         self.group_size = module.group_size
@@ -352,7 +289,6 @@ class AscendV1Saver(AutoSaverProcessor):
             if module.bias is not None:
                 self.write_tensor(prefix + ".bias", "W8A8_DYNAMIC", module.bias.to(torch.float32))
 
-    @save_this_rank_only()
     def on_wfp8afp8_dynamic_per_channel(self, prefix: str, module: qir.WFP8AFP8DynamicPerChannelFakeQuantLinear):
         self.update_quant_type("WFP8AFP8_DYNAMIC")
         with torch.device(module.weight.device):
@@ -364,7 +300,6 @@ class AscendV1Saver(AutoSaverProcessor):
             if module.bias is not None:
                 self.write_tensor(prefix + ".bias", "WFP8AFP8_DYNAMIC", module.bias.to(torch.float32))
 
-    @save_this_rank_only()
     def on_w8a8_mx_dynamic_per_block(self, prefix: str, module: qir.W8A8MXDynamicPerBlockFakeQuantLinear):
         self.update_quant_type("W8A8_MXFP8")
 
@@ -381,7 +316,6 @@ class AscendV1Saver(AutoSaverProcessor):
                 # +127 是对 weight_scale 进行偏移处理，使其从-127~128偏移到0~255，正好覆盖torch_uint8的取值范围
             )
 
-    @save_this_rank_only()
     def on_w4a8_dynamic(self, prefix: str, module: qir.W4A8DynamicFakeQuantLinear):
         self.update_quant_type("W4A8_DYNAMIC")
 
@@ -398,7 +332,6 @@ class AscendV1Saver(AutoSaverProcessor):
             if module.bias is not None:
                 self.write_tensor(prefix + ".bias", "W4A8_DYNAMIC", module.bias.to(torch.float32))
 
-    @save_this_rank_only()
     def on_w4a4_dynamic_per_channel(self, prefix: str, module: qir.W4A4DynamicPerChannelFakeQuantLinear):
         self.update_quant_type("W4A4_DYNAMIC")
 
@@ -411,7 +344,6 @@ class AscendV1Saver(AutoSaverProcessor):
             if module.bias is not None:
                 self.write_tensor(prefix + ".bias", "W4A4_DYNAMIC", module.bias.to(torch.float32))
 
-    @save_this_rank_only()
     def on_w4a4_dynamic_per_group(self, prefix: str, module: qir.W4A4DynamicPerGroupFakeQuantLinear):
         self.update_quant_type("W4A4_DYNAMIC")
         self.group_size = module.group_size
@@ -423,7 +355,6 @@ class AscendV1Saver(AutoSaverProcessor):
             if module.bias is not None:
                 self.write_tensor(prefix + ".bias", "W4A4_DYNAMIC", module.bias.to(torch.float32))
 
-    @save_this_rank_only()
     def on_w4a4_mx_dynamic_per_block(self, prefix: str, module: qir.W4A4MXDynamicPerBlockFakeQuantLinear):
         self.update_quant_type("W4A4_MXFP4")
 
@@ -440,7 +371,6 @@ class AscendV1Saver(AutoSaverProcessor):
                 # +127 是对 weight_scale 进行偏移处理，使其从-127~128偏移到0~255，正好覆盖torch_uint8的取值范围
             )
 
-    @save_this_rank_only()
     def on_w4a8_mx_dynamic_per_block(self, prefix: str, module: qir.W4A8MXDynamicPerBlockFakeQuantLinear):
         self.update_quant_type("W4A8_MXFP")
 
@@ -457,18 +387,15 @@ class AscendV1Saver(AutoSaverProcessor):
                 # +127 是对 weight_scale 进行偏移处理，使其从-127~128偏移到0~255，正好覆盖torch_uint8的取值范围
             )
 
-    @save_this_rank_only()
     def on_float_linear(self, prefix: str, module: nn.Linear):
         self.update_quant_type("FLOAT")
 
         return self.on_float_module(prefix, module)
 
-    @save_this_rank_only()
     def on_float_module(self, prefix: str, module: nn.Module):
         for name, param in module.named_parameters(recurse=False, prefix=prefix):
             self.write_tensor(name, "FLOAT", param)
 
-    @save_this_rank_only()
     def on_dynamic_cache(self, prefix: str, module: qir.FakeQuantDynamicCache):
         prefix_list = prefix.split(".")
         prefix_no_last = '.'.join(prefix_list[:-1])
@@ -483,14 +410,12 @@ class AscendV1Saver(AutoSaverProcessor):
         self.json_append['kv_cache_type'] = "C8"
         self.json_append['kv_quant_type'] = "C8"
 
-    @save_this_rank_only()
     def on_w16a16s(self, prefix: str, module: qir.W16A16sLinear):
         self.update_quant_type("W16A16S")
 
         for name, param in module.named_parameters(recurse=False, prefix=prefix):
             self.write_tensor(name, "W16A16S", param)
 
-    @save_this_rank_only()
     def on_activation_per_head(self, prefix: str, module: qir.FakeQuantActivationPerHead):
         scale = module.input_scale.to(torch.float32).unsqueeze(-1)
         # 对于1维张量（fa_k.scale, fa_v.scale），转化为2维（与fa_q.scale对齐维数）
@@ -501,7 +426,6 @@ class AscendV1Saver(AutoSaverProcessor):
         self.write_tensor(prefix + ".offset", "FAQuant", offset)
         self.json_append['fa_quant_type'] = "FAKQuant"
 
-    @save_this_rank_only()
     def on_rotation_wrapper(self, prefix: str, module: qir.QuarotOnlineHeadRotationWrapper):
         """
         处理RotationWrapper类型的模块。
@@ -515,7 +439,6 @@ class AscendV1Saver(AutoSaverProcessor):
         self.quarot_info = module.rotation_info
         self.safetensors_writer.write(f"{prefix}.heads_rotation", self.quarot_info.heads_rotation.clone())
 
-    @save_this_rank_only()
     def on_kronecker_rotation_wrapper(self, prefix: str, module: qir.QuarotOnlineKroneckerRotationWrapper):
         """
         处理KroneckerRotationWrapper类型的模块。
