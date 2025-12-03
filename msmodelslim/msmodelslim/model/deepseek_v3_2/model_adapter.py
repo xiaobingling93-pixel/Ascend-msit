@@ -241,39 +241,24 @@ class DeepSeekV32ModelAdapter(TransformersModel,
             ])
 
             # 根据层类型添加不同的FFN配置
-            post_layernorm = 'model.layers.' + str(layer_idx) + '.post_attention_layernorm'
-            post_layernorm_targets = []
             if layer_idx < self.config.first_k_dense_replace:
                 # Dense FFN 层
                 up_proj = 'model.layers.' + str(layer_idx) + '.mlp.up_proj'
-                gate_proj = 'model.layers.' + str(layer_idx) + '.mlp.gate_proj'
                 down_proj = 'model.layers.' + str(layer_idx) + '.mlp.down_proj'
                 up_down_mapping_config = MappingConfig(
                     source=up_proj,  # 上投影层
                     targets=[down_proj]  # 下投影层
-                )
-                dense_post_norm_mapping_config = MappingConfig(
-                    source=post_layernorm,
-                    targets=[gate_proj, up_proj]
                 )
                 adapter_config.extend([
                     AdapterConfig(
                         subgraph_type="up-down",
                         mapping=up_down_mapping_config
                     ),
-                    AdapterConfig(
-                        subgraph_type="norm-linear",
-                        mapping=dense_post_norm_mapping_config
-                    ),
                 ])
             else:
                 # MOE FFN 层：Shared Experts
                 expert_up_proj = 'model.layers.' + str(layer_idx) + '.mlp.shared_experts.up_proj'
-                expert_gate_proj = 'model.layers.' + str(layer_idx) + '.mlp.shared_experts.gate_proj'
                 expert_down_proj = 'model.layers.' + str(layer_idx) + '.mlp.shared_experts.down_proj'
-
-                gate_proj = 'model.layers.' + str(layer_idx) + '.mlp.gate'
-                post_layernorm_targets.extend([expert_gate_proj, expert_up_proj, gate_proj])
                 up_down_mapping_config_shared = MappingConfig(
                     source=expert_up_proj,
                     targets=[expert_down_proj]
@@ -288,7 +273,6 @@ class DeepSeekV32ModelAdapter(TransformersModel,
                 # MOE FFN 层：Routed Experts
                 for expert in range(expert_num):
                     up_proj = 'model.layers.' + str(layer_idx) + '.mlp.experts.' + str(expert) + '.up_proj'
-                    gate_proj = 'model.layers.' + str(layer_idx) + '.mlp.experts.' + str(expert) + '.gate_proj'
                     down_proj = 'model.layers.' + str(layer_idx) + '.mlp.experts.' + str(expert) + '.down_proj'
                     up_down_mapping_config_expert = MappingConfig(
                         source=up_proj,
@@ -300,18 +284,6 @@ class DeepSeekV32ModelAdapter(TransformersModel,
                             mapping=up_down_mapping_config_expert
                         )
                     ])
-                    post_layernorm_targets.extend([gate_proj, up_proj])
-
-                post_layernorm_mapping_config = MappingConfig(
-                    source=post_layernorm,
-                    targets=post_layernorm_targets
-                )
-                adapter_config.extend([
-                    AdapterConfig(
-                        subgraph_type="norm-linear",
-                        mapping=post_layernorm_mapping_config
-                    )
-                ])
 
         return adapter_config
 
