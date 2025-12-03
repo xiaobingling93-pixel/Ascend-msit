@@ -41,6 +41,10 @@ class QConfig(BaseModel):
 @QABCRegistry.register_abc(dispatch_key=Tuple[QScheme, str])
 class AutoActQuantizer(nn.Module):
 
+    def __init__(self):
+        super().__init__()
+        self.sync = False  # 默认不启用同步操作
+
     @classmethod
     @validate_call(config=dict(arbitrary_types_allowed=True))
     def from_config(cls, config: QConfig) -> Self:
@@ -61,9 +65,29 @@ class AutoActQuantizer(nn.Module):
         """
         pass
 
+    def support_distributed(self) -> bool:
+        """
+        判断是否支持分布式
+        
+        Returns:
+            bool: 是否支持分布式，默认为True
+        """
+        return True
+
+    def enable_sync(self):
+        """
+        启用同步操作
+        子类可以重写此方法以实现更复杂的同步逻辑
+        """
+        self.sync = True
+
 
 @QABCRegistry.register_abc(dispatch_key=Tuple[QScheme, str])
 class AutoWeightQuantizer(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.sync = False  # 默认不启用同步操作
 
     @classmethod
     @validate_call(config=dict(arbitrary_types_allowed=True))
@@ -116,3 +140,19 @@ class AutoWeightQuantizer(nn.Module):
         获取量化参数
         """
         pass
+
+    def support_distributed(self) -> bool:
+        """
+        判断是否支持分布式
+        
+        Returns:
+            bool: 是否支持分布式，默认为True
+        """
+        return True
+
+    def enable_sync(self):
+        """
+        启用同步操作
+        子类可以重写此方法以实现更复杂的同步逻辑
+        """
+        self.sync = True

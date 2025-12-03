@@ -1,17 +1,4 @@
-#  Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
-#  #
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#  #
-#  http://www.apache.org/licenses/LICENSE-2.0
-#  #
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
-
+# Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
 # modified from DeepSeek-V3.2-Exp/inference/model.py
 import math
 from dataclasses import dataclass
@@ -22,9 +9,11 @@ import torch.distributed as dist
 import torch.nn.functional as F
 from einops import rearrange
 from torch import nn
+from msmodelslim.utils.distributed import DistHelper
 
 WORLD_SIZE = 1
 RANK = 0
+USE_DP_MODE = True  # True: DP+EP mode, False: TP+EP mode
 BLOCK_SIZE = 128
 
 
@@ -120,6 +109,7 @@ class ModelArgs:
 class ParallelEmbedding(nn.Module):
     """
     Embedding layer with parallelism support across distributed processes.
+    TP模式：切分词表；DP模式：不切分词表
 
     Args:
         vocab_size (int): Vocabulary size.
@@ -130,8 +120,13 @@ class ParallelEmbedding(nn.Module):
         super().__init__()
         self.vocab_size = vocab_size
         self.dim = dim
-        self.part_vocab_size = (vocab_size // WORLD_SIZE)
-        self.vocab_start_idx = RANK * self.part_vocab_size
+        # TP模式下切分词表，DP模式下不切分
+        if not USE_DP_MODE:
+            self.part_vocab_size = vocab_size // WORLD_SIZE
+            self.vocab_start_idx = RANK * self.part_vocab_size
+        else:
+            self.part_vocab_size = vocab_size
+            self.vocab_start_idx = 0
         self.vocab_end_idx = self.vocab_start_idx + self.part_vocab_size
         self.weight = nn.Parameter(torch.empty(self.part_vocab_size, self.dim))
 
@@ -148,12 +143,13 @@ class ParallelEmbedding(nn.Module):
         Raises:
             ValueError: If `world_size` is not defined.
         """
-        if WORLD_SIZE > 1:
+        # TP模式下需要处理词表切分
+        if WORLD_SIZE > 1 and not USE_DP_MODE:
             mask = (x < self.vocab_start_idx) | (x >= self.vocab_end_idx)
             x = x - self.vocab_start_idx
             x[mask] = 0
         y = F.embedding(x, self.weight)
-        if WORLD_SIZE > 1:
+        if WORLD_SIZE > 1 and not USE_DP_MODE:
             y[mask] = 0
             dist.all_reduce(y)
         return y
@@ -364,7 +360,8 @@ class Indexer(torch.nn.Module):
         super().__init__()
         self.dim: int = args.hidden_size
         self.n_heads: int = args.index_n_heads
-        self.n_local_heads = args.index_n_heads // WORLD_SIZE
+        # TP模式下切分注意力头，DP模式下不切分
+        self.n_local_heads = args.index_n_heads if USE_DP_MODE else (args.index_n_heads // WORLD_SIZE)
         self.head_dim: int = args.index_head_dim
         self.rope_head_dim: int = args.qk_rope_head_dim
         self.index_topk: int = args.index_topk
@@ -442,7 +439,8 @@ class MLA(nn.Module):
         super().__init__()
         self.dim = args.hidden_size
         self.n_heads = args.num_attention_heads
-        self.n_local_heads = args.num_attention_heads // WORLD_SIZE
+        # TP模式下切分注意力头，DP模式下不切分
+        self.n_local_heads = args.num_attention_heads if USE_DP_MODE else (args.num_attention_heads // WORLD_SIZE)
         self.q_lora_rank = args.q_lora_rank
         self.kv_lora_rank = args.kv_lora_rank
         self.qk_nope_head_dim = args.qk_nope_head_dim
@@ -721,11 +719,34 @@ class MoE(nn.Module):
         Returns:
             torch.Tensor: Output tensor after expert routing and computation.
         """
+        # DP模式：需要gather不同rank的输入（因为每个rank有完整模型但处理不同数据）
+        # TP模式：不需要gather（因为不同rank处理不同的张量分片和专家，输入已经按专家路由）
+        if WORLD_SIZE > 1 and USE_DP_MODE:
+            seq_len_this_rank = x.size(-2)  # 当前rank的seq_len
+            
+            # 同步所有rank的seq_len
+            seq_len_tensor = torch.tensor([seq_len_this_rank], dtype=torch.long, device=x.device)
+            seq_len_list = [torch.zeros_like(seq_len_tensor) for _ in range(WORLD_SIZE)]
+            dist.all_gather(seq_len_list, seq_len_tensor)
+            seq_lens = [s.item() for s in seq_len_list]
+            
+            # 计算当前rank的起始位置（前面所有rank的token数量之和）
+            start_pos = sum(seq_lens[:RANK])
+            end_pos = start_pos + seq_len_this_rank
+            
+            # gather所有rank的输入
+            x = torch.cat(DistHelper.gather_variable_shapes(x), dim=1)
+        else:
+            start_pos = 0
+            end_pos = x.size(-2)
+        
         shape = x.size()
         x = x.view(-1, self.dim)
         weights, indices = self.gate(x)
         y = torch.zeros_like(x, dtype=torch.float32)
         counts = torch.bincount(indices.flatten(), minlength=self.n_routed_experts).tolist()
+        
+        # 处理本地专家（专家在所有rank间切分，无论DP+EP还是TP+EP模式）
         for i in range(self.experts_start_idx, self.experts_end_idx):
             if counts[i] == 0:
                 continue
@@ -733,8 +754,16 @@ class MoE(nn.Module):
             idx, top = torch.where(indices == i)
             y[idx] += expert(x[idx]) * weights[idx, top, None]
         y += self.shared_experts(x)
+        
+        # 专家并行需要all_reduce汇总结果
         if WORLD_SIZE > 1:
             dist.all_reduce(y)
+            # 筛选出本rank的token
+            if USE_DP_MODE:
+                return y.type_as(x).view(shape)[:, start_pos:end_pos, :]
+            else:
+                return y.type_as(x).view(shape)
+        
         return y.type_as(x).view(shape)
 
 
@@ -807,9 +836,10 @@ class DeepSeekModel(nn.Module):
         Args:
             args (ModelArgs): Model arguments containing transformer parameters.
         """
-        global WORLD_SIZE, RANK
+        global WORLD_SIZE, RANK, USE_DP_MODE
         WORLD_SIZE = dist.get_world_size() if dist.is_initialized() else 1
         RANK = dist.get_rank() if dist.is_initialized() else 0
+        
         super().__init__()
         self.max_seq_len = args.max_seq_len
         self.embed_tokens = ParallelEmbedding(args.vocab_size, args.hidden_size)
@@ -879,7 +909,9 @@ class Transformer(nn.Module):
         """
         h, _ = self.model(tokens, start_pos)
         logits = self.lm_head(h[:, -1].float())
-        if WORLD_SIZE > 1:
+        # TP模式：需要all_gather logits（因为词表被切分）
+        # DP模式：不需要all_gather（每个rank有完整词表）
+        if WORLD_SIZE > 1 and not USE_DP_MODE:
             all_logits = [torch.empty_like(logits) for _ in range(WORLD_SIZE)]
             dist.all_gather(all_logits, logits)
             logits = torch.cat(all_logits, dim=-1)

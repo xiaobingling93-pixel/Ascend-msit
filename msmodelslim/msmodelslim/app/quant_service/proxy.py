@@ -3,7 +3,7 @@ import sys
 import traceback
 from importlib.metadata import entry_points
 from pathlib import Path
-from typing import Optional, Any, Dict, Type
+from typing import Optional, Any, List, Dict, Type
 
 from msmodelslim.app.quant_service import BaseQuantService, DatasetLoaderInfra
 from msmodelslim.app.quant_service.interface import BaseQuantConfig
@@ -28,6 +28,7 @@ class QuantServiceProxy(BaseQuantService):
             model_adapter: Any,
             save_path: Optional[Path] = None,
             device: DeviceType = DeviceType.NPU,
+            device_indices: Optional[List[int]] = None,
     ) -> None:
         load_plugins()
         self.quant_service = load_quant_service_cls(quant_config.apiversion)(self.dataset_loader)
@@ -36,6 +37,7 @@ class QuantServiceProxy(BaseQuantService):
             model_adapter=model_adapter,
             save_path=save_path,
             device=device,
+            device_indices=device_indices
         )
 
 

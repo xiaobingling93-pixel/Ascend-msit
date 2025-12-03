@@ -20,6 +20,7 @@ import torch
 from pydantic import BaseModel
 from torch import distributed as dist, nn
 
+from msmodelslim.utils.distributed import sync_base_operation
 from msmodelslim.utils.exception import SpecError
 
 
@@ -48,13 +49,9 @@ class MsMinMaxObserver(nn.Module):
         else:
             self.max_val = torch.max(self.max_val, torch.amax(x, self.config.dim, self.config.keepdim))
 
-        if sync and group:
-            if not dist.is_initialized():
-                raise SpecError("MinMaxStrategy's update_with_group requires distributed enabled",
-                                action='Please make sure enable distributed')
-
-            dist.all_reduce(self.min_val, op=dist.ReduceOp.MIN, group=group)
-            dist.all_reduce(self.max_val, op=dist.ReduceOp.MAX, group=group)
+        if sync and dist.is_initialized():
+            sync_base_operation(self.min_val, op='min')
+            sync_base_operation(self.max_val, op='max')
 
     def reset(self):
         self.min_val = None
@@ -85,7 +82,7 @@ class MsMinMaxBlockObserver(nn.Module):
     def update(
             self,
             x: torch.Tensor,
-            sync: bool = False,
+            sync: bool = True,
             group: Optional[dist.ProcessGroup] = None,
             shared_exp_axes=None # 用于指定需要共享指数（或缩放因子）的维度
     ):
@@ -105,14 +102,10 @@ class MsMinMaxBlockObserver(nn.Module):
         elif self.config.method == 'none':
             self.max_val = torch.abs(x) # 若方法为'none'，则直接记录每个元素的绝对值作为max_val
         self.min_val = self.max_val.clone() # min_val暂用max_val的副本
-        # 若需要同步且指定了通信组，则进行分布式环境下的统计量同步
-        if sync and group:
-            if not dist.is_initialized():
-                raise SpecError("MinMaxStrategy's update_with_group requires distributed enabled",
-                                action='Please make sure enable distributed')
-
-            dist.all_reduce(self.min_val, op=dist.ReduceOp.MIN, group=group)
-            dist.all_reduce(self.max_val, op=dist.ReduceOp.MAX, group=group)
+        
+        if sync and dist.is_initialized():
+            sync_base_operation(self.min_val, op='min')
+            sync_base_operation(self.max_val, op='max')
 
     def reset(self):
         self.min_val = None

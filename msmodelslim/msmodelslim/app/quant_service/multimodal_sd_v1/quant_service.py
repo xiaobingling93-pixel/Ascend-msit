@@ -15,7 +15,7 @@
 import functools
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 from msmodelslim.app.quant_service.base import BaseQuantService
 from msmodelslim.app.quant_service.dataset_loader_infra import DatasetLoaderInfra
@@ -44,6 +44,7 @@ class MultimodalSDModelslimV1QuantService(BaseQuantService):
             model_adapter: IModel,
             save_path: Optional[Path] = None,
             device: DeviceType = DeviceType.NPU,
+            device_indices: Optional[List[int]] = None,
     ) -> None:
         if not isinstance(quant_config, BaseQuantConfig):
             raise SchemaValidateError("task must be a BaseTask")

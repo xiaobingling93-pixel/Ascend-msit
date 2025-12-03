@@ -52,8 +52,12 @@ class IterStatsCollector(StatsCollector):
     def __init__(self, symmetric: bool):
         super().__init__()
         self.symmetric = symmetric
+        self.sync = False
         self.minmax_observers: Dict[str, MsMinMaxObserver] = {}
         self.channel_max_observers: Dict[str, MsMinMaxObserver] = {}
+    
+    def enable_sync(self):
+        self.sync = True
 
     def create_hook(self, name: str, subgraph_type: str = None) -> Callable:
         def stats_hook(module: nn.Linear, input_tensor: tuple, output: Any) -> None:
@@ -75,7 +79,7 @@ class IterStatsCollector(StatsCollector):
                 observer_config = MinMaxObserverConfig(dim=0, keepdim=False)
                 self.minmax_observers[name] = MsMinMaxObserver(observer_config)
 
-            self.minmax_observers[name].update(tensor)
+            self.minmax_observers[name].update(tensor, sync=self.sync)
             coming_min, coming_max = self.minmax_observers[name].get_min_max()
 
             statis_dict[StatKey.STAT_KEY_MAX] = coming_max
@@ -91,11 +95,11 @@ class IterStatsCollector(StatsCollector):
             if not self.symmetric and subgraph_type in self.ASYM_SUPPORT_SUBGRAPH_TYPES:
                 # asymmetric模式：计算shift后的绝对值最大值
                 shifted_tensor = (tensor - statis_dict[StatKey.STAT_KEY_SHIFT]).abs()
-                self.channel_max_observers[name].update(shifted_tensor)
+                self.channel_max_observers[name].update(shifted_tensor, sync=self.sync)
             else:
                 # symmetric模式：计算绝对值最大值
                 abs_tensor = tensor.abs()
-                self.channel_max_observers[name].update(abs_tensor)
+                self.channel_max_observers[name].update(abs_tensor, sync=self.sync)
 
             _, channel_max = self.channel_max_observers[name].get_min_max()
             statis_dict[StatKey.STAT_KEY_SMOOTH_SCALE] = channel_max
@@ -128,6 +132,9 @@ class IterSmoothProcessor(BaseSmoothProcessor):
         self.config = config
         self._validate_parameters()
         self.stats_collector = IterStatsCollector(symmetric=config.symmetric)
+        
+        if self.support_distributed() and dist.is_initialized():
+            self.stats_collector.enable_sync()
 
         if not config.symmetric:
             supported_types = ', '.join(IterStatsCollector.ASYM_SUPPORT_SUBGRAPH_TYPES)

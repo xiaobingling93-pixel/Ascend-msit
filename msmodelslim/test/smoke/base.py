@@ -119,11 +119,18 @@ def invoke_test(config_name: str, model_save_path: str, device: str = 'cpu', off
             original_quantize = QuantServiceProxy.quantize
 
             # 创建包装函数来捕获model_adapter但不影响原始流程
-            def capture_model_adapter(self, quant_config, model_adapter, save_path=None, device=None):
+            def capture_model_adapter(
+                self, 
+                quant_config, 
+                model_adapter, 
+                save_path=None, 
+                device=None, 
+                device_indices=None):
+
                 nonlocal captured_model_adapter
                 captured_model_adapter = model_adapter
                 # 调用原始方法，保持原始流程不变
-                return original_quantize(self, quant_config, model_adapter, save_path, device)
+                return original_quantize(self, quant_config, model_adapter, save_path, device, device_indices)
 
             # 临时替换方法
             QuantServiceProxy.quantize = capture_model_adapter

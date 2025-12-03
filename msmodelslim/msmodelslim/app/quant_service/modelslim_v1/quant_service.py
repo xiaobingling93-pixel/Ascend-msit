@@ -14,7 +14,7 @@
 #  limitations under the License.
 
 from pathlib import Path
-from typing import Optional, Literal
+from typing import Optional, Literal, List
 
 import torch
 
@@ -41,7 +41,8 @@ class ModelslimV1QuantService(BaseQuantService):
 
     @staticmethod
     def _choose_runner_type(quant_config: ModelslimV1QuantConfig,
-                            model_adapter: PipelineInterface) -> Literal[
+                            model_adapter: PipelineInterface,
+                            device_indices: Optional[List[int]] = None) -> Literal[
         RunnerType.MODEL_WISE, RunnerType.LAYER_WISE]:
         """根据模型和配置确定使用的pipeline类型。
 
@@ -60,6 +61,10 @@ class ModelslimV1QuantService(BaseQuantService):
             get_logger().info("Layer-wise runner detected, using layer-wise pipeline.")
             return RunnerType.LAYER_WISE
 
+        if quant_config.spec.runner == RunnerType.AUTO and device_indices is not None and len(device_indices) > 1:
+            get_logger().info("multi device configuration detected, using distributed layer-wise pipeline.")
+            return RunnerType.DP_LAYER_WISE
+
         get_logger().info("Runner type not detected, using layer-wise pipeline.")
         return RunnerType.LAYER_WISE
 
@@ -69,7 +74,8 @@ class ModelslimV1QuantService(BaseQuantService):
             model_adapter: IModel,
             save_path: Optional[Path] = None,
             device: DeviceType = DeviceType.NPU,
-    ) -> None:
+            device_indices: Optional[List[int]] = None
+    ):
         if not isinstance(quant_config, BaseQuantConfig):
             raise SchemaValidateError("task is NOT BaseQuantConfig",
                                       action="Please make sure the task is a BaseQuantConfig")
@@ -83,13 +89,17 @@ class ModelslimV1QuantService(BaseQuantService):
             raise SchemaValidateError("device must be a DeviceType",
                                       action="Please make sure the device is a DeviceType")
 
-        return self.quant_process(ModelslimV1QuantConfig.from_base(quant_config), model_adapter, save_path, device)
+        return self.quant_process(
+            ModelslimV1QuantConfig.from_base(quant_config),
+            model_adapter, save_path, device, device_indices
+        )
 
     def quant_process(self,
                       quant_config: ModelslimV1QuantConfig,
                       model_adapter: PipelineInterface,
                       save_path: Optional[Path],
                       device: DeviceType = DeviceType.NPU,
+                      device_indices: Optional[List[int]] = None,
                       ):
 
         common_seed = 42
@@ -115,11 +125,15 @@ class ModelslimV1QuantService(BaseQuantService):
 
         get_logger().info(f"==========QUANTIZATION: Run Quantization==========")
         # 选择 runner
-        runner_type = self._choose_runner_type(quant_config, model_adapter)
+        runner_type = self._choose_runner_type(quant_config, model_adapter, device_indices)
         if runner_type == RunnerType.MODEL_WISE:
             runner = PPRunner(adapter=model_adapter)
         elif runner_type == RunnerType.LAYER_WISE:
             runner = LayerWiseRunner(adapter=model_adapter)
+        elif runner_type == RunnerType.DP_LAYER_WISE:
+            # 延迟导入以避免循环依赖
+            from msmodelslim.core.runner.dp_layer_wise_runner import DPLayerWiseRunner
+            runner = DPLayerWiseRunner(adapter=model_adapter)
         else:
             raise UnsupportedError("Invalid runner type",
                                    action="Please use RunnerType.MODEL_WISE or RunnerType.LAYER_WISE")
@@ -129,5 +143,5 @@ class ModelslimV1QuantService(BaseQuantService):
         for process_cfg in final_process_cfg:
             runner.add_processor(processor_cfg=process_cfg)
 
-        runner.run(calib_data=dataset, device=device)
+        runner.run(calib_data=dataset, device=device, device_indices=device_indices)
         get_logger().info(f"==========QUANTIZATION: END==========")

@@ -91,7 +91,7 @@ class FloatSparseProcessor(AutoSessionProcessor):
         return False
 
     def support_distributed(self) -> bool:
-        return True
+        return False
 
     def post_run(self) -> None:
         """运行后处理：检查未匹配的模式并发出警告"""

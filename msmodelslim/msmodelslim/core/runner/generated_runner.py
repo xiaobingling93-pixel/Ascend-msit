@@ -12,6 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import gc
 from typing import List, Optional, Any, Generator
 
 import torch
@@ -29,6 +30,8 @@ from msmodelslim.utils.cache import to_device
 from msmodelslim.utils.cache.memory import load_cached
 from msmodelslim.utils.exception import ToDoError, UnsupportedError, InvalidDatasetError, SecurityError
 from msmodelslim.utils.logging import get_logger
+from msmodelslim.utils.memory import get_device_allocated_memory, get_device_reserved_memory, \
+    format_memory_size
 
 KEY_DATA_LOADER = "data_loader"
 
@@ -100,6 +103,26 @@ class GeneratedProcessUnit:
 
         if batch_request.outputs is not None:
             self.data_recorder.output = batch_request.outputs
+
+        if hasattr(torch, 'npu'):
+            gc.collect()
+            torch.npu.empty_cache()
+            get_logger().debug(
+                "After make progress for %s: allocated=%s, reserved=%s",
+                self.processor,
+                format_memory_size(get_device_allocated_memory()),
+                format_memory_size(get_device_reserved_memory())
+            )
+        elif hasattr(torch, 'cuda'):
+            gc.collect()
+            torch.cuda.empty_cache()
+            get_logger().debug(
+                "After make progress for %s: allocated=%s, reserved=%s",
+                self.processor,
+                format_memory_size(get_device_allocated_memory()),
+                format_memory_size(get_device_reserved_memory())
+            )
+
         return True
 
 
@@ -149,7 +172,7 @@ class GeneratedRunner(BaseRunner):
         return process_unit
 
     def run(self, model: nn.Module = None, calib_data: Optional[List[Any]] = None,
-            device: DeviceType = DeviceType.NPU):
+            device: DeviceType = DeviceType.NPU, device_indices: Optional[List[int]] = None):
 
         # to avoid oom
         _ = get_input_datas(self.adapter, calib_data, device)

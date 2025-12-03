@@ -93,7 +93,7 @@ class TestFloatSparseProcessor(TestProcessorBase):
         self.assertEqual(processor.admm_pruners, {})
         self.assertEqual(processor.hook_handles, {})
         self.assertFalse(processor.is_data_free())
-        self.assertTrue(processor.support_distributed())
+        self.assertFalse(processor.support_distributed())
 
     def test_basic_sparse_processing(self):
         """测试基本稀疏化处理"""

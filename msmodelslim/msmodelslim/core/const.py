@@ -35,3 +35,4 @@ class RunnerType(str, ExtendedEnum):
     AUTO = "auto"
     MODEL_WISE = "model_wise"
     LAYER_WISE = "layer_wise"
+    DP_LAYER_WISE = "dp_layer_wise"
