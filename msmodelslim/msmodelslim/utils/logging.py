@@ -5,8 +5,8 @@ import logging
 from functools import wraps
 from logging import Logger
 from contextlib import contextmanager
-
 from typing_extensions import Any, Callable, Type, Union
+import torch.distributed as dist
 
 from msmodelslim.utils.exception import SchemaValidateError, ToDoError
 
@@ -16,6 +16,14 @@ class MsgConst:
     Class for log messages const
     """
     SPECIAL_CHAR = ["\n", "\r", "\u007F", "\b", "\f", "\t", "\u000B", "%08", "%0a", "%0b", "%0c", "%0d", "%7f"]
+
+
+class DistributedFilter(logging.Filter):
+    def filter(self, record):
+        # DEBUG 级别显示所有 rank，其他级别只显示 rank 0
+        if record.levelno == logging.DEBUG:
+            return True
+        return dist.get_rank() == 0 if dist.is_initialized() else True
 
 
 def filter_special_chars(func):
@@ -35,6 +43,10 @@ def filter_logger(cur_logger: Logger):
     setattr(cur_logger, 'error', filter_special_chars(cur_logger.error))
     setattr(cur_logger, 'info', filter_special_chars(cur_logger.info))
     setattr(cur_logger, 'warning', filter_special_chars(cur_logger.warning))
+
+    # 添加分布式过滤器
+    if not any(isinstance(f, DistributedFilter) for f in cur_logger.filters):
+        cur_logger.addFilter(DistributedFilter())
 
 
 def get_logger(name: str = ''):
@@ -108,9 +120,9 @@ def set_logger_level(level="info"):
         raise SchemaValidateError(f"level must be str, not {type(level)}",
                                   action='Please make sure log level is a string')
     if level.lower() in LOG_LEVEL:
-        logger.setLevel(LOG_LEVEL.get(level.lower()))
+        get_root_logger().setLevel(LOG_LEVEL.get(level.lower()))
     else:
-        logger.warning("Set %r log level failed.", level)
+        get_root_logger().warning("Set %r log level failed.", level)
 
 
 def progress_bar(iterable, desc: str = None, total: int = -1, interval: int = 1):

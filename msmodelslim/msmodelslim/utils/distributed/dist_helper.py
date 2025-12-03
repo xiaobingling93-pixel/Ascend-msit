@@ -39,28 +39,7 @@ class DistHelper:
     Expert Parallel(专家并行)模型处理类
     用于管理分布式训练中的模型模块，处理本地模块和共享模块的分配
     """
-
-    @staticmethod
-    def gather_variable_shapes(local_tensor):
-        """
-        支持不同 shape 张量的 all_gather 实现
-        """
-        # 同步张量形状
-        local_shape = torch.tensor(local_tensor.shape, dtype=torch.long)
-        shape_list = [torch.zeros_like(local_shape) for _ in range(dist.get_world_size())]
-        dist.all_gather(shape_list, local_shape)
-
-        # 初始化存储
-        tensor_list = [
-            torch.zeros(*s.tolist(), dtype=local_tensor.dtype, device=local_tensor.device)
-            for s in shape_list
-        ]
-
-        # 收集数据
-        dist.all_gather(tensor_list, local_tensor)
-        return tensor_list
-
-    def __init__(self, model: nn.Module):
+    def __init__(self, model: nn.Module, prefix: str = ""):
         """
         初始化EPModelHandle
         Args:
@@ -68,7 +47,10 @@ class DistHelper:
         """
         self._model = model
         # 获取本地所有非None模块的名称集合
-        self._local_modules = set([name for name, module in self._model.named_modules() if module is not None])
+        self._local_modules = set([
+            name for name, module in self._model.named_modules(prefix=prefix)
+            if module is not None
+        ])
 
         # 创建用于收集所有进程模块信息的列表
         gathered_modules = [None] * dist.get_world_size()
@@ -81,6 +63,27 @@ class DistHelper:
         self._all_modules = set.union(*gathered_modules)
         # 计算仅在本地存在的模块（差集）
         self._local_only_modules = self._local_modules - self._shared_modules
+
+    @staticmethod
+    def gather_variable_shapes(local_tensor: torch.Tensor):
+        """
+        支持不同 shape 张量的 all_gather 实现
+        """
+        with torch.device(local_tensor.device):
+            # 同步张量形状
+            local_shape = torch.tensor(local_tensor.shape, dtype=torch.long)
+            shape_list = [torch.zeros_like(local_shape) for _ in range(dist.get_world_size())]
+            dist.all_gather(shape_list, local_shape)
+
+            # 初始化存储
+            tensor_list = [
+                torch.zeros(*s.tolist(), dtype=local_tensor.dtype)
+                for s in shape_list
+            ]
+
+            # 收集数据
+            dist.all_gather(tensor_list, local_tensor)
+            return tensor_list
 
     def get_rank(self):
         """

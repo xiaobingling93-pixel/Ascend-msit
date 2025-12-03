@@ -15,14 +15,14 @@
 
 
 """
-msmodelslim.utils.dist 模块的单元测试
+msmodelslim.utils.distributed 模块的单元测试
 """
 
 import unittest
 from unittest.mock import patch
 import torch
 import torch.nn as nn
-from msmodelslim.utils.dist import DistHelper
+from msmodelslim.utils.distributed import DistHelper
 
 
 class TestDistHelper(unittest.TestCase):

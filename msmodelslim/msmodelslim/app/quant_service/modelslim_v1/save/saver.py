@@ -25,7 +25,7 @@ from typing_extensions import Annotated
 import msmodelslim.quant.ir as qir
 from msmodelslim.core.base.protocol import BatchProcessRequest
 from msmodelslim.quant.processor.base import AutoSessionProcessor, AutoProcessorConfig
-from msmodelslim.utils.dist import DistHelper
+from msmodelslim.utils.distributed import DistHelper
 from msmodelslim.utils.logging import get_logger
 
 
