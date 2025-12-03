@@ -32,6 +32,8 @@ from msmodelslim.quant.processor.base import AutoSessionProcessor
 from msmodelslim.quant.observer import MsMinMaxObserver, MinMaxObserverConfig
 from msmodelslim.utils.logging import get_logger, logger_setter
 from msmodelslim.utils.validation.value import validate_normalized_value, is_boolean, is_string_list
+from msmodelslim.utils.exception import UnsupportedError
+from msmodelslim.quant.processor.anti_outlier.smooth_interface import IterSmoothInterface
 
 
 class IterSmoothProcessorConfig(BaseSmoothProcessorConfig):
@@ -118,6 +120,11 @@ class IterSmoothProcessor(BaseSmoothProcessor):
 
     def __init__(self, model: nn.Module, config: IterSmoothProcessorConfig, adapter: object, **kwargs):
         super().__init__(model, config, adapter)
+        if not isinstance(adapter, IterSmoothInterface):
+            raise UnsupportedError(
+                f'{adapter.__class__.__name__} does not implement IterSmoothInterface',
+                action='Please provide a valid model adapter which implements IterSmoothInterface'
+            )
         self.config = config
         self._validate_parameters()
         self.stats_collector = IterStatsCollector(symmetric=config.symmetric)

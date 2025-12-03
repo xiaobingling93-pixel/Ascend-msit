@@ -21,7 +21,7 @@ import torch.nn as nn
 from msmodelslim.core.graph.adapter_types import AdapterConfig, MappingConfig, FusionConfig
 from msmodelslim.quant.processor.anti_outlier.iter_smooth import IterSmoothProcessor, IterSmoothProcessorConfig
 from msmodelslim.quant.processor.anti_outlier.smooth_interface import IterSmoothInterface
-from msmodelslim.utils.exception import SchemaValidateError
+from msmodelslim.utils.exception import SchemaValidateError, UnsupportedError
 
 
 class MockModel(nn.Module):
@@ -78,13 +78,12 @@ class TestIterSmoothProcessor:
         config = IterSmoothProcessorConfig()
         adapter = MockAdapterWithoutInterface()
 
-        processor = IterSmoothProcessor(model, config, adapter)
+        # 在__init__时就会检查adapter是否实现IterSmoothInterface
+        with pytest.raises(UnsupportedError) as exc_info:
+            processor = IterSmoothProcessor(model, config, adapter)
 
-        # 在pre_run时才会调用adapter.get_adapter_config_for_subgraph()
-        with pytest.raises(AttributeError) as exc_info:
-            processor.pre_run()
-
-        assert "get_adapter_config_for_subgraph" in str(exc_info.value)
+        assert "MockAdapterWithoutInterface does not implement IterSmoothInterface" in str(exc_info.value)
+        assert "Please provide a valid model adapter which implements IterSmoothInterface" in str(exc_info.value)
 
     def test_adapter_missing_subgraph_type(self):
         """测试用例2：用户adapter不配置subgraph_type"""
@@ -194,7 +193,8 @@ class TestIterSmoothProcessor:
     def test_yaml_enable_subgraph_type_validation_invalid_element(self):
         """测试用例8：yaml参数校验enable_subgraph_type为字符串列表类型，且元素要在四种子图结构之间"""
         model = MockModel()
-        adapter = MockAdapterWithoutInterface()
+        # 需要使用实现了IterSmoothInterface的adapter，否则会在接口检查时提前抛出UnsupportedError
+        adapter = MockAdapterWithIncompleteConfig()
 
         # 创建config，然后创建processor，在__init__时会自动调用validate_parameters验证enable_subgraph_type的内容
         config = IterSmoothProcessorConfig(enable_subgraph_type=["haha"])

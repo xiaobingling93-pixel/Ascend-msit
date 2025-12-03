@@ -54,6 +54,7 @@ def get_ext_offset(q_param: QParam) -> torch.Tensor:
 def ssz_calculate_qparam(
     weight: QStorage,
     q_param: QParam,
+    config: Optional[QConfig] = None,
 ) -> QParam:
     """
     SSZ (Scan-Scale-Zero) 量化算法，通过迭代搜索最优的 scale 和 offset 来最小化量化误差
@@ -90,9 +91,15 @@ def ssz_calculate_qparam(
 
     # 当前迭代的量化权重，初始化为最优量化权重
     quant_weight = best_quant_weight
+    # 确定迭代次数：优先使用 config.ext 中的 step 值
+    iter_num = SCALE_SEARCH_ITER_NUM  # 默认迭代次数
+    if config is not None and hasattr(config, 'ext') and config.ext is not None:
+        step = config.ext.get('step', 0)
+        if isinstance(step, int) and step > 0:
+            iter_num = step
 
     # 主迭代循环：最多迭代50次
-    for _ in range(SCALE_SEARCH_ITER_NUM):
+    for _ in range(iter_num):
         # 根据量化方案选择不同的参数更新策略
         if q_param.scheme.symmetric:
             # 对称量化：offset固定为0，只优化scale
@@ -238,7 +245,7 @@ class WeightPerChannelSsz(AutoWeightQuantizer):
             )
 
             # 使用SSZ算法优化量化参数，减少量化误差
-            self.w_q_param = ssz_calculate_qparam(self.weight.T, self.w_q_param)
+            self.w_q_param = ssz_calculate_qparam(self.weight.T, self.w_q_param, config=self.config)
 
             # 使用优化后的参数进行量化，并存储结果
             self.w_q_storage = quantize(self.weight.T, self.w_q_param).T
