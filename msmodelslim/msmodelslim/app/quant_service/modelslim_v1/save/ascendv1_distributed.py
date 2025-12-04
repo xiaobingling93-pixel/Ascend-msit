@@ -213,6 +213,9 @@ class DistributedAscendV1Saver(AscendV1Saver):
 
         if self.support_distributed() and dist.is_initialized():
             self.merge_ranks()
+        
+        if dist.get_rank() != 0:
+            return
 
         copy_files(self.adapter.model_path, self.config.save_directory)
         remove_quantization_config(self.config.save_directory)
@@ -238,6 +241,8 @@ class DistributedAscendV1Saver(AscendV1Saver):
         self._merge_index_files()
         self._merge_json_files()
         self._cleanup_rank_dirs()
+        
+        get_logger().info(f"Merge ranks completed successfully. Final weights saved to: {self.config.save_directory}")
         
     def _merge_safetensor_files(self, file_counts):
         """合并所有rank的safetensors文件"""

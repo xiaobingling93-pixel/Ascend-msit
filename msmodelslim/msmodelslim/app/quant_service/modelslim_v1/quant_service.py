@@ -60,11 +60,15 @@ class ModelslimV1QuantService(BaseQuantService):
         if quant_config.spec.runner == RunnerType.LAYER_WISE:
             get_logger().info("Layer-wise runner detected, using layer-wise pipeline.")
             return RunnerType.LAYER_WISE
+        
+        if quant_config.spec.runner == RunnerType.DP_LAYER_WISE:
+            get_logger().info("Distributed layer-wise runner detected, using distributed layer-wise pipeline.")
+            return RunnerType.DP_LAYER_WISE
 
         if quant_config.spec.runner == RunnerType.AUTO and device_indices is not None and len(device_indices) > 1:
             get_logger().info("multi device configuration detected, using distributed layer-wise pipeline.")
             return RunnerType.DP_LAYER_WISE
-
+        
         get_logger().info("Runner type not detected, using layer-wise pipeline.")
         return RunnerType.LAYER_WISE
 

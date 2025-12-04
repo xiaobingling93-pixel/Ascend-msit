@@ -261,12 +261,12 @@ def get_device_allocated_memory() -> int:
         已分配内存大小，单位为字节
     """
     # 自动检测设备类型
-    if hasattr(torch, 'cuda') and torch.cuda.is_available():
-        device_id = torch.cuda.current_device()
-        return torch.cuda.memory_allocated(device_id)
-    elif hasattr(torch, 'npu') and torch.npu.is_available():
+    if hasattr(torch, 'npu') and torch.npu.is_available():
         device_id = torch.npu.current_device()
         return torch.npu.memory_allocated(device_id)
+    elif hasattr(torch, 'cuda') and torch.cuda.is_available():
+        device_id = torch.cuda.current_device()
+        return torch.cuda.memory_allocated(device_id)
     return 0
 
 
