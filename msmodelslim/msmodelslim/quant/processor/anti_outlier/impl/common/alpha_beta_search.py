@@ -130,7 +130,7 @@ class FlexSmoothAlphaBetaSearcher(BaseAlphaBetaSearcher):
             beta = 1.0 - alpha
             mse = self.evaluate_alpha_beta(act, weights, alpha, beta)
             
-            if mse < best_mse:
+            if mse <= best_mse:
                 best_mse = mse
                 best_alpha = alpha
         
@@ -151,7 +151,7 @@ class FlexSmoothAlphaBetaSearcher(BaseAlphaBetaSearcher):
         for beta in np.round(np.arange(0.0, 1.0 + self.search_step, self.search_step), decimals=2):
             mse = self.evaluate_alpha_beta(act, weights, alpha, beta)
             
-            if mse < best_mse:
+            if mse <= best_mse:
                 best_mse = mse
                 best_beta = beta
         
@@ -244,7 +244,7 @@ class FlexAWQSSZAlphaBetaSearcher(BaseAlphaBetaSearcher):
         for alpha in np.round(np.arange(0.0, 1.0 + self.search_step, self.search_step), decimals=2):
             mse = self.evaluate_alpha_beta(act, linear, alpha, beta=0.0)
             
-            if best_mse is None or mse < best_mse:
+            if best_mse is None or mse <= best_mse:
                 best_mse = mse
                 best_alpha = alpha
         
