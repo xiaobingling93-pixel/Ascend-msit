@@ -32,7 +32,7 @@ from msserviceprofiler.modelevalstate.config.base_config import (
     EnginePolicy, DeployPolicy, AnalyzeTool,
     ServiceType, BenchMarkPolicy, PDPolicy
 )
-from msserviceprofiler.modelevalstate.optimizer.optimizer import PSOOptimizer, main, plugin_main, arg_parse
+from msserviceprofiler.modelevalstate.optimizer.optimizer import PSOOptimizer, plugin_main, arg_parse
 from msserviceprofiler.modelevalstate.optimizer.experience_fine_tunning import StopFineTune
 from msserviceprofiler.modelevalstate.optimizer.plugins.simulate import VllmSimulator
 
@@ -451,57 +451,10 @@ def test_prepare(mock_mindie_model_config, mock_is_mindie, mindie_config_file):
     assert optimizer.default_run_param is None
     assert optimizer.default_res is None
     assert optimizer.default_fitness is None
-    optimizer.prepare()
+    optimizer.prepare_plugin()
     assert optimizer.default_res
     assert optimizer.default_fitness
     assert optimizer.default_run_param is not None
-
-
-def test_run():
-    # 创建PSOOptimizer的实例
-    optimizer = PSOOptimizer(MagicMock(), pso_options=get_settings().pso_options, 
-                             target_field=default_support_field[:3],
-                             pso_init_kwargs={"ftol": get_settings().ftol, "ftol_iter": get_settings().ftol_iter},
-                             load_breakpoint=True)
-    performance_index = PerformanceIndex(generate_speed=888,
-                                         time_to_first_token=0.5,
-                                         time_per_output_token=0.05,
-                                         success_rate=1)
-    # 模拟prepare方法
-
-    with patch('msserviceprofiler.modelevalstate.optimizer.global_best_custom.CustomGlobalBestPSO',
-                           autospec=True) as mock_custom_global_best_pso:
-        # 模拟enable_simulate上下文管理器
-        with patch('msserviceprofiler.modelevalstate.optimizer.simulator.enable_simulate_old',
-                               autospec=True) as mock_enable_simulate:
-            custom_global_instance = mock_custom_global_best_pso.return_value
-            custom_global_instance.optimize.return_value = (100, [200, 10, 100])
-            # 模拟op_func方法
-            optimizer.prepare = MagicMock()
-            optimizer.op_func = MagicMock()
-            # 模拟refine_optimization_candidates方法
-            optimizer.refine_optimization_candidates = MagicMock(
-                            return_value=([100], [[200, 10, 100]], [performance_index]))
-            # 模拟best_params方法
-            optimizer.best_params = MagicMock(return_value=(100, [200, 10, 100], performance_index))
-            # 模拟self.scheduler.data_storage
-            optimizer.scheduler.data_storage = MagicMock()
-            # 模拟self.scheduler.simulator
-            optimizer.scheduler.simulator = MagicMock()
-            # 调用run方法
-            optimizer.run()
-            # 验证prepare方法被调用
-            optimizer.prepare.assert_called_once()
-            # 验证上下文管理器被正确使用
-            # 验证enable_simulate上下文管理器被正确使用
-            mock_enable_simulate.assert_called_once()
-            # 验证StagedCBO和CustomGlobalBestPSO类被正确实例化
-            mock_custom_global_best_pso.assert_called_once()
-            # 验证refine_optimization_candidates和best_params方法被调用
-            optimizer.refine_optimization_candidates.assert_called_once()
-            optimizer.best_params.assert_called_once()
-            # 验证self.scheduler.data_storage和self.scheduler.simulator被正确使用
-            optimizer.scheduler.data_storage.get_best_result.assert_called_once()
 
 
 def test_run_plugin():
@@ -547,44 +500,6 @@ def test_run_plugin():
             optimizer.best_params.assert_called_once()
             # 验证self.scheduler.data_storage和self.scheduler.simulator被正确使用
             optimizer.scheduler.data_storage.get_best_result.assert_called_once()
-
-
-@patch("msserviceprofiler.modelevalstate.optimizer.optimizer.PSOOptimizer")	
-@patch("msserviceprofiler.modelevalstate.optimizer.simulator.Simulator")	
-@patch("msserviceprofiler.modelevalstate.optimizer.simulator.VllmSimulator")
-@patch("msserviceprofiler.modelevalstate.optimizer.scheduler.Scheduler")	
-@patch("msserviceprofiler.modelevalstate.optimizer.scheduler.ScheduleWithMultiMachine")	
-def test_main(scheduler_multi, scheduler, vllm_simulator, simulator, psooptimizer):	
-    args = MagicMock()	
-    args.benchmark_policy = BenchMarkPolicy.benchmark.value	
-    args.deploy_policy = DeployPolicy.single.value	
-    args.backup = False	
-    args.load_breakpoint = False	
-    args.engine = EnginePolicy.mindie.value
-
-    # 调用被测试的方法	
-    with patch("shutil.which", return_value="path/to/benchmark"):	
-        main(args)	
-    simulator.assert_called_once()
-    psooptimizer.assert_called_once()	
-    scheduler.assert_called_once()	
- 
-    args.benchmark_policy = BenchMarkPolicy.vllm_benchmark.value
-    scheduler.reset_mock()
-    with patch("shutil.which", return_value="path/to/benchmark"):
-        main(args)
-    scheduler.assert_called_once()
-
-    args.benchmark_policy = BenchMarkPolicy.ais_bench.value	
-    scheduler.reset_mock()	
-    with patch("shutil.which", return_value="path/to/benchmark"):	
-        main(args)	
-    scheduler.assert_called_once()
-    
-    args.deploy_policy = DeployPolicy.multiple.value	
-    with patch("shutil.which", return_value="path/to/benchmark"):	
-        main(args)	
-    scheduler_multi.assert_called_once()
 
 
 @patch("msserviceprofiler.modelevalstate.optimizer.optimizer.PSOOptimizer")
@@ -844,15 +759,6 @@ class TestArgParse(unittest.TestCase):
         arg_parse(subparsers)
         args = parser.parse_args(['optimizer'])
         self.assertEqual(args.func, plugin_main)
-
-    @patch('msserviceprofiler.modelevalstate.plugins.load_general_plugins')
-    def test_arg_parse_without_plugin(self, mock_load_general_plugins):
-        mock_load_general_plugins.return_value = False
-        parser = argparse.ArgumentParser()
-        subparsers = parser.add_subparsers()
-        arg_parse(subparsers)
-        args = parser.parse_args(['optimizer'])
-        self.assertEqual(args.func, main)
 
     @patch('msserviceprofiler.modelevalstate.plugins.load_general_plugins')
     def test_arg_parse_with_load_breakpoint(self, mock_load_general_plugins):

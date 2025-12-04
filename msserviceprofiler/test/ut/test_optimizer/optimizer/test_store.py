@@ -23,7 +23,7 @@ from msserviceprofiler.modelevalstate.config.config import (
     OptimizerConfigField,
     get_settings
 )
-from msserviceprofiler.modelevalstate.optimizer.benchmark import VllmBenchMark
+from msserviceprofiler.modelevalstate.optimizer.plugins.benchmark import VllmBenchMark
 from msserviceprofiler.modelevalstate.optimizer.store import DataStorage
 from msserviceprofiler.msguard import GlobalConfig
 from msserviceprofiler.msguard.security import sanitize_csv_value
@@ -33,7 +33,9 @@ class TestDataStorage(unittest.TestCase):
     def setUp(self):
         self.data_storage = DataStorage(get_settings().data_storage, MagicMock(), MagicMock())
 
-    def test_get_best_result_benchmark_is_benchmark(self):
+    @patch('shutil.which')
+    def test_get_best_result_benchmark_is_benchmark(self, mock_which):
+        mock_which.return_value = 'vllm'
         GlobalConfig.custom_return = True
         self.data_storage.benchmark = None
         self.data_storage.save_file = 'test.csv'
