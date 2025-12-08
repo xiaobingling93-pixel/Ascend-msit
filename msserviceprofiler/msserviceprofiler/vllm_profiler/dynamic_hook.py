@@ -16,14 +16,10 @@ import importlib
 import inspect
 from dataclasses import dataclass
 from typing import Tuple, List, Optional, Callable, Dict, Any
-from .logger import logger
 
-# Expose Profiler/Level at module scope so tests can patch them
-try:
-    from ms_service_profiler import Profiler, Level
-except Exception:
-    Profiler = None  # type: ignore
-    Level = None  # type: ignore
+from ms_service_profiler import Profiler, Level
+
+from .logger import logger
 from .module_hook import VLLMHookerBase, import_object_from_string
 
 
@@ -248,6 +244,44 @@ def _safe_eval_expr(expr: str, ctx: FuncCallContext):
         return None
 
 
+@dataclass
+class AttrContext:
+    """属性采集上下文。"""
+    prof: Any
+    attributes: Optional[List[Dict[str, Any]]]
+    real_func: Callable
+    args: Tuple[Any, ...]
+    kwargs: Dict[str, Any]
+    ret_val: Any
+
+
+def _collect_attributes(ctx: AttrContext):
+    """采集自定义属性并设置到 Profiler。
+    
+    Args:
+        ctx: 属性采集上下文（包含 profiler、配置、原函数、入参与返回值）
+    """
+    if not isinstance(ctx.attributes, list):
+        return
+    
+    for item in ctx.attributes:
+        attr_name = item.get("name")
+        expr = item.get("expr")
+        if not attr_name or not expr:
+            continue
+        
+        call_ctx = FuncCallContext(
+            func_obj=ctx.real_func,
+            this_obj=ctx.args[0] if ctx.args else None,
+            args=ctx.args,
+            kwargs=ctx.kwargs,
+            ret_val=ctx.ret_val,
+        )
+        val = _safe_eval_expr(expr, call_ctx)
+        if val is not None:
+            ctx.prof.attr(attr_name, val)
+
+
 def make_default_time_hook(domain: str, name: str, attributes: Optional[List[Dict[str, Any]]] = None) -> Callable:
     """生成一个默认的耗时统计 hook 处理函数，并支持自定义属性采集。
     
@@ -255,6 +289,7 @@ def make_default_time_hook(domain: str, name: str, attributes: Optional[List[Dic
     - 基本的耗时统计
     - 自定义属性采集
     - 安全的表达式执行
+    - 自动识别同步/异步函数
     
     Args:
         domain: 性能分析域名称
@@ -265,7 +300,7 @@ def make_default_time_hook(domain: str, name: str, attributes: Optional[List[Dic
     
     Returns:
         Callable: hook 处理函数
-    
+        
     Note:
         attributes 结构示例：
         [
@@ -280,40 +315,58 @@ def make_default_time_hook(domain: str, name: str, attributes: Optional[List[Dic
         return _noop
 
     def _default(original_func, *args, **kwargs):
-        """默认的 hook 处理函数。
+        """默认的 hook 处理函数，自动处理同步/异步函数。
         
         Args:
-            original_func: 原始函数
+            original_func: 原始函数或 TrackableOriginalFunc
             *args: 位置参数
             **kwargs: 关键字参数
             
         Returns:
-            原始函数的返回值
+            原始函数的返回值（同步）或协程对象（异步）
         """
-        level_val = getattr(Level, 'INFO', None) if Level is not None else None
-        prof = Profiler(level_val).domain(domain).span_start(name)
-        ret = original_func(*args, **kwargs)
-
-        if isinstance(attributes, list):
-            for item in attributes:
-                attr_name = item.get("name")
-                expr = item.get("expr")
-                if not attr_name or not expr:
-                    continue
-                # 在 expr 中直接使用参数名或 return 来表示数据来源
-                ctx = FuncCallContext(
-                    func_obj=original_func,
-                    this_obj=args[0] if len(args) > 0 else None,
-                    args=args,
-                    kwargs=kwargs,
-                    ret_val=ret
+        # 获取真正的函数对象用于类型判断
+        real_func = getattr(original_func, "original_func", original_func)
+        
+        # 异步函数：返回协程，在协程内部计时
+        if inspect.iscoroutinefunction(real_func):
+            async def _async_wrapper():
+                prof = Profiler("INFO").domain(domain).span_start(name)
+                try:
+                    ret = await original_func(*args, **kwargs)
+                    _collect_attributes(
+                        AttrContext(
+                            prof=prof,
+                            attributes=attributes,
+                            real_func=real_func,
+                            args=args,
+                            kwargs=kwargs,
+                            ret_val=ret,
+                        )
+                    )
+                    return ret
+                finally:
+                    prof.span_end()
+            
+            return _async_wrapper()
+        # 同步函数：直接在当前调用栈内计时
+        else:
+            prof = Profiler("INFO").domain(domain).span_start(name)
+            try:
+                ret = original_func(*args, **kwargs)
+                _collect_attributes(
+                    AttrContext(
+                        prof=prof,
+                        attributes=attributes,
+                        real_func=real_func,
+                        args=args,
+                        kwargs=kwargs,
+                        ret_val=ret,
+                    )
                 )
-                val = _safe_eval_expr(expr, ctx)
-                if val is not None:
-                    prof.attr(attr_name, val)
-
-        prof.span_end()
-        return ret
+                return ret
+            finally:
+                prof.span_end()
 
     return _default
 
