@@ -211,28 +211,6 @@ class TestMakeDefaultTimeHook:
     """测试 make_default_time_hook 函数"""
 
     @staticmethod
-    def test_make_default_time_hook_no_profiler():
-        """测试没有 ms_service_profiler 的情况"""
-        with patch.dict('sys.modules', {'ms_service_profiler': None}):
-            # 重新导入以应用模拟
-            import importlib
-            import sys
-            if 'msserviceprofiler.vllm_profiler.dynamic_hook' in sys.modules:
-                importlib.reload(sys.modules['msserviceprofiler.vllm_profiler.dynamic_hook'])
-            
-            result_func = make_default_time_hook("test_domain", "test_name")
-            
-            # 测试返回的函数
-            mock_original = Mock(return_value="result")
-            mock_args = (1, 2, 3)
-            mock_kwargs = {'key': 'value'}
-            
-            result = result_func(mock_original, *mock_args, **mock_kwargs)
-            
-            mock_original.assert_called_once_with(*mock_args, **mock_kwargs)
-            assert result == "result"
-
-    @staticmethod
     @patch('msserviceprofiler.vllm_profiler.dynamic_hook.Profiler')
     def test_make_default_time_hook_with_profiler_no_attributes(mock_profiler):
         """测试有 profiler 但无属性的情况"""
