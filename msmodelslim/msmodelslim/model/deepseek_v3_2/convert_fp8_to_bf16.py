@@ -68,12 +68,12 @@ def get_inv_tensor(tensor_name, fp8_path, weight_map):
     
     # 自动检测设备类型
     if dist.is_initialized():
-        if hasattr(torch, 'cuda') and torch.cuda.is_available():
-            current_device_idx = torch.cuda.current_device()
-            device = f"cuda:{current_device_idx}"
-        elif hasattr(torch, 'npu') and torch.npu.is_available():
+        if hasattr(torch, 'npu') and torch.npu.is_available():
             current_device_idx = torch.npu.current_device()
             device = f"npu:{current_device_idx}"
+        elif hasattr(torch, 'cuda') and torch.cuda.is_available():
+            current_device_idx = torch.cuda.current_device()
+            device = f"cuda:{current_device_idx}"
         else:
             device = 'cpu'
     else:

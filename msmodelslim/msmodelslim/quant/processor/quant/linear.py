@@ -59,10 +59,7 @@ class LinearQuantProcessor(AutoSessionProcessor):
         self.include = ConfigSet(config.include)
         self.exclude = ConfigSet(config.exclude)
         
-        # 初始化分布式辅助类（如果分布式已启动）
         self.dist_helper = None
-        if dist.is_initialized():
-            self.dist_helper = DistHelper(model)
 
     def is_data_free(self) -> bool:
         if self.config.qconfig.act.scope == QScope.PER_TOKEN:
@@ -92,10 +89,15 @@ class LinearQuantProcessor(AutoSessionProcessor):
         _warning_unmatched_pattern("exclude", self.exclude)
 
     def preprocess(self, request: BatchProcessRequest) -> None:
+        # 在preprocess时创建DistHelper，传入prefix信息
+        if dist.is_initialized():
+            self.dist_helper = DistHelper(request.module, prefix=request.name)
         self._install_quantizer(request.name, request.module)
 
     def postprocess(self, request: BatchProcessRequest) -> None:
         self._deploy(request.name, request.module)
+        # 清理分布式辅助类
+        self.dist_helper = None
 
     def _install_quantizer(self, prefix: str, module: nn.Module) -> None:
         for name, submodule in module.named_modules(prefix=prefix):
@@ -135,4 +137,4 @@ class LinearQuantProcessor(AutoSessionProcessor):
             quantizer.enable_sync()
         
         quantizer.setup(module)
-        self.model.set_submodule(full_name, quantizer)
+        self.model.set_submodule(full_name, quantizer)  

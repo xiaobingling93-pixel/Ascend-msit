@@ -14,7 +14,7 @@
 #  limitations under the License.
 
 from enum import Enum
-from typing import Union
+from typing import Union, List
 
 import torch
 import torch.distributed as dist
@@ -155,4 +155,43 @@ def sync_gather_tensors(
             get_logger().debug(f"Gathered {world_size} tensors with same shape on NPU using HCCL")
         
         return tensor_list
+
+
+def sync_gather_tensor_lists(
+    tensor_list: List[torch.Tensor],
+    group: dist.ProcessGroup = None
+) -> List[torch.Tensor]:
+    """
+    在所有进程间收集张量列表，并展平成一个列表
+    
+    用于收集每个进程上的 tensor 列表（如校准集的 tensor 列表），
+    然后将所有进程的列表合并展平成一个统一的列表。
+    
+    例如：4 卡，每张卡有 12 个 tensor，收集后返回 48 个 tensor 的列表。
+    
+    Args:
+        tensor_list: 本地进程的张量列表
+        group: 进程组，默认为 None（使用默认进程组）
+    
+    Returns:
+        所有进程的张量展平后的列表
+    """    
+    world_size = dist.get_world_size(group)
+    gathered_tensor_lists = [None] * world_size
+    dist.all_gather_object(gathered_tensor_lists, tensor_list, group=group)
+    
+    # 展平所有进程的 tensor 列表
+    flattened_tensors = []
+    for tensor_list in gathered_tensor_lists:
+        if tensor_list:
+            for t in tensor_list:
+                if t is not None:
+                    flattened_tensors.append(t)
+    
+    get_logger().debug(
+        "Gathered and flattened %d tensors from %d ranks",
+        len(flattened_tensors), world_size
+    )
+    
+    return flattened_tensors
 
