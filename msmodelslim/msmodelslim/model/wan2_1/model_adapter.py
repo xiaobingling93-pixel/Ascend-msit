@@ -78,7 +78,7 @@ class Wan2Point1Adapter(BaseModelAdapter,
         return dataset
 
     def init_model(self, device: DeviceType = DeviceType.NPU) -> nn.Module:
-        return self.transformer
+        return {'': self.transformer}
 
     def generate_model_forward(self, model: torch.nn.Module,
                                inputs: Any,
@@ -238,6 +238,7 @@ class Wan2Point1Adapter(BaseModelAdapter,
 
         # 2. 重新解析，得到经过校验/类型转换的新 Namespace
         self.model_args = parser.parse_args(argv)
+        self.model_args.task_config = 't2v'
 
     def _add_attentioncache_args(self, parser: argparse.ArgumentParser):
         group = parser.add_argument_group(title="Attention Cache args")

@@ -2,5 +2,6 @@
 
 from .pth import (
     load_cached_data,
+    load_cached_data_for_models,
     to_device
 )

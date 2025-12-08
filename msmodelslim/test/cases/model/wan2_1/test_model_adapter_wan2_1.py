@@ -104,7 +104,7 @@ class TestWan2Point1Adapter:
         mock_self.transformer = mock_transformer  # 设置预期返回值
 
         result = Wan2Point1Adapter.init_model(mock_self)
-        assert result == mock_transformer, "init_model应返回self.transformer"
+        assert result == {'': mock_transformer}, "init_model应返回self.transformer"
 
     @pytest.fixture
     def adapter(self):
