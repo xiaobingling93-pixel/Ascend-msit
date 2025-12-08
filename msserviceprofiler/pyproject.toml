@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "msserviceprofiler"
-version = "1.2.2"
+version = "1.2.3"
 description = ""
 readme = "README.md"
 changelog = "https://gitcode.com/Ascend/msit/blob/master/msserviceprofiler/Changelog.md"
