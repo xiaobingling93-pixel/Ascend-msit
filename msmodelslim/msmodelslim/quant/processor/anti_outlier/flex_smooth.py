@@ -17,6 +17,7 @@
 
 from typing import Callable, Any, Literal, Annotated, List, Optional, Dict
 
+import torch
 import torch.distributed as dist
 import torch.nn as nn
 from pydantic import AfterValidator, Field
@@ -38,6 +39,9 @@ from msmodelslim.quant.observer import MsMinMaxObserver, MinMaxObserverConfig
 from msmodelslim.utils.exception import UnsupportedError
 from msmodelslim.utils.logging import get_logger, logger_setter
 from msmodelslim.utils.validation.value import validate_normalized_value, is_string_list
+from msmodelslim.utils.distributed.dist_ops import sync_gather_tensor_lists
+from msmodelslim.utils.distributed import DistHelper
+from msmodelslim.core.base.protocol import BatchProcessRequest
 
 
 class FlexSmoothBaseProcessorConfig(BaseSmoothProcessorConfig):
@@ -69,12 +73,13 @@ class FlexStatsCollector(StatsCollector):
     
     def __init__(self):
         super().__init__()
-        self.sync = False
+        self.dist_helper: Optional[DistHelper] = None
         # 为每个模块名称创建observer，用于收集channel_max统计
         self.observers: Dict[str, MsMinMaxObserver] = {}
     
-    def enable_sync(self):
-        self.sync = True
+    def set_dist_helper(self, dist_helper: Optional[DistHelper]):
+        """设置分布式辅助类"""
+        self.dist_helper = dist_helper
     
     def create_hook(self, name: str, subgraph_type: str = None) -> Callable:
         def stats_hook(module: nn.Linear, input_tensor: tuple, output: Any) -> None:
@@ -101,8 +106,10 @@ class FlexStatsCollector(StatsCollector):
             if name not in self.observers:
                 observer_config = MinMaxObserverConfig(dim=0, keepdim=False)
                 self.observers[name] = MsMinMaxObserver(observer_config)
+            # 根据模块是否共享决定是否同步
+            sync = self.dist_helper.is_shared(name) if self.dist_helper is not None else False
             abs_tensor = tensor.abs()
-            self.observers[name].update(abs_tensor, sync=self.sync)
+            self.observers[name].update(abs_tensor, sync=sync)
             _, channel_max = self.observers[name].get_min_max()
             statis_dict[StatKey.STAT_KEY_SMOOTH_SCALE] = channel_max
 
@@ -128,8 +135,8 @@ class FlexSmoothBaseProcessor(BaseSmoothProcessor):
         self._validate_parameters()
         self.stats_collector = FlexStatsCollector()
         
-        if self.support_distributed() and dist.is_initialized():
-            self.stats_collector.enable_sync()
+        # 初始化分布式辅助类（延迟到preprocess时创建，因为需要prefix信息）
+        self.dist_helper = None
 
 
 @QABCRegistry.register(dispatch_key=FlexSmoothQuantProcessorConfig, abc_class=AutoSessionProcessor)
@@ -139,6 +146,20 @@ class FlexSmoothQuantProcessor(FlexSmoothBaseProcessor):
 
     def support_distributed(self) -> bool:
         return True
+    
+    def preprocess(self, request: BatchProcessRequest) -> None:
+        # 在preprocess时创建DistHelper，传入prefix信息
+        if dist.is_initialized():
+            self.dist_helper = DistHelper(request.module, prefix=request.name)
+            self.stats_collector.set_dist_helper(self.dist_helper)
+        
+        super().preprocess(request)
+    
+    def postprocess(self, request: BatchProcessRequest) -> None:
+        super().postprocess(request)
+        # 清理分布式辅助类
+        self.stats_collector.set_dist_helper(None)
+        self.dist_helper = None
     
     def apply_smooth_algorithm(self, subgraph_obj: Any, linear_names: List[str]) -> None:
         """Apply FlexSmoothQuant algorithm"""
@@ -182,15 +203,15 @@ class FlexSmoothQuantProcessor(FlexSmoothBaseProcessor):
 
             # 获取 tensors
             if StatKey.TENSOR in stats:
-                tensors = stats[StatKey.TENSOR]
+                local_tensors = stats[StatKey.TENSOR]
             else:
-                tensors = None
+                local_tensors = None
         else:
             get_logger().warning(f"Linear name {linear_name} not in act_stats")
             return None
 
         # 检查是否成功获取到激活平滑尺度
-        if a_smooth_scale is None or tensors is None:
+        if a_smooth_scale is None or local_tensors is None:
             # 返回 None 而不是抛出异常，让调用者决定如何处理
             get_logger().debug(
                 "Failed to get activation smooth scale from linear name %s. "
@@ -198,6 +219,15 @@ class FlexSmoothQuantProcessor(FlexSmoothBaseProcessor):
                 linear_name
             )
             return None
+        
+        # 多卡同步：收集所有卡的 tensor，确保 alpha/beta 搜索使用相同的数据
+        # 只有共享模块才需要进行多卡同步
+        if (local_tensors and self.dist_helper is not None and self.dist_helper.is_shared(linear_name)):
+            tensors = sync_gather_tensor_lists(local_tensors)
+        else:
+            # 单卡场景、非共享模块或空列表，直接使用本地 tensor
+            tensors = local_tensors
+        
         # 创建 FlexSmoothQuantContext
         smooth_context = FlexSmoothQuantContext(
             version=1,

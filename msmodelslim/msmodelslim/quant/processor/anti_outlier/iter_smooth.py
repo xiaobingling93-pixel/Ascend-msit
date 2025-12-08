@@ -30,6 +30,7 @@ from msmodelslim.quant.processor.anti_outlier.smooth_base import BaseSmoothProce
 from msmodelslim.quant.processor.anti_outlier.common.smooth_components import StatsCollector, SubgraphRegistry, StatKey
 from msmodelslim.quant.processor.base import AutoSessionProcessor
 from msmodelslim.quant.observer import MsMinMaxObserver, MinMaxObserverConfig
+from msmodelslim.utils.distributed import DistHelper
 from msmodelslim.utils.logging import get_logger, logger_setter
 from msmodelslim.utils.validation.value import validate_normalized_value, is_boolean, is_string_list
 from msmodelslim.utils.exception import UnsupportedError
@@ -52,12 +53,13 @@ class IterStatsCollector(StatsCollector):
     def __init__(self, symmetric: bool):
         super().__init__()
         self.symmetric = symmetric
-        self.sync = False
+        self.dist_helper: Optional[DistHelper] = None
         self.minmax_observers: Dict[str, MsMinMaxObserver] = {}
         self.channel_max_observers: Dict[str, MsMinMaxObserver] = {}
     
-    def enable_sync(self):
-        self.sync = True
+    def set_dist_helper(self, dist_helper: Optional[DistHelper]):
+        """设置分布式辅助类"""
+        self.dist_helper = dist_helper
 
     def create_hook(self, name: str, subgraph_type: str = None) -> Callable:
         def stats_hook(module: nn.Linear, input_tensor: tuple, output: Any) -> None:
@@ -79,7 +81,9 @@ class IterStatsCollector(StatsCollector):
                 observer_config = MinMaxObserverConfig(dim=0, keepdim=False)
                 self.minmax_observers[name] = MsMinMaxObserver(observer_config)
 
-            self.minmax_observers[name].update(tensor, sync=self.sync)
+            # 根据模块是否共享决定是否同步
+            sync = self.dist_helper.is_shared(name) if self.dist_helper is not None else False
+            self.minmax_observers[name].update(tensor, sync=sync)
             coming_min, coming_max = self.minmax_observers[name].get_min_max()
 
             statis_dict[StatKey.STAT_KEY_MAX] = coming_max
@@ -95,11 +99,11 @@ class IterStatsCollector(StatsCollector):
             if not self.symmetric and subgraph_type in self.ASYM_SUPPORT_SUBGRAPH_TYPES:
                 # asymmetric模式：计算shift后的绝对值最大值
                 shifted_tensor = (tensor - statis_dict[StatKey.STAT_KEY_SHIFT]).abs()
-                self.channel_max_observers[name].update(shifted_tensor, sync=self.sync)
+                self.channel_max_observers[name].update(shifted_tensor, sync=sync)
             else:
                 # symmetric模式：计算绝对值最大值
                 abs_tensor = tensor.abs()
-                self.channel_max_observers[name].update(abs_tensor, sync=self.sync)
+                self.channel_max_observers[name].update(abs_tensor, sync=sync)
 
             _, channel_max = self.channel_max_observers[name].get_min_max()
             statis_dict[StatKey.STAT_KEY_SMOOTH_SCALE] = channel_max
@@ -133,8 +137,8 @@ class IterSmoothProcessor(BaseSmoothProcessor):
         self._validate_parameters()
         self.stats_collector = IterStatsCollector(symmetric=config.symmetric)
         
-        if self.support_distributed() and dist.is_initialized():
-            self.stats_collector.enable_sync()
+        # 初始化分布式辅助类（延迟到preprocess时创建，因为需要prefix信息）
+        self.dist_helper = None
 
         if not config.symmetric:
             supported_types = ', '.join(IterStatsCollector.ASYM_SUPPORT_SUBGRAPH_TYPES)
@@ -174,9 +178,20 @@ class IterSmoothProcessor(BaseSmoothProcessor):
         )
 
     def preprocess(self, request: BatchProcessRequest) -> None:
+        # 在preprocess时创建DistHelper，传入prefix信息
+        if dist.is_initialized():
+            self.dist_helper = DistHelper(request.module, prefix=request.name)
+            self.stats_collector.set_dist_helper(self.dist_helper)
+        
         super().preprocess(request)
         self._replace_norm_modules()
         get_logger().debug("Processed %d subgraphs for submodule %s", len(self.adapter_config), request.name)
+
+    def postprocess(self, request: BatchProcessRequest) -> None:
+        super().postprocess(request)
+        # 清理分布式辅助类
+        self.stats_collector.set_dist_helper(None)
+        self.dist_helper = None
 
     def _build_smooth_context(self, linear_names: List[str]) -> Optional[IterSmoothContext]:
         a_smooth_scale = None

@@ -112,8 +112,28 @@ class DPLayerWiseRunner(LayerWiseRunner):
                 f"(device index {actual_device_idx}) with backend {self.backend}"
             )
             
-            # Execute quantization without repeating initialization
-            # Note: model and calib_data are already initialized in the main process
+            # Initialize model in distributed environment
+            _ = get_input_datas(self.adapter, calib_data, DeviceType.CPU)
+            
+            if model is None:
+                get_logger().info('Start to init model in distributed environment')
+                model = self.adapter.init_model(device=DeviceType.CPU)
+                get_logger().info('Init model success in distributed environment')
+            
+            # Check if all processors support distributed execution (only rank 0 performs check)
+            unsupported_processors = self._check_distributed_support(self.process_config_list, model)
+            
+            if unsupported_processors:
+                # Found unsupported processors, raise error
+                unsupported_names = [str(p) for p in unsupported_processors]
+                error_msg = (
+                    f"The following processors do not support distributed quantization: {unsupported_names}. "
+                    f"Please check the processor configuration."
+                )
+                get_logger().error(error_msg)
+                raise UnsupportedError(error_msg)
+            
+            # Execute quantization (based on layer_wise_runner.run)
             processor_list = self.process_config_list.copy()
             self.preprocess_processor(processor_list, model, device=device)
             
@@ -155,31 +175,9 @@ class DPLayerWiseRunner(LayerWiseRunner):
             return super().run(model=model, calib_data=calib_data, device=device, device_indices=device_indices)
         
         world_size = len(device_indices)
-        
-        # Initialize model in main process to avoid repeated initialization in each worker process
-        _ = get_input_datas(self.adapter, calib_data, DeviceType.CPU)
-        
-        if model is None:
-            get_logger().info('Start to init model in main process')
-            model = self.adapter.init_model(device=DeviceType.CPU)
-            get_logger().info('Init model success in main process')
-        
-        # Check if all processors support distributed execution
-        processor_list = self.process_config_list.copy()
-        unsupported_processors = self._check_distributed_support(processor_list, model)
-        
-        if unsupported_processors:
-            # Found unsupported processors, raise error
-            unsupported_names = [str(p) for p in unsupported_processors]
-            raise UnsupportedError(
-                f"The following processors do not support distributed quantization: {unsupported_names}. "
-                f"Please check the processor configuration.",
-            )
-        
-        # All processors support distributed execution, start distributed execution
+
         get_logger().info(
-            f"All processors support distributed execution. Starting distributed execution with "
-            f"{world_size} devices: {device_indices}"
+            f"Starting distributed execution with {world_size} devices: {device_indices}. "
         )
         
         try:
