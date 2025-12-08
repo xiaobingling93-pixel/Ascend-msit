@@ -105,6 +105,7 @@ class MindIEFormatConfig(AutoSaverBaseConfig):
 
 DEFAULT_DESC_JSON_NAME = "quant_model_description.json"
 DEFAULT_SAFETENSORS_NAME = "quant_model_weight.safetensors"
+DEFAULT_GROUP_SIZE = 32
 
 
 def save_this_rank_only():
@@ -275,6 +276,27 @@ class MindIEFormatSaver(AutoSaverProcessor):
         if ValidJsonExt.JSON_APPEND not in self.json_append.keys():
             self.json_append[ValidJsonExt.JSON_APPEND] = dict()
         self.json_append[ValidJsonExt.JSON_APPEND]['model_quant_type'] = "W8A8_DYNAMIC"
+
+    @save_this_rank_only()
+    def on_w8a8_mx_dynamic_per_block(self, prefix: str, module: qir.W8A8MXDynamicPerBlockFakeQuantLinear):
+        with torch.device(module.weight.device):
+            if not (isinstance(module.w_axes, (int, list))):
+                raise SchemaValidateError("w_axes must be int or list[int].")
+            weight_scale = module.weight_scale
+            self.group_size = DEFAULT_GROUP_SIZE
+            self.write_tensor(prefix + ".weight", "W8A8_MXFP8", module.weight.cpu().to(torch.float8_e4m3fn))
+            self.write_tensor(
+                prefix + ".weight_scale",
+                "W8A8_MXFP8",
+                (weight_scale.squeeze(dim=module.w_axes) + 127).to(torch.uint8)
+                # +127 是对 weight_scale 进行偏移处理，使其从-127~128偏移到0~255，正好覆盖torch_uint8的取值范围
+            )
+            if module.bias is not None:
+                self.write_tensor(prefix + ".bias", "FLOAT", module.bias.to(torch.float32))
+
+        if ValidJsonExt.JSON_APPEND not in self.json_append.keys():
+            self.json_append[ValidJsonExt.JSON_APPEND] = dict()
+        self.json_append[ValidJsonExt.JSON_APPEND]['model_quant_type'] = "W8A8_MXFP8"
 
     @save_this_rank_only()
     def on_float_linear(self, prefix: str, module: nn.Linear):

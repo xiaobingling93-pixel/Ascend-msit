@@ -31,6 +31,10 @@ from msmodelslim.app.quant_service.multimodal_sd_v1.quant_service import (
 
 
 class TestQuantProcessComplete:
+    mock_model = None
+    mock_model1 = None
+    mock_model2 = None
+
     def setup_method(self):
         # 基础服务与核心依赖
         self.dataset_loader = Mock()
@@ -55,8 +59,13 @@ class TestQuantProcessComplete:
 
         # 模型适配器（保持原逻辑）
         self.model_adapter = Mock(spec=MultimodalPipelineInterface)
-        self.mock_model = Mock(forward=Mock())
-        self.model_adapter.init_model.return_value = self.mock_model
+        self.mock_model = Mock()
+        self.mock_model1 = Mock()
+        self.mock_model2 = Mock()
+        self.model_adapter.init_model.return_value = {'': self.mock_model}
+        self.model_adapter.model_args = Mock()
+        self.model_adapter.model_args.task_config = ''
+        self.model_adapter.transformer = Mock()
 
         # 3. 测试固定参数
         self.save_path = Path("/test/save")
@@ -103,14 +112,18 @@ class TestQuantProcessComplete:
             self.quant_config, self.model_adapter, self.save_path, self.device
         )
 
-    @patch("msmodelslim.app.quant_service.multimodal_sd_v1.quant_service.load_cached_data")
+    @patch("msmodelslim.app.quant_service.multimodal_sd_v1.quant_service.load_cached_data_for_models")
     @patch("msmodelslim.app.quant_service.multimodal_sd_v1.quant_service.to_device")
     @patch("msmodelslim.app.quant_service.multimodal_sd_v1.quant_service.LayerWiseRunner")
     def test_quant_process_full_flow(self, mock_runner_cls, mock_to_device, mock_load_cache):
         """简化完整流程测试：聚焦核心步骤"""
         # 1. 简化依赖Mock行为
+        self.model_adapter.init_model.return_value = {'model1': self.mock_model1, 'model2': self.mock_model2}
+        self.model_adapter.model_args.task_config = 'mock'
         mock_load_cache.return_value = "raw_calib_data"
-        mock_to_device.return_value = "device_calib_data"
+        calib_data = {'model1': '/test/dump/calib_data_mock_model1.pth',
+                      'model2': '/test/dump/calib_data_mock_model2.pth'}
+        mock_to_device.return_value = calib_data
         mock_runner = Mock()
         mock_runner_cls.return_value = mock_runner
 
@@ -122,16 +135,24 @@ class TestQuantProcessComplete:
         self.model_adapter.set_model_args.assert_called_once_with("test_config")
         self.model_adapter.load_pipeline.assert_called_once()
         # 数据加载与设备转换
+        pth_file_path_list = {'model1': '/test/dump/calib_data_mock_model1.pth',
+                              'model2': '/test/dump/calib_data_mock_model2.pth'}
+        model = {'model1': self.mock_model1, 'model2': self.mock_model2}
         mock_load_cache.assert_called_once_with(
-            pth_file_path=os.path.join("/test/dump", "calib_data.pth"),
+            pth_file_path_list=pth_file_path_list,
             generate_func=self.model_adapter.run_calib_inference,
-            model=self.mock_model,
+            models=model,
             dump_config=self.mock_quant_spec.multimodal_sd_config.dump_config
         )
         mock_to_device.assert_called_once_with("raw_calib_data", self.device.value)
         # 保存配置与Runner处理
+        expert_save_path1 = self.save_path.joinpath(f"{self.model_adapter.model_args.task_config}_model1")
+        expert_save_path2 = self.save_path.joinpath(f"{self.model_adapter.model_args.task_config}_model2")
         for save_cfg in self.mock_quant_spec.save:
-            save_cfg.set_save_directory.assert_called_once_with(self.save_path)
+            save_cfg.set_save_directory.assert_has_calls(
+                [call(expert_save_path1), call(expert_save_path2)],
+                any_order=False
+            )
         mock_runner.add_processor.assert_has_calls(
             [call(processor_cfg=cfg) for cfg in self.mock_quant_spec.process],
             any_order=False
@@ -140,15 +161,65 @@ class TestQuantProcessComplete:
         partial_func = self.model_adapter.apply_quantization.call_args[0][0]
         assert isinstance(partial_func, functools.partial)
         assert partial_func.func == mock_runner.run
-        assert partial_func.keywords == {"calib_data": "device_calib_data", "device": self.device}
+        assert partial_func.keywords == {"calib_data": "/test/dump/calib_data_mock_model2.pth",
+                                         "device": self.device, "model": self.mock_model2}
 
-    @patch("msmodelslim.app.quant_service.multimodal_sd_v1.quant_service.load_cached_data")
+    @patch("msmodelslim.app.quant_service.multimodal_sd_v1.quant_service.load_cached_data_for_models")
+    @patch("msmodelslim.app.quant_service.multimodal_sd_v1.quant_service.to_device")
+    @patch("msmodelslim.app.quant_service.multimodal_sd_v1.quant_service.LayerWiseRunner")
+    def test_quant_process_full_flow_not_moe(self, mock_runner_cls, mock_to_device, mock_load_cache):
+        """简化完整流程测试：聚焦核心步骤"""
+        # 1. 简化依赖Mock行为
+        self.model_adapter.init_model.return_value = {'': self.mock_model1}
+        self.model_adapter.model_args.task_config = ''
+        mock_load_cache.return_value = "raw_calib_data"
+        calib_data = {'': '/test/dump/calib_data__.pth'}
+        mock_to_device.return_value = calib_data
+        mock_runner = Mock()
+        mock_runner_cls.return_value = mock_runner
+
+        # 2. 执行测试
+        self.service.quant_process(self.quant_config, self.model_adapter, self.save_path, self.device)
+
+        # 3. 核心步骤验证（按执行顺序）
+        # 模型配置与加载
+        self.model_adapter.set_model_args.assert_called_once_with("test_config")
+        self.model_adapter.load_pipeline.assert_called_once()
+        # 数据加载与设备转换
+        pth_file_path_list = {'': '/test/dump/calib_data__.pth'}
+        model = {'': self.mock_model1}
+        mock_load_cache.assert_called_once_with(
+            pth_file_path_list=pth_file_path_list,
+            generate_func=self.model_adapter.run_calib_inference,
+            models=model,
+            dump_config=self.mock_quant_spec.multimodal_sd_config.dump_config
+        )
+        mock_to_device.assert_called_once_with("raw_calib_data", self.device.value)
+        # 保存配置与Runner处理
+        expert_save_path1 = self.save_path
+        for save_cfg in self.mock_quant_spec.save:
+            save_cfg.set_save_directory.assert_has_calls(
+                [call(expert_save_path1)],
+                any_order=False
+            )
+        mock_runner.add_processor.assert_has_calls(
+            [call(processor_cfg=cfg) for cfg in self.mock_quant_spec.process],
+            any_order=False
+        )
+        # 量化应用（验证partial函数参数）
+        partial_func = self.model_adapter.apply_quantization.call_args[0][0]
+        assert isinstance(partial_func, functools.partial)
+        assert partial_func.func == mock_runner.run
+        assert partial_func.keywords == {"calib_data": "/test/dump/calib_data__.pth",
+                                         "device": self.device, "model": self.mock_model1}
+
+    @patch("msmodelslim.app.quant_service.multimodal_sd_v1.quant_service.load_cached_data_for_models")
     @patch("msmodelslim.app.quant_service.multimodal_sd_v1.quant_service.get_logger")
     @patch("msmodelslim.app.quant_service.multimodal_sd_v1.quant_service.LayerWiseRunner")
     def test_quant_process_special_scenarios(self, mock_runner_cls, mock_get_logger, mock_load_cache):
         """合并特殊场景测试：彻底隔离Mock调用记录，避免干扰"""
         # 1. 初始化依赖
-        mock_load_cache.return_value = "raw_calib_data"
+        mock_load_cache.return_value = {"": "raw_calib_data"}
         mock_logger = mock_get_logger.return_value
         mock_runner_cls.return_value = Mock()
         dump_config = self.mock_quant_spec.multimodal_sd_config.dump_config
@@ -177,8 +248,8 @@ class TestQuantProcessComplete:
         for save_cfg in scene2_save_cfgs:
             save_cfg.set_save_directory.assert_called_once_with(self.save_path)
         # 验证警告日志
-        mock_logger.warning.assert_called_once_with(
-            "runner for multimodal_sd_v1 is not layer_wise, will be converted to layer_wise."
+        mock_logger.warning.assert_has_calls(
+            [call("runner for multimodal_sd_v1 is not layer_wise, will be converted to layer_wise.")]
         )
 
         # -------------------------- 场景3：无save_path --------------------------
