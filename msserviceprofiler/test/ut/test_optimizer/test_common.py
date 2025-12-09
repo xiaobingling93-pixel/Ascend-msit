@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import subprocess
+import shutil
 
 from msserviceprofiler.modelevalstate.common import get_module_version, get_npu_total_memory
 
@@ -48,6 +49,7 @@ def test_get_npu_total_memory_success(monkeypatch):
     """.encode()
 
     monkeypatch.setattr(subprocess, "check_output", _npu_info_usages)
+    monkeypatch.setattr(shutil, "which", lambda _: "/usr/bin/npu-smi")
 
     # Call the function and check the result
     total_memory, usage_rate = get_npu_total_memory()
