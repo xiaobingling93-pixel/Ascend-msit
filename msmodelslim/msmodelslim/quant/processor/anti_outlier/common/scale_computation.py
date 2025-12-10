@@ -21,9 +21,10 @@ from typing import List, Optional, Tuple
 import torch
 import torch.nn as nn
 
-from msmodelslim.quant.processor.anti_outlier.common import SmoothContext
 from msmodelslim.utils.exception import MisbehaviorError
 from msmodelslim.utils.logging import get_logger
+
+from .smooth_types import SmoothContext
 
 
 @torch.no_grad()

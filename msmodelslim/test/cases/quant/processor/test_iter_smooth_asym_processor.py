@@ -12,7 +12,7 @@ from resources.fake_llama.fake_llama import get_fake_llama_model_and_tokenizer
 from msmodelslim.core.base.protocol import BatchProcessRequest
 from msmodelslim.quant.processor.anti_outlier.iter_smooth import IterSmoothProcessor, IterSmoothProcessorConfig
 from msmodelslim.core.graph.adapter_types import MappingConfig, AdapterConfig
-from msmodelslim.quant.processor.anti_outlier.smooth_interface import IterSmoothInterface
+from msmodelslim.quant.processor.anti_outlier.iter_smooth.interface import IterSmoothInterface
 
 SEQ_LEN_OUT = 32
 KEY_INPUT_IDS = "input_ids"

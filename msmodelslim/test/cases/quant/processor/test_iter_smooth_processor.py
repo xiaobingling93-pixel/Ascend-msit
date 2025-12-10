@@ -20,7 +20,7 @@ from unittest.mock import Mock, patch, MagicMock
 from typing import List
 
 from msmodelslim.quant.processor.anti_outlier.iter_smooth import IterSmoothProcessor, IterSmoothProcessorConfig
-from msmodelslim.quant.processor.anti_outlier.smooth_interface import IterSmoothInterface
+from msmodelslim.quant.processor.anti_outlier.iter_smooth.interface import IterSmoothInterface
 from msmodelslim.core.graph.adapter_types import AdapterConfig, MappingConfig, FusionConfig
 from msmodelslim.core.base.protocol import BatchProcessRequest
 from msmodelslim.quant.ir.norm_bias import RMSNormBias

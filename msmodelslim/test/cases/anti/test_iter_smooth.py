@@ -28,15 +28,14 @@ from msmodelslim.quant.ir.norm_bias import RMSNormBias
 from msmodelslim.quant.processor.anti_outlier.common.smooth_types import (
     IterSmoothConfig,
     IterSmoothContext,
-    SmoothContext,
 )
-from msmodelslim.quant.processor.anti_outlier.impl.common.scale_computation import (
+from msmodelslim.quant.processor.anti_outlier.common.scale_computation import (
     IterSmoothScaleCalculator,
     apply_smooth_scale_shift,
     prepare_mqga_parameters,
     reduce_scales_for_mqga_mean,
 )
-from msmodelslim.quant.processor.anti_outlier.impl.iter_smooth import (
+from msmodelslim.quant.processor.anti_outlier.iter_smooth.api import (
     iter_smooth_impl_linear_linear,
     iter_smooth_impl_norm_linear,
     iter_smooth_impl_ov,

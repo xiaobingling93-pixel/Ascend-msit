@@ -27,7 +27,7 @@ from msmodelslim.quant.processor.anti_outlier.flex_smooth import (
     FlexSmoothQuantProcessorConfig
 )
 from msmodelslim.quant.processor.anti_outlier.common.smooth_components import StatKey
-from msmodelslim.quant.processor.anti_outlier.smooth_interface import FlexSmoothQuantInterface
+from msmodelslim.quant.processor.anti_outlier.flex_smooth.interface import FlexSmoothQuantInterface
 from msmodelslim.utils.exception import UnsupportedError
 from msmodelslim.core.graph.adapter_types import AdapterConfig, MappingConfig, FusionConfig
 

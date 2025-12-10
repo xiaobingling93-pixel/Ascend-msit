@@ -20,7 +20,7 @@ import torch.nn as nn
 
 from msmodelslim.core.graph.adapter_types import AdapterConfig, MappingConfig, FusionConfig
 from msmodelslim.quant.processor.anti_outlier.iter_smooth import IterSmoothProcessor, IterSmoothProcessorConfig
-from msmodelslim.quant.processor.anti_outlier.smooth_interface import IterSmoothInterface
+from msmodelslim.quant.processor.anti_outlier.iter_smooth.interface import IterSmoothInterface
 from msmodelslim.utils.exception import SchemaValidateError, UnsupportedError
 
 
@@ -83,7 +83,7 @@ class TestIterSmoothProcessor:
             processor = IterSmoothProcessor(model, config, adapter)
 
         assert "MockAdapterWithoutInterface does not implement IterSmoothInterface" in str(exc_info.value)
-        assert "Please provide a valid model adapter which implements IterSmoothInterface" in str(exc_info.value)
+        assert "Please ensure MockAdapterWithoutInterface inherits from IterSmoothInterface" in str(exc_info.value)
 
     def test_adapter_missing_subgraph_type(self):
         """测试用例2：用户adapter不配置subgraph_type"""

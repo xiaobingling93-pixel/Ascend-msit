@@ -13,7 +13,7 @@ from msmodelslim.quant.processor.anti_outlier.flex_smooth import (
     FlexAWQSSZProcessor,
     FlexAWQSSZProcessorConfig
 )
-from msmodelslim.quant.processor.anti_outlier.smooth_interface import FlexSmoothQuantInterface
+from msmodelslim.quant.processor.anti_outlier.flex_smooth.interface import FlexSmoothQuantInterface
 from msmodelslim.quant.quantizer.base import QConfig
 from msmodelslim.quant.quantizer.linear import LinearQConfig
 

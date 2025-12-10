@@ -30,16 +30,14 @@ from msmodelslim.core.QAL.qtypes import (
     Subgraph,
     UpDownSubgraph,
 )
-from msmodelslim.quant.processor.anti_outlier.common.smooth_types import (
-    FlexSmoothQuantConfig,
-    SmoothContext,
-)
-from msmodelslim.quant.processor.anti_outlier.impl.common.alpha_beta_search import (
+from msmodelslim.quant.processor.anti_outlier.common.smooth_types import FlexSmoothQuantConfig
+from msmodelslim.quant.processor.anti_outlier.common import SmoothContext
+from msmodelslim.quant.processor.anti_outlier.flex_smooth.alpha_beta_search import (
     FlexSmoothAlphaBetaSearcher,
     quant_int8asym,
     quant_int8sym,
 )
-from msmodelslim.quant.processor.anti_outlier.impl.common.scale_computation import (
+from msmodelslim.quant.processor.anti_outlier.common.scale_computation import (
     FlexSmoothScaleCalculator,
     MQGAScaleParams,
     apply_smooth_scale_shift,
@@ -47,7 +45,7 @@ from msmodelslim.quant.processor.anti_outlier.impl.common.scale_computation impo
     reduce_scales_for_mqga_max,
     reduce_scales_for_mqga_mean,
 )
-from msmodelslim.quant.processor.anti_outlier.impl.flex_smooth_quant import (
+from msmodelslim.quant.processor.anti_outlier.flex_smooth.api import (
     flex_smooth_impl_linear_linear,
     flex_smooth_impl_norm_linear,
     flex_smooth_impl_ov,

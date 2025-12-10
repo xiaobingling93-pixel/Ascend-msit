@@ -23,6 +23,8 @@ Processor classes are lazily loaded to avoid importing unused algorithms.
 
 __all__ = [
     # Processors
+    "SmoothQuantProcessor",
+    "SmoothQuantProcessorConfig",
     "IterSmoothProcessor",
     "IterSmoothProcessorConfig",
     "FlexSmoothQuantProcessor",
@@ -35,19 +37,24 @@ __all__ = [
 ]
 
 
-from .common.smooth_components import HookManager, StatsCollector, SubgraphRegistry
+from .common import HookManager, StatsCollector, SubgraphRegistry
+from .smooth_quant import SmoothQuantProcessorConfig
+from .smooth_quant.api import smooth_quant
 from .iter_smooth import IterSmoothProcessorConfig
-from .impl import iter_smooth
+from .iter_smooth.api import iter_smooth
 
 from .flex_smooth import (
     FlexSmoothQuantProcessorConfig,
     FlexAWQSSZProcessorConfig
 )
-from .impl import flex_smooth_quant, flex_awq_ssz
+from .flex_smooth.api import flex_smooth_quant, flex_awq_ssz
 
 
 def __getattr__(name: str):
     """Lazy import for processor classes."""
+    if name == 'SmoothQuantProcessor':
+        from .smooth_quant import SmoothQuantProcessor
+        return SmoothQuantProcessor
     if name == "IterSmoothProcessor":
         from .iter_smooth import IterSmoothProcessor
         return IterSmoothProcessor

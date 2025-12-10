@@ -15,6 +15,7 @@
 
 
 import unittest
+from typing import Any, List
 from unittest.mock import MagicMock, patch
 # 修复 torch 导入警告，假设测试环境中 torch 已安装
 try:
@@ -24,10 +25,8 @@ except ImportError:
     torch = None
     nn = None
 
-from msmodelslim.quant.processor.anti_outlier.smooth_base import (
-    BaseSmoothProcessorConfig,
-    BaseSmoothProcessor
-)
+from msmodelslim.quant.processor.anti_outlier.smooth_base import BaseSmoothProcessor
+from msmodelslim.quant.processor.anti_outlier.iter_smooth import IterSmoothProcessorConfig
 from msmodelslim.quant.processor.anti_outlier.common.smooth_components import StatKey
 from msmodelslim.utils.logging import get_logger
 from msmodelslim.core.graph.adapter_types import AdapterConfig
@@ -35,39 +34,16 @@ from msmodelslim.core.base.protocol import BatchProcessRequest
 from msmodelslim.utils.exception import SchemaValidateError, MisbehaviorError
 
 
-class TestBaseSmoothProcessorConfig(unittest.TestCase):
-    def setUp(self):
-        self.config = BaseSmoothProcessorConfig(
-            alpha=0.5,
-            beta=0.1,
-            scale_min=0.01,
-            symmetric=True,
-            enable_subgraph_type=["norm-linear", "linear-linear", "ov", "up-down"],
-            include=["layer1", "layer2"],
-            exclude=["layer3"]
-        )
+class ConcreteSmoothProcessor(BaseSmoothProcessor):
+    """用于测试的具体实现类，实现了 BaseSmoothProcessor 的抽象方法"""
 
-    def test_config_initialization(self):
-        self.assertEqual(self.config.alpha, 0.5)
-        self.assertEqual(self.config.beta, 0.1)
-        self.assertEqual(self.config.scale_min, 0.01)
-        self.assertTrue(self.config.symmetric)
-        self.assertEqual(self.config.enable_subgraph_type, ["norm-linear", "linear-linear", "ov", "up-down"])
-        self.assertEqual(self.config.include, ["layer1", "layer2"])
-        self.assertEqual(self.config.exclude, ["layer3"])
+    def apply_smooth_algorithm(self, subgraph_obj: Any, linear_names: List[str]) -> None:
+        """测试用的平滑算法应用，不做任何操作"""
+        pass
 
-    def test_subgraph_priority_fixed(self):
-        expected_priority = {"up-down": 1, "ov": 2, "norm-linear": 3, "linear-linear": 4}
-        self.assertEqual(self.config.subgraph_priority, expected_priority)
-
-    def test_validate_no_fixed_overrides(self):
-        data = {
-            "alpha": 0.7,
-            "subgraph_priority": {"up-down": 5}
-        }
-        config = BaseSmoothProcessorConfig.validate_no_fixed_overrides(data)
-        self.assertNotIn("subgraph_priority", config)
-        self.assertEqual(config["alpha"], 0.7)
+    def _validate_adapter_interface(self, adapter: object) -> None:
+        """测试用的适配器接口验证，不做任何验证"""
+        pass
 
 
 class TestBaseSmoothProcessor(unittest.TestCase):
@@ -76,17 +52,15 @@ class TestBaseSmoothProcessor(unittest.TestCase):
         self.model.config = MagicMock()
         self.model.config.num_attention_heads = 8
         self.model.config.num_key_value_heads = 4
-        self.config = BaseSmoothProcessorConfig(
+        self.config = IterSmoothProcessorConfig(
             alpha=0.5,
-            beta=0.1,
-            scale_min=0.01,
             symmetric=True,
             enable_subgraph_type=["norm-linear", "linear-linear", "ov", "up-down"],
             include=["*layer1*"],
             exclude=["*layer3*"]
         )
         self.adapter = MagicMock()
-        self.processor = BaseSmoothProcessor(self.model, self.config, self.adapter)
+        self.processor = ConcreteSmoothProcessor(self.model, self.config, self.adapter)
 
     def test_validate_parameters_valid(self):
         self.processor._validate_parameters()
@@ -94,10 +68,10 @@ class TestBaseSmoothProcessor(unittest.TestCase):
         self.assertTrue(True)
 
     def test_validate_parameters_invalid_subgraph_type(self):
-        invalid_config = BaseSmoothProcessorConfig(
+        invalid_config = IterSmoothProcessorConfig(
             enable_subgraph_type=["invalid-type"]
         )
-        processor = BaseSmoothProcessor(self.model, invalid_config)
+        processor = ConcreteSmoothProcessor(self.model, invalid_config)
         with self.assertRaises(SchemaValidateError):
             processor._validate_parameters()
 
