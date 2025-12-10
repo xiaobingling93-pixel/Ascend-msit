@@ -19,25 +19,31 @@ from typing import Callable, Any, Literal, Annotated, Optional, List, Dict
 import torch
 import torch.distributed as dist
 import torch.nn as nn
-from pydantic import AfterValidator, Field
+from pydantic import AfterValidator, Field, model_validator
 
 from msmodelslim.core.QAL.qregistry import QABCRegistry
-from msmodelslim.quant.ir.norm_bias import RMSNormBias
-from msmodelslim.quant.processor.anti_outlier.common import IterSmoothConfig, IterSmoothContext
-from msmodelslim.quant.processor.anti_outlier.api.smooth_api import iter_smooth
 from msmodelslim.core.base.protocol import BatchProcessRequest
-from msmodelslim.quant.processor.anti_outlier.smooth_base import BaseSmoothProcessor, BaseSmoothProcessorConfig
-from msmodelslim.quant.processor.anti_outlier.common.smooth_components import StatsCollector, SubgraphRegistry, StatKey
-from msmodelslim.quant.processor.base import AutoSessionProcessor
+from msmodelslim.quant.ir.norm_bias import RMSNormBias
+from msmodelslim.quant.processor.base import AutoSessionProcessor, AutoProcessorConfig
 from msmodelslim.quant.observer import MsMinMaxObserver, MinMaxObserverConfig
 from msmodelslim.utils.distributed import DistHelper
+from msmodelslim.utils.exception import UnsupportedError
 from msmodelslim.utils.logging import get_logger, logger_setter
 from msmodelslim.utils.validation.value import validate_normalized_value, is_boolean, is_string_list
-from msmodelslim.utils.exception import UnsupportedError
-from msmodelslim.quant.processor.anti_outlier.smooth_interface import IterSmoothInterface
+
+from ..common import (
+    IterSmoothConfig,
+    IterSmoothContext,
+    StatsCollector,
+    SubgraphRegistry,
+    StatKey,
+)
+from ..smooth_base import BaseSmoothProcessor
+from .api import iter_smooth
+from .interface import IterSmoothInterface
 
 
-class IterSmoothProcessorConfig(BaseSmoothProcessorConfig):
+class IterSmoothProcessorConfig(AutoProcessorConfig):
     type: Literal["iter_smooth"] = "iter_smooth"
     alpha: Annotated[float, AfterValidator(validate_normalized_value)] = 0.9
     scale_min: Annotated[float, AfterValidator(validate_normalized_value)] = 1e-5
@@ -45,6 +51,8 @@ class IterSmoothProcessorConfig(BaseSmoothProcessorConfig):
     enable_subgraph_type: Annotated[list, AfterValidator(is_string_list)] = Field(
         default_factory=lambda: ["norm-linear", "linear-linear", "ov", "up-down"]
     )
+    include: Optional[List[str]] = None
+    exclude: Optional[List[str]] = None
 
 
 class IterStatsCollector(StatsCollector):
@@ -125,20 +133,14 @@ class IterStatsCollector(StatsCollector):
 @QABCRegistry.register(dispatch_key=IterSmoothProcessorConfig, abc_class=AutoSessionProcessor)
 @logger_setter()
 class IterSmoothProcessor(BaseSmoothProcessor):
-
     def __init__(self, model: nn.Module, config: IterSmoothProcessorConfig, adapter: object, **kwargs):
         super().__init__(model, config, adapter)
-        if not isinstance(adapter, IterSmoothInterface):
-            raise UnsupportedError(
-                f'{adapter.__class__.__name__} does not implement IterSmoothInterface',
-                action='Please provide a valid model adapter which implements IterSmoothInterface'
-            )
         self.config = config
         self._validate_parameters()
         self.stats_collector = IterStatsCollector(symmetric=config.symmetric)
-        
-        # 初始化分布式辅助类（延迟到preprocess时创建，因为需要prefix信息）
-        self.dist_helper = None
+
+        if self.support_distributed() and dist.is_initialized():
+            self.stats_collector.enable_sync()
 
         if not config.symmetric:
             supported_types = ', '.join(IterStatsCollector.ASYM_SUPPORT_SUBGRAPH_TYPES)
@@ -185,7 +187,8 @@ class IterSmoothProcessor(BaseSmoothProcessor):
         
         super().preprocess(request)
         self._replace_norm_modules()
-        get_logger().debug("Processed %d subgraphs for submodule %s", len(self.adapter_config), request.name)
+        get_logger().debug("Processed %d subgraphs for submodule %s",
+                           len(self.adapter_config), request.name)
 
     def postprocess(self, request: BatchProcessRequest) -> None:
         super().postprocess(request)
@@ -245,16 +248,22 @@ class IterSmoothProcessor(BaseSmoothProcessor):
         for adapter_config in self.adapter_config:
             if adapter_config.subgraph_type == "norm-linear":
                 norm_name = adapter_config.mapping.source
-                norm_module = self.model.get_submodule(norm_name) if norm_name else None
+                norm_module = self.model.get_submodule(
+                    norm_name) if norm_name else None
                 if norm_name and norm_module is not None:
                     try:
                         if hasattr(norm_module, 'weight'):
-                            norm_bias = RMSNormBias(norm_module.weight.shape[-1])
-                            norm_bias.weight.data.copy_(norm_module.weight.data)
-                            norm_bias.weight.data = norm_bias.weight.data.type(norm_module.weight.data.dtype)
+                            norm_bias = RMSNormBias(
+                                norm_module.weight.shape[-1])
+                            norm_bias.weight.data.copy_(
+                                norm_module.weight.data)
+                            norm_bias.weight.data = norm_bias.weight.data.type(
+                                norm_module.weight.data.dtype)
                             if hasattr(norm_module, 'bias') and norm_module.bias is not None:
-                                norm_bias.bias.data.copy_(norm_module.bias.data)
-                                norm_bias.bias.data = norm_bias.bias.data.type(norm_module.weight.data.dtype)
+                                norm_bias.bias.data.copy_(
+                                    norm_module.bias.data)
+                                norm_bias.bias.data = norm_bias.bias.data.type(
+                                    norm_module.weight.data.dtype)
                             norm_bias.to(norm_module.weight.data.device)
                             self.model.set_submodule(norm_name, norm_bias)
                             get_logger().debug("%s: %s -> %s", norm_name, type(norm_module), type(norm_bias))
@@ -262,3 +271,12 @@ class IterSmoothProcessor(BaseSmoothProcessor):
                             get_logger().warning("Norm module %s does not have weight attribute", norm_name)
                     except Exception as e:
                         get_logger().warning("Failed to replace norm module %s: %s", norm_name, e)
+
+    def _validate_adapter_interface(self, adapter: object) -> None:
+        """Validate that the adapter implements IterSmoothInterface."""
+        if not isinstance(adapter, IterSmoothInterface):
+            raise UnsupportedError(
+                f'{adapter.__class__.__name__} does not implement IterSmoothInterface',
+                action=f'Please ensure {adapter.__class__.__name__} inherits from IterSmoothInterface '
+                       f'and implements the methods defined by the interface'
+            )

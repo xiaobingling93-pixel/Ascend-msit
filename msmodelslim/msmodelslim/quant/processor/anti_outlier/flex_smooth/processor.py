@@ -20,31 +20,34 @@ from typing import Callable, Any, Literal, Annotated, List, Optional, Dict
 import torch
 import torch.distributed as dist
 import torch.nn as nn
-from pydantic import AfterValidator, Field
+from pydantic import AfterValidator, Field, model_validator
 
 from msmodelslim.core.QAL.qregistry import QABCRegistry
-from msmodelslim.quant.processor.anti_outlier.common import (
-    FlexSmoothQuantConfig,
-    FlexAWQSSZConfig,
-    FlexSmoothQuantContext,
-    FlexAWQSSZContext
-)
-from msmodelslim.quant.processor.anti_outlier.api.smooth_api import flex_smooth_quant, flex_awq_ssz
-from msmodelslim.quant.processor.anti_outlier.smooth_base import BaseSmoothProcessor, BaseSmoothProcessorConfig
-from msmodelslim.quant.processor.anti_outlier.smooth_interface import FlexSmoothQuantInterface
-from msmodelslim.quant.processor.anti_outlier.common.smooth_components import StatsCollector, SubgraphRegistry, StatKey
-from msmodelslim.quant.processor.base import AutoSessionProcessor
+from msmodelslim.core.base.protocol import BatchProcessRequest
+from msmodelslim.quant.processor.base import AutoSessionProcessor, AutoProcessorConfig
 from msmodelslim.quant.quantizer.linear import LinearQConfig
 from msmodelslim.quant.observer import MsMinMaxObserver, MinMaxObserverConfig
 from msmodelslim.utils.exception import UnsupportedError
 from msmodelslim.utils.logging import get_logger, logger_setter
-from msmodelslim.utils.validation.value import validate_normalized_value, is_string_list
 from msmodelslim.utils.distributed.dist_ops import sync_gather_tensor_lists
 from msmodelslim.utils.distributed import DistHelper
-from msmodelslim.core.base.protocol import BatchProcessRequest
+from msmodelslim.utils.validation.value import validate_normalized_value, is_string_list
+
+from ..common import (
+    FlexSmoothQuantConfig,
+    FlexAWQSSZConfig,
+    FlexSmoothQuantContext,
+    FlexAWQSSZContext,
+    StatsCollector,
+    SubgraphRegistry,
+    StatKey
+)
+from ..smooth_base import BaseSmoothProcessor
+from .api import flex_smooth_quant, flex_awq_ssz
+from .interface import FlexSmoothQuantInterface
 
 
-class FlexSmoothBaseProcessorConfig(BaseSmoothProcessorConfig):
+class FlexSmoothBaseProcessorConfig(AutoProcessorConfig):
     """Base configuration class for Flex processors, defining common fields and validation rules"""
     type: Literal["_abstract_flex_smooth_base_"] = "_abstract_flex_smooth_base_"
     
@@ -53,6 +56,8 @@ class FlexSmoothBaseProcessorConfig(BaseSmoothProcessorConfig):
     enable_subgraph_type: Annotated[list, AfterValidator(is_string_list)] = Field(
         default_factory=lambda: ["norm-linear", "linear-linear", "ov", "up-down"]
     )
+    include: Optional[List[str]] = None
+    exclude: Optional[List[str]] = None
 
 
 class FlexSmoothQuantProcessorConfig(FlexSmoothBaseProcessorConfig):
@@ -125,18 +130,21 @@ class FlexStatsCollector(StatsCollector):
 class FlexSmoothBaseProcessor(BaseSmoothProcessor):    
     def __init__(self, model: nn.Module, config: FlexSmoothBaseProcessorConfig, adapter: object, **kwargs):
         super().__init__(model, config, adapter)
-        if not isinstance(adapter, FlexSmoothQuantInterface):
-            raise UnsupportedError(
-                f'{adapter.__class__.__name__} does not implement FlexSmoothQuantInterface',
-                action='Please provide a valid model adapter which implements FlexSmoothQuantInterface'
-            )
-        
         self.config = config
         self._validate_parameters()
         self.stats_collector = FlexStatsCollector()
         
         # 初始化分布式辅助类（延迟到preprocess时创建，因为需要prefix信息）
         self.dist_helper = None
+
+    def _validate_adapter_interface(self, adapter: object):
+        """Validate that the adapter implements FlexSmoothQuantInterface."""
+        if not isinstance(adapter, FlexSmoothQuantInterface):
+            raise UnsupportedError(
+                f'{adapter.__class__.__name__} does not implement FlexSmoothQuantInterface',
+                action=f'Please ensure {adapter.__class__.__name__} inherits from FlexSmoothQuantInterface '
+                       f'and implements the methods defined by the interface'
+            )
 
 
 @QABCRegistry.register(dispatch_key=FlexSmoothQuantProcessorConfig, abc_class=AutoSessionProcessor)

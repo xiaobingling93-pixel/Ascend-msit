@@ -32,6 +32,22 @@ if TYPE_CHECKING:
 
 
 @dataclass
+class SmoothQuantContext:
+    """SmoothQuant runtime context"""
+    version: int
+    a_smooth_scale: torch.Tensor
+    shift: torch.Tensor
+
+
+@dataclass
+class SmoothQuantConfig:
+    """SmoothQuant algorithm configuration"""
+    version: int = 1
+    alpha: float = 0.5
+    shift: bool = False
+
+
+@dataclass
 class IterSmoothContext:
     version: int
     a_smooth_scale: torch.Tensor
@@ -97,5 +113,5 @@ class FlexAWQSSZConfig:
     qconfig: Optional['LinearQConfig'] = None
 
 
-SmoothContext = Union[IterSmoothContext, FlexSmoothQuantContext, FlexAWQSSZContext]
+SmoothContext = Union[SmoothQuantContext, IterSmoothContext, FlexSmoothQuantContext, FlexAWQSSZContext]
 

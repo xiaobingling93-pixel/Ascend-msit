@@ -32,6 +32,7 @@ __all__ = [
 
     # algorithm interface
     'KVSmoothFusedInterface',  # For KV Smooth, describing the architecture of model.
+    'SmoothQuantInterface',  # For Smooth Quant, describing the architecture of model.
     'IterSmoothInterface',  # For Iter Smooth, describing the architecture of model.
     'FlexSmoothQuantInterface',  # For Flex Smooth Quant, describing the architecture of model.
 
@@ -61,7 +62,9 @@ from msmodelslim.app.quant_service.multimodal_sd_v1.pipeline_interface import \
 from msmodelslim.app.quant_service.modelslim_v1.save.interface import AscendV1SaveInterface
 from msmodelslim.model import IModel
 from msmodelslim.core.runner.pipeline_interface import PipelineInterface as ModelSlimPipelineInterfaceV1
-from msmodelslim.quant.processor.anti_outlier.smooth_interface import IterSmoothInterface, FlexSmoothQuantInterface
+from msmodelslim.quant.processor.anti_outlier.smooth_quant.interface import SmoothQuantInterface
+from msmodelslim.quant.processor.anti_outlier.iter_smooth.interface import IterSmoothInterface
+from msmodelslim.quant.processor.anti_outlier.flex_smooth.interface import FlexSmoothQuantInterface
 from msmodelslim.quant.processor.kv_smooth import KVSmoothFusedInterface
 from msmodelslim.quant.processor.quant.fa3.interface import FA3QuantAdapterInterface, FA3QuantPlaceHolder
 from msmodelslim.quant.processor.quarot.quarot_interface import QuaRotInterface, QuaRotOnlineInterface

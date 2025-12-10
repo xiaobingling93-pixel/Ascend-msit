@@ -13,12 +13,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-"""
-Anti-outlier API module
+__all__ = [
+    'SmoothQuantProcessor',
+    'SmoothQuantProcessorConfig',
+    'SmoothQuantInterface'
+]
 
-This module provides APIs for outlier suppression algorithms including:
-- iter_smooth: Iterative Smooth algorithm
-- flex_smooth_quant: Flex Smooth Quantization algorithm
-- flex_awq_ssz: Flex AWQ SSZ algorithm
-"""
+from .processor import SmoothQuantProcessor, SmoothQuantProcessorConfig
+from .interface import SmoothQuantInterface
 

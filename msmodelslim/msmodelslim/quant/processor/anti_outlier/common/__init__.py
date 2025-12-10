@@ -18,11 +18,17 @@ Anti-outlier common utilities
 """
 
 __all__ = [
+    # Fused Linear
     'VirtualVModuleFromQKVFused',
     'VirtualVModuleFromKVFused',
+    # Smooth Components
     'HookManager',
     'StatsCollector',
     'SubgraphRegistry',
+    'StatKey',
+    # Schema Types
+    'SmoothQuantContext',
+    'SmoothQuantConfig',
     'IterSmoothContext',
     'IterSmoothConfig',
     'FlexSmoothQuantContext',
@@ -30,21 +36,66 @@ __all__ = [
     'FlexAWQSSZContext',
     'FlexAWQSSZConfig',
     'SmoothContext',
+    # Scale Computation
+    'IterSmoothScaleCalculator',
+    'FlexSmoothScaleCalculator',
+    'FlexAWQSSZScaleCalculator',
+    'BaseScaleCalculator',
+    'validate_and_process_tensors',
+    'compute_weight_scale',
+    'compute_multi_weight_scale',
+    'apply_smooth_scale_shift',
+    'prepare_mqga_parameters',
+    'reduce_scales_for_mqga_mean',
+    'reduce_scales_for_mqga_max',
+    'MQGAScaleParams',
+    # Subgraph Fusion
+    'SubgraphFusionFactory',
+    'SubgraphFusionStrategy',
+    'OVSubgraphFusion',
+    'UpDownSubgraphFusion',
+    'LinearLinearSubgraphFusion',
+    'NormLinearSubgraphFusion',
 ]
 
 from .fused_linear import VirtualVModuleFromQKVFused, VirtualVModuleFromKVFused
 from .smooth_components import (
     HookManager,
     StatsCollector,
-    SubgraphRegistry
+    SubgraphRegistry,
+    StatKey
 )
 from .smooth_types import (
+    SmoothQuantContext,
+    SmoothQuantConfig,
     IterSmoothContext,
     IterSmoothConfig,
     FlexSmoothQuantContext,
     FlexSmoothQuantConfig,
     FlexAWQSSZContext,
     FlexAWQSSZConfig,
-    SmoothContext,
+    SmoothContext
+)
+from .scale_computation import (
+    BaseScaleCalculator,
+    FlexAWQSSZScaleCalculator,
+    FlexSmoothScaleCalculator,
+    IterSmoothScaleCalculator,
+    MQGAScaleParams,
+    apply_smooth_scale_shift,
+    compute_multi_weight_scale,
+    compute_weight_scale,
+    prepare_mqga_parameters,
+    reduce_scales_for_mqga_max,
+    reduce_scales_for_mqga_mean,
+    validate_and_process_tensors
+)
+from .subgraph_fusion import (
+    LinearLinearSubgraphFusion,
+    NormLinearSubgraphFusion,
+    OVSubgraphFusion,
+    SubgraphFusionFactory,
+    SubgraphFusionStrategy,
+    UpDownSubgraphFusion
 )
 

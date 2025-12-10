@@ -1,6 +1,7 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 from typing import Any, List
 from msmodelslim.utils.exception import SchemaValidateError, SecurityError
+from msmodelslim.utils.logging import get_logger
 
 
 def greater_than_zero(v: float) -> float:

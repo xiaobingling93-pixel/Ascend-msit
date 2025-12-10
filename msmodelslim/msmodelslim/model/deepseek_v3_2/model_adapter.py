@@ -28,7 +28,6 @@ from msmodelslim.core.base.protocol import ProcessRequest
 from msmodelslim.core.const import DeviceType
 from msmodelslim.core.graph import AdapterConfig, MappingConfig, FusionConfig
 from msmodelslim.model.deepseek_v3.quarot import get_ln_fuse_map, get_rotate_map
-from msmodelslim.quant.processor.anti_outlier.smooth_interface import FlexSmoothQuantInterface
 from msmodelslim.quant.processor.quarot import QuaRotInterface
 from msmodelslim.utils.exception import InvalidModelError
 from msmodelslim.utils.logging import logger_setter, get_logger
@@ -38,7 +37,7 @@ from .model import Transformer, ModelArgs
 from .mtp_quant_module import get_mtp_layer, wrap_mtp_decoder, remove_zero_and_shift
 from ..common.layer_wise_forward import generated_decoder_layer_visit_func, TransformersForwardBreak
 from ..common.transformers import TransformersModel
-from ..interface_hub import ModelSlimPipelineInterfaceV1
+from ..interface_hub import ModelSlimPipelineInterfaceV1, FlexSmoothQuantInterface
 
 
 @logger_setter("msmodelslim.model.deepseek_v3_2")

@@ -18,6 +18,8 @@ __all__ = [
     "AutoroundQuantProcessor",
     "LinearProcessorConfig",
     "LinearQuantProcessor",
+    "SmoothQuantProcessorConfig",
+    "SmoothQuantProcessor",
     "IterSmoothProcessorConfig",
     "IterSmoothProcessor",
     "LinearQuantProcessor",
@@ -47,6 +49,7 @@ from .sparse.float_sparse import FloatSparseProcessorConfig, FloatSparseProcesso
 from .quarot import QuaRotProcessor, QuaRotProcessorConfig
 
 from .anti_outlier import (
+    SmoothQuantProcessorConfig,
     IterSmoothProcessorConfig,
     FlexSmoothQuantProcessorConfig,
     FlexAWQSSZProcessorConfig

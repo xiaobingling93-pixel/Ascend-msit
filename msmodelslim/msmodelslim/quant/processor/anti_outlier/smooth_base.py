@@ -13,11 +13,10 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from enum import Enum
 from typing import List, Optional, Dict, Any, Literal
 
-from pydantic import Field, model_validator
 from torch import nn
 
 from msmodelslim.core.QAL.qtypes import (
@@ -28,54 +27,20 @@ from msmodelslim.core.QAL.qtypes import (
 )
 from msmodelslim.core.base.protocol import BatchProcessRequest
 from msmodelslim.core.graph.adapter_types import AdapterConfig
-from msmodelslim.quant.processor.anti_outlier.common.fused_linear import (
-    VirtualVModuleFromQKVFused,
-    VirtualVModuleFromKVFused
-)
-from msmodelslim.quant.processor.anti_outlier.common.smooth_components import (
-    HookManager, SubgraphRegistry
-)
 from msmodelslim.quant.processor.base import AutoSessionProcessor, AutoProcessorConfig
 from msmodelslim.utils.config_map import ConfigSet
 from msmodelslim.utils.exception import MisbehaviorError, SchemaValidateError, UnsupportedError
 from msmodelslim.utils.logging import get_logger
 
-
-class BaseSmoothProcessorConfig(AutoProcessorConfig):
-    """Base configuration for smooth processors"""
-    type: Literal["_abstract_base_smooth_"] = "_abstract_base_smooth_"
-
-    alpha: Optional[float] = None
-    beta: Optional[float] = None
-    scale_min: Optional[float] = None
-    symmetric: Optional[bool] = None
-    enable_subgraph_type: Optional[List[str]] = None
-    include: Optional[List[str]] = None
-    exclude: Optional[List[str]] = None
-    subgraph_priority: Dict[str, int] = Field(
-        default_factory=lambda: {"up-down": 1, "ov": 2, "norm-linear": 3, "linear-linear": 4},
-        frozen=True
-    )
-
-    @model_validator(mode='before')
-    @classmethod
-    def validate_no_fixed_overrides(cls, data: Any):
-        if isinstance(data, dict):
-            fixed_fields = {'subgraph_priority'}
-            attempted_overrides = fixed_fields.intersection(data.keys())
-            if attempted_overrides:
-                get_logger().warning(
-                    "Fields %s have fixed values and cannot be overridden. "
-                    "Using default subgraph_priority configuration: "
-                    "up-down(1) -> ov(2) -> norm-linear(3) -> linear-linear(4)",
-                    attempted_overrides
-                )
-                for override_field in attempted_overrides:
-                    data.pop(override_field, None)
-        return data
+from .common import (
+    VirtualVModuleFromQKVFused,
+    VirtualVModuleFromKVFused,
+    HookManager,
+    SubgraphRegistry
+)
 
 
-class BaseSmoothProcessor(AutoSessionProcessor):
+class BaseSmoothProcessor(AutoSessionProcessor, ABC):
     """
     Base Smooth Processor
 
@@ -85,13 +50,19 @@ class BaseSmoothProcessor(AutoSessionProcessor):
     3. Manage common resources (config, hooks, context)
     """
     SUBGRAPH_HANDLERS = SubgraphRegistry.NAME_TO_HANDLER
+    SUBGRAPH_PRIORITY = {
+        "up-down": 1,
+        "ov": 2,
+        "norm-linear": 3,
+        "linear-linear": 4
+    }
 
     def __init__(self, model: nn.Module, config: AutoProcessorConfig, adapter: Optional[Any] = None):
         super().__init__(model)
         self.model = model
+        self._validate_adapter_interface(adapter)
         self.adapter = adapter
         self.config = config
-
         self.hook_manager = HookManager(model)
         self.context_builder = None
         self.global_adapter_config = None
@@ -101,7 +72,14 @@ class BaseSmoothProcessor(AutoSessionProcessor):
     @abstractmethod
     def apply_smooth_algorithm(self, subgraph_obj: Any, linear_names: List[str]) -> None:
         """Apply smooth algorithm (must be implemented by subclass)"""
-        pass
+        ...
+
+    @abstractmethod
+    def _validate_adapter_interface(self, adapter: object) -> None:
+        """Validate if the adapter implements the required interface.
+           Raise UnsupportedError if the adapter does not implement the required interface.
+        """
+        ...
 
     def pre_run(self) -> None:
         self.global_adapter_config = self.adapter.get_adapter_config_for_subgraph()
@@ -182,11 +160,11 @@ class BaseSmoothProcessor(AutoSessionProcessor):
         get_logger().debug("Starting smoothing application")
         sorted_configs = sorted(
             self.adapter_config,
-            key=lambda x: self.config.subgraph_priority.get(x.subgraph_type, 999)
+            key=lambda x: self.SUBGRAPH_PRIORITY.get(x.subgraph_type, 999)
         )
 
         for idx, adapter_config in enumerate(sorted_configs, start=1):
-            priority = self.config.subgraph_priority.get(adapter_config.subgraph_type, 999)
+            priority = self.SUBGRAPH_PRIORITY.get(adapter_config.subgraph_type, 999)
             get_logger().debug(
                 "  %d. %s (priority: %d) - %s",
                 idx, adapter_config.subgraph_type, priority, adapter_config.mapping.source

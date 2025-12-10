@@ -5,13 +5,7 @@ from typing import List
 from msmodelslim.core.graph.adapter_types import AdapterConfig
 
 
-class IterSmoothInterface(ABC): 
+class IterSmoothInterface(ABC):
     @abstractmethod
     def get_adapter_config_for_subgraph(self) -> List[AdapterConfig]:
-        pass
-
-
-class FlexSmoothQuantInterface(ABC):
-    @abstractmethod
-    def get_adapter_config_for_subgraph(self) -> List[AdapterConfig]:
-        pass
+        ...

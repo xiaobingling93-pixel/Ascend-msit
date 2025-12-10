@@ -13,9 +13,11 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import torch
-import torch.nn as nn
+from typing import Type, Tuple
 
+import torch
+
+from msmodelslim.core.KIA.manager import KIAManager
 from msmodelslim.core.QAL.qregistry import QFuncRegistry
 from msmodelslim.core.QAL.qtypes import (
     Subgraph,
@@ -24,13 +26,37 @@ from msmodelslim.core.QAL.qtypes import (
     OVSubgraph,
     UpDownSubgraph,
 )
-from msmodelslim.quant.processor.anti_outlier.common import (
-    SmoothContext,
+
+from ..common import (
     IterSmoothConfig,
+    SmoothContext,
+    IterSmoothScaleCalculator,
+    SubgraphFusionFactory
 )
 
-from .common.scale_computation import IterSmoothScaleCalculator
-from .common.subgraph_fusion import SubgraphFusionFactory
+
+@KIAManager.mark_require_version(min_version="1.0.0")
+@QFuncRegistry.register_api(dispatch_key=Tuple[Type[Subgraph], int])
+def iter_smooth(subgraph: Subgraph, config: IterSmoothConfig, context: SmoothContext) -> None:
+    """
+    使用iter_smooth算法进行异常值抑制
+    
+    Args:
+        subgraph: 应用iter_smooth算法的子图，支持以下类型：
+            NormLinearSubgraph
+            LinearLinearSubgraph
+            OVSubgraph
+            UpDownSubgraph
+        config: IterSmooth算法配置
+        context: 上下文，用于输入激活的smooth_scale，并记录权重的smooth_scale
+        
+    Returns:
+        None: 无返回值
+        
+    """
+    return QFuncRegistry.dispatch("iter_smooth",
+                                  (type(subgraph), config.version),
+                                  *(subgraph, config, context))
 
 
 @torch.no_grad()
