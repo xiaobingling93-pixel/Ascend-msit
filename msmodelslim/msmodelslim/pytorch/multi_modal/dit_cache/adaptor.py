@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from typing import Optional
 from dataclasses import dataclass
+import logging
 
 import imageio
 import torch
@@ -12,37 +13,57 @@ import torch.nn as nn
 import torch.distributed as dist
 
 import ascend_utils.common.security.path as path_checker
-from msmodelslim.utils.logging import logger as logger_root
 
-from . import dit_cache_searcher
+from . import dit_cache_search_tool
 
 START_HIDDEN_KEY = 'start_hidden'
 DELTA_HIDDEN_KEY = 'delta_hidden'
 
+logger = logging.getLogger(__name__)
 
-def get_rank():
-    if not dist.is_initialized():
+
+def get_local_rank():
+    if 'LOCAL_RANK' not in os.environ:
         return 0
-    return dist.get_rank() if dist.is_initialized() else 0
+
+    local_rank_str = os.environ['LOCAL_RANK']
+
+    # 1. check whether LOCAL_RANK is empty
+    if not local_rank_str.strip():
+        raise ValueError("LOCAL_RANK environment variable is empty")
+
+    # 2. check whether LOCAL_RANK contains non-digit characters
+    if not local_rank_str.isdigit():
+        raise ValueError(f"LOCAL_RANK includes non-digit characters: {local_rank_str}")
+
+    # 3. check whether LOCAL_RANK is a valid integer
+    try:
+        local_rank = int(local_rank_str)
+    except ValueError as e:
+        raise ValueError(f"LOCAL_RANK conversion to integer failed: {local_rank_str}") from e
+
+    # 4. check whether LOCAL_RANK is negative
+    if local_rank < 0:
+        raise ValueError(f"LOCAL_RANK cannot be negative: {local_rank}")
+
+    return local_rank
 
 
 def logger_info(*args, **kwargs):
-    if get_rank() != 0:
-        return
-    logger_root.info(*args, **kwargs)
+    if get_local_rank() == 0:
+        logger.info(*args, **kwargs)
 
 
 def logger_debug(*args, **kwargs):
-    if get_rank() != 0:
-        return
-    logger_root.debug(*args, **kwargs)
+    if get_local_rank() == 0:
+        logger.debug(*args, **kwargs)
 
 
 # ----------------- Cache-related Data Structures -----------------
 @dataclass
 class DitCacheConfig:
     """Configuration for DiT caching mechanism.
-    
+
     Attributes:
         cache_step_start: Starting timestep for caching
         cache_step_interval: Interval between timesteps for cache computation
@@ -83,15 +104,18 @@ class DitCacheConfig:
 @dataclass
 class DitCacheSearchConfig:
     """Configuration for DiT cache search parameters.
-    
+
     Attributes:
         cache_ratio: Speedup ratio to control cache application
         dit_block_num: Total number of DiT blocks
         num_sampling_steps: Total number of sampling steps
+        num_hidden_states: Total number of hidden states to keep track of (like double/triple stream blocks)
     """
     cache_ratio: float = 1.3
     dit_block_num: Optional[int] = None
     num_sampling_steps: int = None
+    cache_step_interval: int = 2
+    num_hidden_states: int = 1
 
     def __post_init__(self):
         """Validates configuration parameters"""
@@ -113,6 +137,16 @@ class DitCacheSearchConfig:
             raise ValueError("num_sampling_steps must be an integer")
         elif self.num_sampling_steps <= 0:
             raise ValueError("num_sampling_steps must be positive")
+
+        if not isinstance(self.cache_step_interval, int):
+            raise ValueError("cache_step_interval must be an integer")
+        elif self.cache_step_interval < 2:
+            raise ValueError("cache_step_interval for searching must be larger or equal to 2`")
+
+        if not isinstance(self.num_hidden_states, int):
+            raise ValueError("num_hidden_states must be an integer")
+        elif self.num_hidden_states < 1:
+            raise ValueError("num_hidden_states must be positive")
 
 
 class DitCacheDummy:
@@ -156,11 +190,12 @@ class DitCacheAdaptor:
         ```
 
     Important:
-        Always call set_timestep_idx() at the beginning of each timestep before
-        running the DiT block forward pass.
+        Always call set_timestep_idx() before running the DiT block forward pass.
     """
 
     _timestep_idx = None
+    _init_timestep_idx = None
+    _cur_block = 0
 
     def __init__(self, pipeline,
                  config: DitCacheSearchConfig = None,
@@ -188,7 +223,6 @@ class DitCacheAdaptor:
         self.pipeline = pipeline
         self.search_config = config
         self.cache = {}  # Stores block outputs from previous timestep, keyed by block index
-        self.rank = get_rank()
 
         # Validate path format during initialization
         if not isinstance(dit_block_path, str) or not dit_block_path:
@@ -278,8 +312,8 @@ class DitCacheAdaptor:
     def set_timestep_idx(cls, t_idx):
         """Set the current timestep index for DiT cache mechanism.
 
-        This method MUST be called at the beginning of each timestep before running
-        the DiT block forward pass. The timestep index is used to determine whether
+        This method MUST be called before running the DiT block forward pass.
+        The timestep index is used to determine whether
         to use cached results or compute new ones.
 
         Example:
@@ -300,20 +334,22 @@ class DitCacheAdaptor:
         if not isinstance(t_idx, int) or t_idx < 0:
             raise ValueError("t_idx must be non-negative integer")
         cls._timestep_idx = t_idx
+        cls._init_timestep_idx = t_idx
         logger_debug('set timestep idx: %r', t_idx)
 
-    @classmethod
-    def get_timestep_idx(cls):
+    def get_timestep_idx(self):
         """Get current timestep index.
 
         Raises:
             ValueError: If timestep_idx is not set via set_timestep_idx()
         """
-        if cls._timestep_idx is None:
+        if self._timestep_idx is None:
             raise ValueError(
                 "timestep_idx is not set, "
                 "Please call DitCacheAdaptor.set_timestep_idx(t_idx) at the beginning of timestep.")
-        return cls._timestep_idx
+        to_return_timestep_idx = self._timestep_idx
+        self._counter()
+        return to_return_timestep_idx
 
     def update_cache_config(self, cache_block_start: int, cache_num_blocks: int,
                             cache_step_start: int, cache_step_interval: int):
@@ -326,7 +362,7 @@ class DitCacheAdaptor:
         )
 
     @torch.no_grad()
-    def search(self, run_pipeline_and_save_videos: callable, prompts_num: int = 1):
+    def search(self, run_pipeline_and_save_videos: callable, prompts_num: int = 1, num_videos: int = 1):
         """Execute search process to optimize model forward pass using caching mechanism.
 
         Args:
@@ -356,9 +392,9 @@ class DitCacheAdaptor:
             logger_debug("Entering generate_videos function with config_: %r", config_)
 
             # Copy key values from config_ to local variables for fixed snapshot
-            use_cache = getattr(config_, 'use_cache', True) and config_.cache_num_dit_blocks != 0
-            cache_dit_block_start = config_.cache_dit_block_start
-            cache_num_dit_blocks = config_.cache_num_dit_blocks
+            use_cache = getattr(config_, 'use_cache', True) and config_.cache_num_blocks != 0
+            cache_dit_block_start = config_.cache_block_start
+            cache_num_dit_blocks = config_.cache_num_blocks
             cache_step_start = config_.cache_step_start
             cache_step_interval = config_.cache_step_interval
 
@@ -374,7 +410,7 @@ class DitCacheAdaptor:
             # Generate videos using external function
             videos = run_pipeline_and_save_videos(pipeline_)
             logger_debug("Video generation complete, number of videos: %d", len(videos))
-            if self.rank == 0 and (not isinstance(videos, list) or len(videos) != prompts_num):
+            if get_local_rank() == 0 and (not isinstance(videos, list) or len(videos) != prompts_num * num_videos):
                 raise ValueError(
                     "run_pipeline_and_save_videos must return a video list with length equal to prompts_num:"
                     " {}!={}".format(len(videos), prompts_num))
@@ -390,47 +426,52 @@ class DitCacheAdaptor:
                 logger_debug("Generated video file path template: %r", vid_path)
                 return vid_path
 
+            video_paths = []
             # Save and verify generated videos
-            for sample_idx, video in enumerate(videos):
-                video_path = get_video_path_tpl().format(
-                    sample_idx=sample_idx,
-                    cache_dit_block_start=cache_dit_block_start,
-                    cache_step_interval=cache_step_interval,
-                    cache_num_dit_blocks=cache_num_dit_blocks,
-                    cache_step_start=cache_step_start
-                )
-                logger_debug("Saving video #%d to path: %r", sample_idx, video_path)
-                fps = getattr(self.pipeline, 'config', {}).get('fps', 24)
-                path_checker.get_valid_write_path(video_path)
-                imageio.mimwrite(
-                    video_path,
-                    video,
-                    fps=fps,
-                    quality=6,
-                    codec='libx264',
-                    output_params=['-threads', '20']
-                )
-                if os.path.exists(video_path):
-                    logger_debug("Video file successfully generated: %r", video_path)
-                else:
-                    logger_root.error("Video file not generated: %r", video_path)
+            if get_local_rank() == 0:
+                for sample_idx, video in enumerate(videos):
+                    video_path = get_video_path_tpl().format(
+                        sample_idx=sample_idx,
+                        cache_dit_block_start=cache_dit_block_start,
+                        cache_step_interval=cache_step_interval,
+                        cache_num_dit_blocks=cache_num_dit_blocks,
+                        cache_step_start=cache_step_start
+                    )
+                    logger_debug("Saving video #%d to path: %r", sample_idx, video_path)
+                    fps = getattr(self.pipeline, 'config', {}).get('fps', 24)
+                    path_checker.get_valid_write_path(video_path)
+                    imageio.mimwrite(
+                        video_path,
+                        video,
+                        fps=fps,
+                        quality=6,
+                        codec='libx264',
+                        output_params=['-threads', '20']
+                    )
+                    if os.path.exists(video_path):
+                        logger_debug("Video file successfully generated: %r", video_path)
+                    else:
+                        logger.error("Video file not generated: %r", video_path)
+                    video_paths.append(video_path)
 
             logger_debug("Exiting generate_videos function")
+            return video_paths
 
         try:
             search_cache_path = self._setup_temp_cache_dir()
 
             # ----------------- Search Interface Integration -----------------
-            config = dit_cache_searcher.DitCacheSearcherConfig(
+            config = dit_cache_search_tool.DitCacheSearcherConfig(
                 dit_block_num=self.search_config.dit_block_num,
                 prompts_num=prompts_num,
                 num_sampling_steps=self.search_config.num_sampling_steps,
                 cache_ratio=self.search_config.cache_ratio,
-                search_cache_path=search_cache_path
+                search_cache_path=search_cache_path,
+                cache_step_interval=self.search_config.cache_step_interval
             )
 
             logger_info("***** Start searching for dit cache with config %r", self.search_config)
-            searcher = dit_cache_searcher.DitCacheSearcher(
+            searcher = dit_cache_search_tool.DitCacheSearcher(
                 config=config,
                 pipeline=self.pipeline,
                 generate_videos=generate_videos
@@ -438,7 +479,8 @@ class DitCacheAdaptor:
 
             # Start search
             [cache_block_start, cache_step_interval, cache_num_blocks, cache_step_start] = searcher.search()[0]
-            dist.barrier()
+            if dist.is_initialized():
+                dist.barrier()
         finally:
             # Clean up temporary cache directory
             self._cleanup_temp_cache_dir()
@@ -455,6 +497,15 @@ class DitCacheAdaptor:
         logger_info("***** Finish searching for dit cache with result: %r", searched_config)
 
         return searched_config
+
+    def _counter(self):
+        # 内部计数 + 1
+        self._cur_block += 1
+        if self._cur_block == self.search_config.dit_block_num:
+            self._timestep_idx += 1  # 满足blocks_count时，timestep_idx + 1
+            self._cur_block = 0  # 重置block计数
+            if self._timestep_idx == self._init_timestep_idx + self.search_config.num_sampling_steps:
+                self._timestep_idx = self._init_timestep_idx  # 满足到num_sampling_steps时，恢复到初始timestep_idx
 
     def _add_cache_to_dit_block(self, dit_blocks: nn.ModuleList):
         """Replace transformer block forward method with caching logic.
@@ -506,14 +557,19 @@ class DitCacheAdaptor:
                         logger_debug(
                             "cache: t_idx=%r, block=%r: store cache for input hidden states",
                             t_idx, _block_idx)
-                        self.cache[START_HIDDEN_KEY] = hidden_states
+                        if self.search_config.num_hidden_states == 1:
+                            self.cache[START_HIDDEN_KEY] = hidden_states
+                        else:
+                            self.cache[START_HIDDEN_KEY] = (hidden_states,
+                                                            *args[:self.search_config.num_hidden_states - 1])
 
                     if is_step_to_store_cache:
                         return orig_forward(hidden_states, *args, **kwargs)
                     else:
                         logger_debug("cache: t_idx=%r, block=%r: cache skipped block",
                                      t_idx, _block_idx)
-                        return DitCacheDummy()
+                        return DitCacheDummy() if self.search_config.num_hidden_states == 1 else tuple(
+                            DitCacheDummy() for _ in range(self.search_config.num_hidden_states))
 
                 elif _block_idx == blk_end:
                     # Get the hidden states of block_start's input
@@ -526,7 +582,11 @@ class DitCacheAdaptor:
                         hidden_states = orig_forward(hidden_states, *args, **kwargs)
 
                         # Calculate delta hidden states and save to cache
-                        delta_hidden = hidden_states - last_block_hidden_states
+                        if self.search_config.num_hidden_states == 1:
+                            delta_hidden = hidden_states - last_block_hidden_states
+                        else:
+                            delta_hidden = tuple(hidden_states[i] - last_block_hidden_states[i]
+                                                 for i in range(self.search_config.num_hidden_states))
                         self.cache[DELTA_HIDDEN_KEY] = delta_hidden
 
                         logger_debug("cache: t_idx=%r, block=%r: calculate delta hidden states and save to cache",
@@ -537,7 +597,11 @@ class DitCacheAdaptor:
                             raise ValueError(
                                 f"cache: t_idx={t_idx}, block={_block_idx}: cache for block_delta not found")
 
-                        hidden_states_reuse = self.cache[DELTA_HIDDEN_KEY] + last_block_hidden_states
+                        if self.search_config.num_hidden_states == 1:
+                            hidden_states_reuse = self.cache[DELTA_HIDDEN_KEY] + last_block_hidden_states
+                        else:
+                            hidden_states_reuse = tuple(self.cache[DELTA_HIDDEN_KEY][i] + last_block_hidden_states[i]
+                                                        for i in range(self.search_config.num_hidden_states))
 
                         logger_debug("cache: t_idx=%r, block=%r: reuse the cached delta hidden",
                                      t_idx, _block_idx)
@@ -555,7 +619,7 @@ class DitCacheAdaptor:
         # 所有进程都初始化一个空列表用于广播
         temp_dir_list = [None]  # 使用列表包装，因为broadcast_object_list需要列表
 
-        if self.rank == 0:
+        if get_local_rank() == 0:
             timestamp = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S")
             temp_dir = './__cache_for_dit_adaptor_{}'.format(timestamp)
             path_checker.safe_delete_path_if_exists(temp_dir)  # 清理旧目录
@@ -573,11 +637,9 @@ class DitCacheAdaptor:
 
     def _cleanup_temp_cache_dir(self):
         """Clean up temporary cache directory."""
-        if self.rank != 0:
-            return
-        if self._temp_cache_dir and os.path.exists(self._temp_cache_dir):
+        if get_local_rank() == 0 and self._temp_cache_dir and os.path.exists(self._temp_cache_dir):
             try:
                 path_checker.safe_delete_path_if_exists(self._temp_cache_dir)
                 logger_debug(f"Cleaned up temporary cache directory: {self._temp_cache_dir}")
             except Exception as e:
-                logger_root.warning(f"Failed to clean up temporary cache directory: %r", e)
+                logger.warning(f"Failed to clean up temporary cache directory: %r", e)
