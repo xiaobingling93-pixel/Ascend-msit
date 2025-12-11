@@ -21,18 +21,17 @@ import torch
 import torch.distributed as dist
 import torch.nn as nn
 from pydantic import AfterValidator, Field, model_validator
-
+from pydantic_core import PydanticUndefined
 from msmodelslim.core.QAL.qregistry import QABCRegistry
 from msmodelslim.core.base.protocol import BatchProcessRequest
 from msmodelslim.quant.processor.base import AutoSessionProcessor, AutoProcessorConfig
 from msmodelslim.quant.quantizer.linear import LinearQConfig
 from msmodelslim.quant.observer import MsMinMaxObserver, MinMaxObserverConfig
-from msmodelslim.utils.exception import UnsupportedError
+from msmodelslim.utils.exception import UnsupportedError, SchemaValidateError
 from msmodelslim.utils.logging import get_logger, logger_setter
 from msmodelslim.utils.distributed.dist_ops import sync_gather_tensor_lists
 from msmodelslim.utils.distributed import DistHelper
 from msmodelslim.utils.validation.value import validate_normalized_value, is_string_list
-
 from ..common import (
     FlexSmoothQuantConfig,
     FlexAWQSSZConfig,
@@ -67,8 +66,22 @@ class FlexSmoothQuantProcessorConfig(FlexSmoothBaseProcessorConfig):
 
 class FlexAWQSSZProcessorConfig(FlexSmoothBaseProcessorConfig):
     """FlexAWQSSZ processor configuration"""
+    qconfig: LinearQConfig = Field(description="量化配置")
     type: Literal["flex_awq_ssz"] = "flex_awq_ssz"
-    qconfig: LinearQConfig
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_qconfig_missing(cls, values: dict) -> dict:
+        """模型级前置校验：拦截 qconfig 缺失的场景"""
+        if "qconfig" not in values or values["qconfig"] is PydanticUndefined:
+            raise SchemaValidateError(
+                "qconfig is a required parameter for flex_awq_ssz processor",
+                action=(
+                    "Please provide qconfig parameter in the YAML configuration, "
+                    "including act and weight quantization settings"
+                )
+            )
+        return values
 
 
 class FlexStatsCollector(StatsCollector):

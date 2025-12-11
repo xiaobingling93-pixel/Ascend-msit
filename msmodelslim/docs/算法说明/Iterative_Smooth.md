@@ -20,9 +20,9 @@
     - 'linear-linear'
     - 'ov'
     - 'up-down'
-  include:                                # 字符串列表，参与平滑的 attention 匹配模式（完整路径，支持 `*` 通配），默认全量。
+  include:                                # 包含的层模式，支持通配符。
     - "*"
-  exclude:                                # 字符串列表，禁止平滑的 attention 匹配模式（完整路径，支持 `*` 通配），默认为空。
+  exclude:                                # 排除的层模式，支持通配符。
     - "*self_attn*"
 ```
 
@@ -128,7 +128,7 @@ y = down_proj(ReLU(gate_proj(x)) * up_proj(x))
 
 ### 实现
 
-算法在 `msmodelslim/quant/processor/anti_outlier/iter_smooth.py` 中实现，处理流程分两阶段：
+算法在 `msmodelslim/quant/processor/anti_outlier/iter_smooth/processor.py` 中实现，处理流程分两阶段：
 
 #### 1) 预处理阶段（preprocess）
 
