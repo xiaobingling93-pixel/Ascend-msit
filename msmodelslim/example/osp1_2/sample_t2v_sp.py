@@ -35,25 +35,25 @@ from msmodelslim.utils.logging import logger
 def load_t2v_checkpoint(model_path):
     logger.info('load_t2v_checkpoint, %r', model_path)
     if args.model_type == 'udit':
-        transformer_model = UDiTT2V.from_pretrained(model_path, 
+        transformer_model = UDiTT2V.from_pretrained(model_path,
                                                     cache_dir=args.cache_dir,
-                                                    low_cpu_mem_usage=False, 
+                                                    low_cpu_mem_usage=False,
                                                     device_map=None,
-                                                    torch_dtype=weight_dtype, 
+                                                    torch_dtype=weight_dtype,
                                                     local_files_only=True)
     elif args.model_type == 'dit':
-        transformer_model = OpenSoraT2V.from_pretrained(model_path, 
+        transformer_model = OpenSoraT2V.from_pretrained(model_path,
                                                         cache_dir=args.cache_dir,
-                                                        low_cpu_mem_usage=False, 
+                                                        low_cpu_mem_usage=False,
                                                         device_map=None,
-                                                        torch_dtype=weight_dtype, 
+                                                        torch_dtype=weight_dtype,
                                                         local_files_only=True)
     else:
-        transformer_model = LatteT2V.from_pretrained(model_path, 
-                                                     cache_dir=args.cache_dir, 
+        transformer_model = LatteT2V.from_pretrained(model_path,
+                                                     cache_dir=args.cache_dir,
                                                      low_cpu_mem_usage=False,
-                                                     device_map=None, 
-                                                     torch_dtype=weight_dtype, 
+                                                     device_map=None,
+                                                     torch_dtype=weight_dtype,
                                                      local_files_only=True)
     # set eval mode
     transformer_model.eval()
@@ -222,13 +222,13 @@ if __name__ == "__main__":
 
     args.cache_dir = get_write_directory(args.cache_dir)
     args.text_encoder_name = get_valid_read_path(args.text_encoder_name, is_dir=True)
-    text_encoder = MT5EncoderModel.from_pretrained(args.text_encoder_name, 
+    text_encoder = MT5EncoderModel.from_pretrained(args.text_encoder_name,
                                                    cache_dir=args.cache_dir,
-                                                   low_cpu_mem_usage=True, 
-                                                   torch_dtype=weight_dtype, 
+                                                   low_cpu_mem_usage=True,
+                                                   torch_dtype=weight_dtype,
                                                    local_files_only=True).to(device)
-    tokenizer = T5Tokenizer.from_pretrained(args.text_encoder_name, 
-                                            cache_dir=args.cache_dir, 
+    tokenizer = T5Tokenizer.from_pretrained(args.text_encoder_name,
+                                            cache_dir=args.cache_dir,
                                             local_files_only=True)
 
     # set eval mode
@@ -304,10 +304,16 @@ if __name__ == "__main__":
     torch.npu.empty_cache()
 
     if cache_config is not None:
-        from msmodelslim.pytorch.multi_modal.dit_cache import DitCacheAdaptor
+        from msmodelslim.pytorch.multi_modal.dit_cache import DitCacheAdaptor, DitCacheSearchConfig
 
+        block_num = len(getattr(pipeline.transformer, "transformer_blocks"))
+        search_config = DitCacheSearchConfig(
+            num_sampling_steps=args.num_sampling_steps,
+            dit_block_num=block_num
+        )
         # add adaptor to add cache func to the dit blocks
-        adaptor = DitCacheAdaptor(pipeline)
+        adaptor = DitCacheAdaptor(pipeline, search_config)
+        adaptor.set_timestep_idx(0)
         adaptor.update_cache_config(**cache_config)
 
         logger.info('using cache config: %r', cache_config)
