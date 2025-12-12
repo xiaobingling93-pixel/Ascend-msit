@@ -67,7 +67,7 @@ setup(
             '*.so',
         ],
         'msmodelslim.config': ['*'],
-        'msmodelslim.lab_calib': ['*'],
+        'msmodelslim.lab_calib': ['**'],
         'msmodelslim.lab_practice': ['**'],
     },
     data_files=[('', ['requirements.txt'])],
@@ -84,6 +84,8 @@ setup(
             "modelslim_v1=msmodelslim.app.quant_service.modelslim_v1:ModelslimV1QuantService",
             "multimodal_sd_modelslim_v1="
             "msmodelslim.app.quant_service.multimodal_sd_v1:MultimodalSDModelslimV1QuantService",
+            "multimodal_vlm_modelslim_v1="
+            "msmodelslim.app.quant_service.multimodal_vlm_v1:MultimodalVLMModelslimV1QuantService",
         ],
         "msmodelslim.model_adapter.plugins": model_adapter_plugins,
     },

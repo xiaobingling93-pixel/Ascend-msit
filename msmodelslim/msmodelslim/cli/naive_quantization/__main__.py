@@ -7,6 +7,7 @@ from msmodelslim.core.const import DeviceType
 from msmodelslim.app.naive_quantization import NaiveQuantizationApplication
 from msmodelslim.app.quant_service.proxy import QuantServiceProxy
 from msmodelslim.infra.dataset_loader import FileDatasetLoader
+from msmodelslim.infra.vlm_dataset_loader import VLMDatasetLoader
 from msmodelslim.infra.practice_manager import PracticeManager
 from msmodelslim.model import PluginModelFactory
 from msmodelslim.utils.security.path import get_valid_read_path
@@ -97,10 +98,11 @@ def main(args):
     practice_manager = PracticeManager(official_config_dir=config_dir)
     dataset_dir = get_dataset_dir()
     dataset_loader = FileDatasetLoader(dataset_dir)
-    
+    vlm_dataset_loader = VLMDatasetLoader(dataset_dir)
+
     device_type, device_index = parse_device_string(args.device)
     
-    quant_service = QuantServiceProxy(dataset_loader)
+    quant_service = QuantServiceProxy(dataset_loader, vlm_dataset_loader)
     
     app = NaiveQuantizationApplication(
         practice_manager=practice_manager,

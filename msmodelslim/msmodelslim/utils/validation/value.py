@@ -65,3 +65,26 @@ def validate_str_length(input_str, str_name="string", max_len=4096):
     if len(input_str) > max_len:
         raise SecurityError(f"The length of {str_name} should be less than {max_len}.",
                             action=f"Please make sure the {str_name} is not longer than {max_len} characters.")
+
+
+def non_empty_string(v: str, field_name: str = "value") -> str:
+    """
+    Validate that a string is non-null and non-empty after stripping whitespace.
+
+    Args:
+        v: string to validate
+        field_name: name for error message context
+
+    Returns:
+        The original string if valid
+
+    Raises:
+        SchemaValidateError: if the string is None or empty/whitespace
+    """
+    if v is None:
+        raise SchemaValidateError(f"{field_name} must not be null",
+                                  action=f"Please provide a non-empty string for {field_name}")
+    if not str(v).strip():
+        raise SchemaValidateError(f"{field_name} must be a non-empty string",
+                                  action=f"Please provide a non-empty string for {field_name}")
+    return v
