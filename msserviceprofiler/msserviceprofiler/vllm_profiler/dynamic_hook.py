@@ -331,7 +331,7 @@ def make_default_time_hook(domain: str, name: str, attributes: Optional[List[Dic
         # 异步函数：返回协程，在协程内部计时
         if inspect.iscoroutinefunction(real_func):
             async def _async_wrapper():
-                prof = Profiler("INFO").domain(domain).span_start(name)
+                prof = Profiler(Level.INFO).domain(domain).span_start(name)
                 try:
                     ret = await original_func(*args, **kwargs)
                     _collect_attributes(
@@ -351,7 +351,7 @@ def make_default_time_hook(domain: str, name: str, attributes: Optional[List[Dic
             return _async_wrapper()
         # 同步函数：直接在当前调用栈内计时
         else:
-            prof = Profiler("INFO").domain(domain).span_start(name)
+            prof = Profiler(Level.INFO).domain(domain).span_start(name)
             try:
                 ret = original_func(*args, **kwargs)
                 _collect_attributes(
