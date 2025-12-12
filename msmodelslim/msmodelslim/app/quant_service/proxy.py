@@ -18,9 +18,10 @@ _FAILED_PLUGINS: Dict[str, str] = {}  # 记录加载失败的插件及其错误�
 @logger_setter(prefix='msmodelslim.app.quant_service.proxy')
 class QuantServiceProxy(BaseQuantService):
 
-    def __init__(self, dataset_loader: DatasetLoaderInfra):
+    def __init__(self, dataset_loader: DatasetLoaderInfra, vlm_dataset_loader: DatasetLoaderInfra):
         super().__init__(dataset_loader)
         self.quant_service: Optional[BaseQuantService] = None
+        self.vlm_dataset_loader = vlm_dataset_loader
 
     def quantize(
             self,
@@ -31,6 +32,10 @@ class QuantServiceProxy(BaseQuantService):
             device_indices: Optional[List[int]] = None,
     ) -> None:
         load_plugins()
+
+        # Determine the appropriate dataset loader based on apiversion
+        self._set_dataset_loader_for_service(quant_config.apiversion)
+
         self.quant_service = load_quant_service_cls(quant_config.apiversion)(self.dataset_loader)
         self.quant_service.quantize(
             quant_config=quant_config,
@@ -39,6 +44,26 @@ class QuantServiceProxy(BaseQuantService):
             device=device,
             device_indices=device_indices
         )
+    
+    def _set_dataset_loader_for_service(self, apiversion: str) -> DatasetLoaderInfra:
+        """
+        Set the appropriate dataset loader for a specific service.
+        
+        For services that require specialized dataset loaders, 
+        set the appropriate loader instance.
+        
+        For other services, set the dataset_loader to the default FileDatasetLoader.
+        
+        Args:
+            apiversion: The API version string (e.g., "multimodal_vlm_modelslim_v1")
+        
+        Returns:
+            Dataset loader instance
+        """
+        # Map services to their specialized dataset loaders
+        if apiversion == 'multimodal_vlm_modelslim_v1':
+            self.dataset_loader = self.vlm_dataset_loader
+        # Other services use the default FileDatasetLoader
 
 
 def get_entry_points(group_name):
