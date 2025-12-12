@@ -100,7 +100,9 @@ class OpenSoraPipelineV1x2(OpenSoraPipeline):
             **kwargs,
     ) -> Union[ImagePipelineOutput, Tuple]:
         """
-        Copy and modified from `super().__call__` to add `DitCacheAdaptor.set_timestep_idx(i)`
+        (Deprecated) Copy and modified from `super().__call__` to add `DitCacheAdaptor.set_timestep_idx(i)`
+        (The newer version of DitCacheAdaptor no longer need this.
+        It only needs to set time step before the initial run.)
         """
 
         # 1. Check inputs. Raise error if not correct
@@ -191,9 +193,6 @@ class OpenSoraPipelineV1x2(OpenSoraPipeline):
 
         with self.progress_bar(total=num_inference_steps) as progress_bar:
             for i, t in enumerate(timesteps):
-                from msmodelslim.pytorch.multi_modal.dit_cache import DitCacheAdaptor
-                DitCacheAdaptor.set_timestep_idx(i)
-
                 latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
                 latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
 
@@ -308,7 +307,7 @@ class OpenSoraPipelineV1x2(OpenSoraPipeline):
             args: TextEmbeddingsArgs
     ) -> Union[ImagePipelineOutput, Tuple]:
         """获取文本嵌入
-        
+
         Args:
             args: TextEmbeddingsArgs，包含所有获取文本嵌入的相关参数
         """
@@ -359,7 +358,7 @@ class OpenSoraPipelineV1x2(OpenSoraPipeline):
 
     def one_step_sample(self, args: OneStepSampleArgs):
         """执行一步采样
-        
+
         Args:
             args: OneStepSampleArgs，包含:
                 latents: 潜在变量

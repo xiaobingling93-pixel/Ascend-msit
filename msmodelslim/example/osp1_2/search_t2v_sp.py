@@ -97,9 +97,12 @@ def search_dit_cache(pipeline, args):
         torch.npu.empty_cache()
         return all_videos
 
+
+    block_num = len(getattr(pipeline.transformer, "transformer_blocks"))
     config = DitCacheSearchConfig(
         num_sampling_steps=args.num_sampling_steps,
         cache_ratio=args.cache_ratio,
+        dit_block_num=block_num
     )
 
     if args.cache_save_path is None:
@@ -109,6 +112,7 @@ def search_dit_cache(pipeline, args):
         get_write_directory(os.path.dirname(args.cache_save_path))
 
     cache_adaptor = DitCacheAdaptor(pipeline, config)
+    cache_adaptor.set_timestep_idx(0)
     searched_config: DitCacheConfig = \
         cache_adaptor.search(run_pipeline_and_save_videos=run_pipeline_and_save_videos,
                              prompts_num=len(args.text_prompt))
