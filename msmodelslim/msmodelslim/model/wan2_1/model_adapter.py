@@ -50,6 +50,10 @@ EXAMPLE_PROMPT = {
 }
 
 SUPPORTED_TASKS = ['t2v-14B', 't2v-1.3B']
+TASK_CONFIGS = {
+    't2v-1.3B': 't2v-1.3B',
+    't2v-14B': 't2v',
+}
 
 
 @logger_setter()
@@ -238,7 +242,7 @@ class Wan2Point1Adapter(BaseModelAdapter,
 
         # 2. 重新解析，得到经过校验/类型转换的新 Namespace
         self.model_args = parser.parse_args(argv)
-        self.model_args.task_config = 't2v'
+        self.model_args.task_config = TASK_CONFIGS[self.model_args.task]
 
     def _add_attentioncache_args(self, parser: argparse.ArgumentParser):
         group = parser.add_argument_group(title="Attention Cache args")
@@ -361,7 +365,8 @@ class Wan2Point1Adapter(BaseModelAdapter,
             )
 
         # Validate prompt
-        if "prompt" not in args:
+        prompt = getattr(args, "prompt", None)
+        if prompt is None:
             raise SchemaValidateError("Missing required parameter: prompt")
         if not isinstance(args.prompt, str):
             raise SchemaValidateError(f"prompt must be a string, got {type(args.prompt).__name__}")

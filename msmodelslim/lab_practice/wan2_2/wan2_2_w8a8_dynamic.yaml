@@ -28,8 +28,6 @@ spec:
           method: "minmax"      # default is minmax
       include:
         - "*"
-      exclude:
-        - "*ffn.2*"
 
   save:
     - type: "mindie_format_saver"

@@ -15,14 +15,17 @@
 
 from dataclasses import dataclass
 from typing import Dict, Any, Union
+from pathlib import Path
 
 from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Self, Literal
+import torch.nn as nn
 
 from msmodelslim.app.quant_service.interface import BaseQuantConfig
 from msmodelslim.app.quant_service.modelslim_v1.quant_config import ModelslimV1QuantConfig, ModelslimV1ServiceConfig
 from msmodelslim.utils.exception import SchemaValidateError
 from msmodelslim.utils.exception_decorator import exception_handler
+from .pipeline_interface import MultimodalPipelineInterface
 
 
 class DumpConfig(BaseModel):
@@ -80,3 +83,14 @@ def load_specific_config(yaml_spec: object) -> MultimodalSDServiceConfig:
     if not isinstance(yaml_spec, dict):
         raise SchemaValidateError("task spec must be dict")
     return MultimodalSDServiceConfig.model_validate(yaml_spec)
+
+
+@dataclass
+class MultiExpertQuantConfig:
+    """多专家模型量化配置"""
+    model_adapter: MultimodalPipelineInterface
+    models: dict[str, nn.Module]
+    calib_data: dict[str, Any]
+    quant_config: MultimodalSDModelslimV1QuantConfig
+    save_path: Path
+    device: str = "npu"
