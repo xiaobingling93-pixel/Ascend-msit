@@ -14,6 +14,7 @@
 #  limitations under the License.
 import functools
 import os
+import copy
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional, List, Any
@@ -28,19 +29,9 @@ from msmodelslim.utils.cache import load_cached_data, load_cached_data_for_model
 from msmodelslim.utils.exception import SchemaValidateError
 from msmodelslim.utils.logging import get_logger, logger_setter
 from .pipeline_interface import MultimodalPipelineInterface
-from .quant_config import MultimodalSDModelslimV1QuantConfig
+from .quant_config import MultimodalSDModelslimV1QuantConfig, MultiExpertQuantConfig
 from ..interface import BaseQuantConfig
 
-
-@dataclass
-class MultiExpertQuantConfig:
-    """多专家模型量化配置"""
-    model_adapter: MultimodalPipelineInterface
-    models: dict[str, nn.Module]
-    calib_data: dict[str, Any]
-    quant_config: MultimodalSDModelslimV1QuantConfig
-    save_path: Path
-    device: str = "npu"
 
 
 @logger_setter(prefix='msmodelslim.app.quant_service.multimodal_sd_v1')
@@ -99,7 +90,7 @@ class MultimodalSDModelslimV1QuantService(BaseQuantService):
             else:
                 expert_save_path = save_path
 
-            final_process_cfg = quant_config.spec.process
+            final_process_cfg = copy.copy(quant_config.spec.process)
 
             if expert_save_path is not None:
                 get_logger().warning(f"========== QUANTIZATION: Prepare Save Path ==========")

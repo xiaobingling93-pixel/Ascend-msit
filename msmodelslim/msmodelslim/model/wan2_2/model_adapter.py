@@ -379,7 +379,8 @@ class Wan2Point2Adapter(BaseModelAdapter,
             )
 
         # Validate prompt
-        if "prompt" not in args:
+        prompt = getattr(args, "prompt", None)
+        if prompt is None:
             raise SchemaValidateError("Missing required parameter: prompt")
         if not isinstance(args.prompt, str):
             raise SchemaValidateError(f"prompt must be a string, got {type(args.prompt).__name__}")
