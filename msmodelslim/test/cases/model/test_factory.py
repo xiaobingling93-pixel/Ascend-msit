@@ -22,8 +22,10 @@ def make_entry_point(name):
     return ep
 
 
+@patch("msmodelslim.model.plugin_factory.DependencyChecker.check_plugin")
 @patch("msmodelslim.model.plugin_factory.entry_points")
-def test_create_valid_model(mock_entry_points):
+def test_create_valid_model(mock_entry_points, mock_check_plugin):
+    mock_check_plugin.return_value = None
     PluginModelFactory._model_map = None
     ep = make_entry_point("deepseek")
     eps = EntryPoints([ep])
@@ -38,12 +40,14 @@ def test_create_valid_model(mock_entry_points):
 
 @patch("msmodelslim.model.plugin_factory.entry_points")
 @patch("msmodelslim.model.plugin_factory.get_logger")
-def test_create_fallback_default(mock_logger, mock_entry_points):
+@patch("msmodelslim.model.plugin_factory.DependencyChecker.check_plugin")
+def test_create_fallback_default(mock_check_plugin, mock_logger, mock_entry_points):
     # Only default exists
     PluginModelFactory._model_map = None
     ep_default = make_entry_point(DEFAULT)
     eps = EntryPoints([ep_default])
     mock_entry_points.return_value.select.return_value = eps
+    mock_check_plugin.return_value = None
 
     model = PluginModelFactory.create("not_exist", Path("/tmp/path"))
 
@@ -52,11 +56,13 @@ def test_create_fallback_default(mock_logger, mock_entry_points):
 
 
 @patch("msmodelslim.model.plugin_factory.entry_points")
-def test_no_adapter_registered_should_raise(mock_entry_points):
+@patch("msmodelslim.model.plugin_factory.DependencyChecker.check_plugin")
+def test_no_adapter_registered_should_raise(mock_check_plugin, mock_entry_points):
     # No adapters at all
     PluginModelFactory._model_map = None
     eps = EntryPoints([])
     mock_entry_points.return_value.select.return_value = eps
+    mock_check_plugin.return_value = None
 
     with pytest.raises(UnsupportedError):
         PluginModelFactory.create("not_exist", Path("/tmp/path"))

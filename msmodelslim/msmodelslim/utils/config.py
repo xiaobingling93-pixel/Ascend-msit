@@ -1,6 +1,7 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 
 import os
+import json
 from configparser import ConfigParser
 
 from pydantic import BaseModel
@@ -18,6 +19,11 @@ ENV_VAR_LOG_LEVEL = 'MSMODELSLIM_LOG_LEVEL'
 
 VALID_LOG_LEVELS = ['info', 'debug']
 
+SECTION_MODEL_ADAPTER = "ModelAdapter"
+SECTION_MODEL_ADAPTER_DEPENDENCIES = "ModelAdapterDependencies"
+
+MODEL_ADAPTER_ENTRY_POINTS = "msmodelslim.model_adapter.plugins"
+
 
 class URLs(BaseModel):
     repository: str
@@ -31,6 +37,30 @@ class EnvVars(BaseModel):
 class ModelSlimConfig(BaseModel):
     urls: URLs
     env_vars: EnvVars
+    model_adapter_dependencies: dict[str, dict[str, str]]
+
+
+def load_model_adapter_dependencies(
+        file_config: ConfigParser,
+) -> dict[str, dict[str, str]]:
+    deps: dict[str, dict[str, str]] = {}
+
+    for model_type, models in file_config.items(SECTION_MODEL_ADAPTER):
+        if file_config.has_option(SECTION_MODEL_ADAPTER_DEPENDENCIES, model_type):
+            dep_str = file_config.get(SECTION_MODEL_ADAPTER_DEPENDENCIES, model_type)
+            try:
+                model_dependency = json.loads(dep_str)
+            except json.JSONDecodeError as e:
+                raise ValueError(
+                    f"Invalid JSON for model {model_type}: {dep_str}"
+                ) from e
+
+            model_list = [m.strip() for m in models.split(",")]
+
+            for model in model_list:
+                deps[f"{MODEL_ADAPTER_ENTRY_POINTS}:{model}"] = model_dependency
+
+    return deps
 
 
 def init_config():
@@ -53,7 +83,15 @@ def init_config():
         raise ConfigError(f"Invalid config key: {KEY_QUESTION_AND_ANSWER_URL}",
                           action=f'Please check the config file {config_path}')
 
-    logger_level = os.getenv(ENV_VAR_LOG_LEVEL, 'INFO').lower()
+    if not file_config.has_section(SECTION_MODEL_ADAPTER):
+        raise ConfigError(f"Invalid config section: {SECTION_MODEL_ADAPTER}",
+                          action=f"Please check the config file {config_path}")
+
+    if not file_config.has_section(SECTION_MODEL_ADAPTER_DEPENDENCIES):
+        raise ConfigError(f"Invalid config section: {SECTION_MODEL_ADAPTER_DEPENDENCIES}",
+                          action=f"Please check the config file {config_path}")
+
+    logger_level = os.getenv(ENV_VAR_LOG_LEVEL, "INFO").lower()
     if logger_level not in VALID_LOG_LEVELS:
         raise EnvVarError(f"Invalid log level: {logger_level}, must be in {VALID_LOG_LEVELS}",
                           action=f'Please check the environment variable {ENV_VAR_LOG_LEVEL}')
@@ -64,6 +102,7 @@ def init_config():
             question_and_answer=file_config.get(SECTION_URL, KEY_QUESTION_AND_ANSWER_URL)
         ),
         env_vars=EnvVars(log_level=logger_level),
+        model_adapter_dependencies=load_model_adapter_dependencies(file_config),
     )
     return modelslim_config
 
