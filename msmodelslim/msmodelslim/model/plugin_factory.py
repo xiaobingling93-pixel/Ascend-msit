@@ -2,12 +2,12 @@
 import sys
 from importlib.metadata import entry_points
 from pathlib import Path
-from typing import Type, TypeVar, Optional
 
+from msmodelslim.utils.config import msmodelslim_config
 from msmodelslim.utils.exception import ToDoError, UnsupportedError
 from msmodelslim.utils.logging import get_logger
+from msmodelslim.utils.dependency_check import DependencyChecker, get_require_packages
 from msmodelslim.model.interface import IModel, IModelFactory
-
 
 MODEL_ADAPTER_ENTRY_POINTS = "msmodelslim.model_adapter.plugins"
 
@@ -15,17 +15,16 @@ DEFAULT = "default"
 
 
 class PluginModelFactory(IModelFactory):
-
     _model_map = None
 
     @classmethod
     def create(
-        cls,
-        model_type: str,
-        model_path: Path,
-        trust_remote_code: bool = False,
+            cls,
+            model_type: str,
+            model_path: Path,
+            trust_remote_code: bool = False,
     ) -> IModel:
-        model_map = PluginModelFactory._get_model_map()
+        model_map = cls._get_model_map()
 
         if model_type not in model_map:
             if DEFAULT in model_map:
@@ -40,6 +39,8 @@ class PluginModelFactory(IModelFactory):
                 )
 
         adapter_class = model_map[model_type].load()
+
+        cls._check_plugin_require_packages(model_type, adapter_class)
 
         adapter_instance = adapter_class(
             model_type=model_type,
@@ -61,3 +62,13 @@ class PluginModelFactory(IModelFactory):
                 f"{list(cls._model_map.keys())}"
             )
         return cls._model_map
+
+    @classmethod
+    def _check_plugin_require_packages(cls, model_type: str, adapter_class: type):
+        plugin_name = f"{MODEL_ADAPTER_ENTRY_POINTS}:{model_type}"
+
+        if plugin_name in msmodelslim_config.model_adapter_dependencies:
+            DependencyChecker.set_plugin(plugin_name,
+                        msmodelslim_config.model_adapter_dependencies[plugin_name])
+        DependencyChecker.set_plugin(plugin_name, get_require_packages(adapter_class))
+        DependencyChecker.check_plugin(plugin_name)
