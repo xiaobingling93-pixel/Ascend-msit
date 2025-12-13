@@ -36,7 +36,7 @@ msserviceprofiler 是一款基于昇腾平台，支持MindIE Service框架和vLL
 
 基于msserviceprofiler工具采集的性能数据，提供性能数据多维度分析能力，可以对性能数据进行batch维度、request维度和service维度分析。
 
-### ️[服务化拆解工具](docs/服务化拆解工具.md)
+### ️[服务化拆解工具](docs/service_performance_split_instruct.md)
 
 基于msserviceprofiler工具采集的性能数据，提供性能数据拆解能力，可以对batch内各阶段耗时进行分析。
 
