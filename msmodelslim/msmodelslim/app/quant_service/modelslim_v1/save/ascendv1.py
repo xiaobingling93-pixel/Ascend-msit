@@ -22,6 +22,7 @@ from typing import Dict, Any, Optional, List, Literal
 
 import torch
 import torch.distributed as dist
+from pydantic import Field
 from torch import nn
 
 from ascend_utils.common.security.path import json_safe_load, json_safe_dump
@@ -121,9 +122,9 @@ class AscendV1Config(AutoSaverBaseConfig):
         self.save_directory = str(save_directory)
 
     type: Literal['ascendv1_saver'] = "ascendv1_saver"
-    save_directory: str = "."
+    save_directory: str = Field(default=".", exclude=True)
     part_file_size: int = 4
-    ext: Dict[str, Any] = {}
+    ext: Dict[str, Any] = Field(default_factory=dict, exclude_if=lambda v: not v)
 
 
 ASCENDV1_DESC_JSON_NAME = "quant_model_description.json"

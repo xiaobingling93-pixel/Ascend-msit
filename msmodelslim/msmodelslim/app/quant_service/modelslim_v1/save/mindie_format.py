@@ -19,6 +19,7 @@ from typing import Dict, Any, Optional, List, Literal
 
 import torch
 import torch.distributed as dist
+from pydantic import Field
 from torch import nn
 
 import msmodelslim.quant.ir as qir
@@ -93,15 +94,13 @@ class MindIEFormatConfig(AutoSaverBaseConfig):
     此时则会生成safetensors index文件，用于记录各个权重所处的safetensors文件。
 
     """
+    type: Literal['mindie_format_saver'] = "mindie_format_saver"
+    save_directory: str = Field(default=".", exclude=True)
+    part_file_size: int = 4
+    ext: Dict[str, Any] = Field(default_factory=dict, exclude_if=lambda v: not v)
 
     def set_save_directory(self, save_directory: str):
         self.save_directory = str(save_directory)
-
-    type: Literal['mindie_format_saver'] = "mindie_format_saver"
-    save_directory: str = "."
-    part_file_size: int = 4
-    ext: Dict[str, Any] = {}
-
 
 DEFAULT_DESC_JSON_NAME = "quant_model_description.json"
 DEFAULT_SAFETENSORS_NAME = "quant_model_weight.safetensors"

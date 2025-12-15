@@ -12,29 +12,18 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, List
 
+from pydantic import BaseModel, Field
+
 from msmodelslim.core.const import DeviceType
 from msmodelslim.model import IModel
-from msmodelslim.utils.exception import SchemaValidateError
 
 
-@dataclass
-class BaseQuantConfig:
-    apiversion: str  # API version
-    spec: object  # spec of the quantization config
-
-    @staticmethod
-    def from_dict(d: object) -> "BaseQuantConfig":
-        if not isinstance(d, dict):
-            raise SchemaValidateError(f'quant config must be a dict',
-                                      action='Please make sure the quant config is a dictionary')
-        return BaseQuantConfig(
-            apiversion=d.get('apiversion', 'Unknown'),
-            spec=d['spec']
-        )
+class BaseQuantConfig(BaseModel):
+    apiversion: str = 'Unknown'  # API version
+    spec: object = Field(default_factory=dict)  # spec of the quantization config
 
 
 class IQuantService(ABC):

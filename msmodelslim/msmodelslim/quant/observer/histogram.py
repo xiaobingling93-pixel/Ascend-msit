@@ -114,9 +114,9 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import List, Optional, Tuple
-from enum import Enum
 from dataclasses import dataclass
+from enum import Enum
+from typing import List, Optional, Tuple
 
 import torch
 from pydantic import BaseModel
@@ -217,7 +217,7 @@ def _merge_histogram(
 
 class SearchMethod(str, Enum):
     """搜索方法枚举类"""
-    L2_NORM = "l2_norm"           # L2范数搜索
+    L2_NORM = "l2_norm"  # L2范数搜索
     KL_DIVERGENCE = "kl_divergence"  # KL散度搜索
 
 
@@ -231,9 +231,6 @@ class HistogramObserverConfig(BaseModel):
     search_method: SearchMethod = SearchMethod.L2_NORM
     dtype: QDType = QDType.INT8
     scope: QScope = QScope.PER_TENSOR
-
-    class Config:
-        use_enum_values = True
 
 
 class HistogramObserver(TorchHistogramObserver):
@@ -253,13 +250,13 @@ class HistogramObserver(TorchHistogramObserver):
     - clip_max: 量化截断的最大值，初始化为正无穷
     - upsample_rate: 上采样率，用于减少量化误差
     """
-    
+
     def __init__(self, config: HistogramObserverConfig):
         super().__init__(qscheme=torch.per_tensor_affine)
         self.config = config
         self.clip_min = None
-        self.clip_max = None   
-        self.upsample_rate = 16  
+        self.clip_max = None
+        self.upsample_rate = 16
 
     def update(self, x: torch.Tensor, sync: bool = False, group: Optional[dist.ProcessGroup] = None):
         """
@@ -283,17 +280,17 @@ class HistogramObserver(TorchHistogramObserver):
                 "Input must be a valid torch.Tensor",
                 action="Please ensure the input is a valid PyTorch tensor"
             )
-        
+
         if x.numel() == 0:
             raise SpecError(
                 "Input tensor is empty",
                 action="Please check if the input tensor is empty"
             )
-        
+
         if x.isnan().any():
             get_logger().warning(
                 "[HistogramObserver] NaN values detected in input tensor, these values have been filtered out."
-                )
+            )
             mask = ~x.isnan()
             x = x[mask]
             if x.numel() == 0:
@@ -301,11 +298,11 @@ class HistogramObserver(TorchHistogramObserver):
                     "Input tensor is empty",
                     action="Please check if the input tensor is empty"
                 )
-        
+
         if x.isinf().any():
             get_logger().warning(
                 "[HistogramObserver] Infinite values detected in input tensor, these values have been filtered out."
-                )
+            )
             mask = ~x.isinf()
             x = x[mask]
             if x.numel() == 0:
@@ -316,16 +313,16 @@ class HistogramObserver(TorchHistogramObserver):
 
         # 更新直方图
         x_min, x_max = torch.aminmax(x)
-        if x_min == x_max: 
-            #torch.histc 不支持min = max的情况，且此时所有值都相同，不需要搜索参数
+        if x_min == x_max:
+            # torch.histc 不支持min = max的情况，且此时所有值都相同，不需要搜索参数
             get_logger().warning(
                 f"[HistogramObserver] Input tensor is all the same value: {x_min}, skip search."
-                )
+            )
             self.clip_min, self.clip_max = x_min, x_max
-            return 
+            return
         else:
             # torch_npu.histc 不支持bfloat16
-            dtype_support_list = [torch.float, torch.float32, torch.float16, torch.int64, 
+            dtype_support_list = [torch.float, torch.float32, torch.float16, torch.int64,
                                   torch.int32, torch.int16, torch.int8, torch.uint8]
             device = x.device
             if x.dtype not in dtype_support_list:
@@ -343,10 +340,10 @@ class HistogramObserver(TorchHistogramObserver):
             if x_clip.numel() > 0:
                 self.clip_min, self.clip_max = torch.aminmax(x_clip)
 
-        #多卡量化 目前尚没有入口
+        # 多卡量化 目前尚没有入口
         if sync and group:
             self.forward(x)
-            histogram_list = [torch.zeros(self.histogram.shape) 
+            histogram_list = [torch.zeros(self.histogram.shape)
                               for _ in range(dist.get_world_size(group))]
             min_val_list = [torch.zeros(self.min_val.shape) for _ in range(dist.get_world_size(group))]
             max_val_list = [torch.zeros(self.max_val.shape) for _ in range(dist.get_world_size(group))]
@@ -365,7 +362,7 @@ class HistogramObserver(TorchHistogramObserver):
         """
         self.clip_min = None
         self.clip_max = None
-        self.min_val = torch.tensor(float("inf"), device=self.histogram.device) 
+        self.min_val = torch.tensor(float("inf"), device=self.histogram.device)
         self.max_val = torch.tensor(float("-inf"), device=self.histogram.device)
         self.histogram = torch.zeros(self.bins, device=self.histogram.device)
 
@@ -384,16 +381,16 @@ class HistogramObserver(TorchHistogramObserver):
                 "Clip min or clip max is not set.",
                 action=" Please call update first."
             )
-        
+
         # 处理无穷值情况
         finfo_dtype = torch.finfo(self.clip_min.dtype)
         if torch.isinf(self.clip_min):
             self.clip_min = torch.tensor(finfo_dtype.min)
         if torch.isinf(self.clip_max):
             self.clip_max = torch.tensor(finfo_dtype.max)
-        
+
         return self.clip_min, self.clip_max
-    
+
     def _compute_quantization_error(self, start_bin: int, end_bin: int) -> float:
         """
         选择量化方法，计算量化误差，目前支持L2范数，KL散度
@@ -406,14 +403,12 @@ class HistogramObserver(TorchHistogramObserver):
             float: 量化误差值
         """
         method = self.config.search_method
-        
+
         if method == SearchMethod.L2_NORM:
             ans = self._compute_l2_error(start_bin, end_bin)
         elif method == SearchMethod.KL_DIVERGENCE:
             ans = self._compute_kl_error(start_bin, end_bin)
         return ans
-
-
 
     def _compute_kl_error(self, next_start_bin: int, next_end_bin: int) -> float:
         """
@@ -439,7 +434,7 @@ class HistogramObserver(TorchHistogramObserver):
         KL = sum(p_i * log(p_i / q_i)), p为真实分布，q为量化分布。
         """
         eps = torch.tensor(torch.finfo(self.histogram.dtype).eps).to(self.histogram.device)
-        bin_width = (self.max_val.item() / self.bins - self.min_val.item() / self.bins) 
+        bin_width = (self.max_val.item() / self.bins - self.min_val.item() / self.bins)
 
         # 计算真实分布
         true_dist = self.histogram / self.histogram.sum()
@@ -453,11 +448,11 @@ class HistogramObserver(TorchHistogramObserver):
         quant_min_val = next_start_bin * bin_width + self.min_val
         quant_max_val = (next_end_bin + 1) * bin_width + self.min_val
         q_param = calculate_qparam(
-            min_val=quant_min_val,      # 最小截断值
-            max_val=quant_max_val,      # 最大截断值
-            q_dtype=QDType(self.config.dtype),    
-            q_scope=QScope(self.config.scope),      
-            symmetric=self.config.symmetric,       
+            min_val=quant_min_val,  # 最小截断值
+            max_val=quant_max_val,  # 最大截断值
+            q_dtype=QDType(self.config.dtype),
+            q_scope=QScope(self.config.scope),
+            symmetric=self.config.symmetric,
         )
         # 计算伪量化后,原直方图每个bin_true对应的新bin_fakequant
         fake_quantized_dist = fake_quantize(QStorage(dtype=QDType.FLOAT, value=quant_mid_points), q_param).value
@@ -473,10 +468,10 @@ class HistogramObserver(TorchHistogramObserver):
         # 计算每个bin_fakequant对应的bin_true数量
         fake_quant_dist = torch.bincount(fake_quantized_dist, minlength=self.bins)
         # 进行平均
-        fake_quant_dict = fake_quant_dict / fake_quant_dist.clamp(min=eps) 
+        fake_quant_dict = fake_quant_dict / fake_quant_dist.clamp(min=eps)
         bin_indices = fake_quantized_dist.long()  # 确保索引为整数类型
         candidate_dist.add_(fake_quant_dict[bin_indices])
-        
+
         # 计算KL散度
         kl_div = torch.sum(true_dist * torch.log(true_dist.clamp(min=eps) / candidate_dist.clamp(min=eps)))
         return kl_div.item()
@@ -514,7 +509,7 @@ class HistogramObserver(TorchHistogramObserver):
         每个部分的误差通过_get_norm方法计算，该方法基于密度函数和位置偏移计算L2范数。
         最终将所有部分的误差累加得到总的L2范数误差。
         """
-        bin_width = (self.max_val.item() / self.bins - self.min_val.item() / self.bins) 
+        bin_width = (self.max_val.item() / self.bins - self.min_val.item() / self.bins)
 
         dst_bin_width = bin_width * (next_end_bin - next_start_bin + 1) / self.dst_nbins
         if dst_bin_width == 0.0:
@@ -564,7 +559,7 @@ class HistogramObserver(TorchHistogramObserver):
         return norm.sum().item()
 
     def _get_norm(
-        self, delta_begin: torch.Tensor, delta_end: torch.Tensor, density: torch.Tensor
+            self, delta_begin: torch.Tensor, delta_end: torch.Tensor, density: torch.Tensor
     ) -> torch.Tensor:
         r"""
         Compute the norm of the values uniformaly distributed between
@@ -575,8 +570,8 @@ class HistogramObserver(TorchHistogramObserver):
              = density * (end^3 - begin^3) / 3
         """
         norm = (
-            delta_end * delta_end * delta_end - delta_begin * delta_begin * delta_begin
-        ) / 3
+                       delta_end * delta_end * delta_end - delta_begin * delta_begin * delta_begin
+               ) / 3
         return density * norm
 
     def _non_linear_param_search(self) -> tuple[torch.Tensor, torch.Tensor]:
@@ -611,7 +606,7 @@ class HistogramObserver(TorchHistogramObserver):
                 get_logger().warning(
                     "[HistogramObserver] Histogram is empty, skipping search. "
                     "This may be caused by an empty input tensor or the input tensor's range being too large."
-                    )
+                )
                 return self.min_val, self.max_val
             c_sum = torch.cumsum(self.histogram, dim=0).to(device='cpu')
 
@@ -662,7 +657,7 @@ class HistogramObserver(TorchHistogramObserver):
             new_min = self.min_val + bin_width * start_bin
             new_max = (end_bin + 1) * (self.min_val / (end_bin + 1) + bin_width)  # 防溢出
             return new_min, new_max
-            
+
         except Exception as e:
             raise UnexpectedError(
                 f"Unexpected error during non-linear parameter search: {e}",

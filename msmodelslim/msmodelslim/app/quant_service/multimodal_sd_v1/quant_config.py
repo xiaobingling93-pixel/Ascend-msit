@@ -62,7 +62,6 @@ class MultimodalSDServiceConfig(ModelslimV1ServiceConfig):
         return self
 
 
-@dataclass
 class MultimodalSDModelslimV1QuantConfig(ModelslimV1QuantConfig):
     """支持多模态的量化配置类"""
     spec: MultimodalSDServiceConfig  # 使用新的多模态配置
@@ -80,6 +79,8 @@ class MultimodalSDModelslimV1QuantConfig(ModelslimV1QuantConfig):
                    action="Please check the multimodal_sd_config parameter of the YAML file.")
 def load_specific_config(yaml_spec: object) -> MultimodalSDServiceConfig:
     """Load specific configuration from YAML spec"""
+    if isinstance(yaml_spec, MultimodalSDServiceConfig):
+        return yaml_spec
     if not isinstance(yaml_spec, dict):
         raise SchemaValidateError("task spec must be dict")
     return MultimodalSDServiceConfig.model_validate(yaml_spec)

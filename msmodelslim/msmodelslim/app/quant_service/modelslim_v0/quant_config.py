@@ -1,14 +1,14 @@
 # Copyright Huawei Technologies Co., Ltd. 2025. All rights reserved.
 from dataclasses import dataclass
 
+from pydantic import BaseModel
 from typing_extensions import Self
 
 from msmodelslim.app.quant_service.interface import BaseQuantConfig
 from msmodelslim.utils.exception import SchemaValidateError
 
 
-@dataclass
-class QuantSpec:
+class QuantSpec(BaseModel):
     # anti
     anti_cfg: dict = None  # anti-outlier config
     anti_params: dict = None  # anti-outlier params
@@ -24,7 +24,6 @@ class QuantSpec:
     calib_dataset: str = None  # calib dataset
 
 
-@dataclass
 class ModelslimV0QuantConfig(BaseQuantConfig):
     spec: QuantSpec  # quantization config specification
 
@@ -38,6 +37,8 @@ class ModelslimV0QuantConfig(BaseQuantConfig):
 
 def load_specific_config(yaml_spec: object) -> QuantSpec:
     """Load specific configuration from YAML spec"""
+    if isinstance(yaml_spec, QuantSpec):
+        return yaml_spec
     if not isinstance(yaml_spec, dict):
         raise SchemaValidateError("task spec must be dict",
                                   action='Please make sure the task spec is a dictionary')

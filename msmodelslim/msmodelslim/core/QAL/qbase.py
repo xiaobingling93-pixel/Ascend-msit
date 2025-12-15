@@ -55,7 +55,7 @@ def _get_format_params(elem_format):
     return ebits, mbits, emax, max_norm
 
 
-class QDType(Enum):
+class QDType(str, Enum):
     FLOAT = "float"
 
     INT8 = "int8"
@@ -83,7 +83,7 @@ class QDType(Enum):
         return Finfo(32, 8, False, *_get_format_params(elem_format))
 
 
-class QScope(Enum):
+class QScope(str, Enum):
     PER_TENSOR = "per_tensor"
     PER_CHANNEL = "per_channel"
     PER_GROUP = "per_group"

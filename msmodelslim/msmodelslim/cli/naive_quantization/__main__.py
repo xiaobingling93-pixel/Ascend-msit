@@ -6,9 +6,9 @@ from typing import Tuple, Optional, List
 from msmodelslim.core.const import DeviceType
 from msmodelslim.app.naive_quantization import NaiveQuantizationApplication
 from msmodelslim.app.quant_service.proxy import QuantServiceProxy
-from msmodelslim.infra.dataset_loader import FileDatasetLoader
+from msmodelslim.infra.file_dataset_loader import FileDatasetLoader
 from msmodelslim.infra.vlm_dataset_loader import VLMDatasetLoader
-from msmodelslim.infra.practice_manager import PracticeManager
+from msmodelslim.infra.yaml_practice_manager import YamlPracticeManager
 from msmodelslim.model import PluginModelFactory
 from msmodelslim.utils.security.path import get_valid_read_path
 from msmodelslim.utils.exception import SchemaValidateError
@@ -53,11 +53,11 @@ def parse_device_string(device_str: str) -> Tuple[str, Optional[List[int]]]:
     device_str = device_str.strip()
     if not device_str:
         raise SchemaValidateError("device string cannot be empty")
-    
+
     # Split by colon to separate device type and indices
     parts = device_str.split(':', 1)
     device_type_str = parts[0].strip()
-    
+
     # Validate and convert device type
     try:
         device_type = DeviceType(device_type_str)
@@ -67,7 +67,7 @@ def parse_device_string(device_str: str) -> Tuple[str, Optional[List[int]]]:
             f"Invalid device type: '{device_type_str}'. "
             f"Supported device types: {valid_types}"
         ) from e
-    
+
     # Parse device indices if provided
     device_indices = None
     if len(parts) > 1:
@@ -75,12 +75,12 @@ def parse_device_string(device_str: str) -> Tuple[str, Optional[List[int]]]:
         if indices_str:  # Only process if not empty
             # Split by comma and convert to integers
             indices_list = [idx.strip() for idx in indices_str.split(',') if idx.strip()]
-            
+
             if not indices_list:
                 raise SchemaValidateError(
                     f"Device indices cannot be empty after parsing: '{indices_str}'"
                 )
-            
+
             # Convert to integers
             try:
                 device_indices = [int(idx) for idx in indices_list]
@@ -89,21 +89,21 @@ def parse_device_string(device_str: str) -> Tuple[str, Optional[List[int]]]:
                     f"Invalid device indices format: '{indices_str}'. "
                     f"Expected comma-separated integers (e.g., '0,1,2,3')"
                 ) from e
-    
+
     return device_type, device_indices
 
 
 def main(args):
     config_dir = get_practice_dir()
-    practice_manager = PracticeManager(official_config_dir=config_dir)
+    practice_manager = YamlPracticeManager(official_config_dir=config_dir)
     dataset_dir = get_dataset_dir()
     dataset_loader = FileDatasetLoader(dataset_dir)
     vlm_dataset_loader = VLMDatasetLoader(dataset_dir)
 
     device_type, device_index = parse_device_string(args.device)
-    
+
     quant_service = QuantServiceProxy(dataset_loader, vlm_dataset_loader)
-    
+
     app = NaiveQuantizationApplication(
         practice_manager=practice_manager,
         quant_service=quant_service,

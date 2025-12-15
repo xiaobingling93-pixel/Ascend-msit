@@ -16,7 +16,7 @@
 from abc import abstractmethod
 
 import torch
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic import validate_call
 from torch import nn
 from typing_extensions import Self, Optional, Dict, Any, Tuple
@@ -30,7 +30,7 @@ class QConfig(BaseModel):
     scope: QScope
     symmetric: bool
     method: str
-    ext: Dict[str, Any] = {}
+    ext: Dict[str, Any] = Field(default_factory=dict, exclude_if=lambda v: not v)
 
     model_config = ConfigDict(extra="forbid")
 

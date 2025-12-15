@@ -1,43 +1,52 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 from typing import Any, List
+
 from msmodelslim.utils.exception import SchemaValidateError, SecurityError
-from msmodelslim.utils.logging import get_logger
 
 
-def greater_than_zero(v: float) -> float:
+def greater_than_zero(v: Any, param_name: str = "value") -> Any:
+    """
+    校验数值是否大于 0，不强制区分类型（int/float 均可）。
+    """
     if v <= 0:
-        raise SchemaValidateError("value must be greater than 0", 
-                                  action="Please check the float value")
+        raise SchemaValidateError(
+            f"{param_name} must be greater than 0",
+            action=f"Please check the numeric {param_name}",
+        )
     return v
 
 
-def validate_normalized_value(v: Any) -> float:
+def validate_normalized_value(v: Any, param_name="value") -> float:
     if not isinstance(v, (float, type(None))):
-        raise SchemaValidateError("value must be a float or None type",
-                                  action="Please provide a float or None value")
+        raise SchemaValidateError(f"{param_name} must be a float or None type",
+                                  action=f"Please provide a float or None {param_name}")
     if v is not None and (v <= 0 or v >= 1):
-        raise SchemaValidateError("value must be in the range (0, 1)",
-                                  action="Please check the float value to ensure it is between 0 and 1")
+        raise SchemaValidateError(f"{param_name} must be in the range (0, 1)",
+                                  action=f"Please check the float {param_name} to ensure it is between 0 and 1")
     return v
 
 
-def is_boolean(v: Any) -> bool:
+def is_boolean(v: Any, param_name="value") -> bool:
     if not isinstance(v, bool):
-        raise SchemaValidateError("value must be a boolean type", 
-                                  action="Please provide a boolean value (True or False)")
+        raise SchemaValidateError(f"{param_name} must be a boolean type",
+                                  action=f"Please provide a boolean {param_name} (True or False)")
     return v
 
 
-def is_string_list(v: Any) -> List[str]:
+def is_string_list(v: Any, param_name="value") -> List[str]:
     if not isinstance(v, list):
-        raise SchemaValidateError("value must be a list type", 
-                                  action="Please provide a list value")
-    
+        raise SchemaValidateError(f"{param_name} must be a list type",
+                                  action=f"Please provide a list {param_name}")
+
     for item in v:
         if not isinstance(item, str):
-            raise SchemaValidateError("all elements in the list must be string types", 
-                                      action="Please ensure all list elements are strings")
-    
+            # 注意：错误信息需要与单测中的关键字严格匹配
+            # 单测断言的关键字为 "all elements in the list must be string types"
+            raise SchemaValidateError(
+                "all elements in the list must be string types",
+                action="Please ensure all list elements are strings",
+            )
+
     return v
 
 
