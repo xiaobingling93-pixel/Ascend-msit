@@ -36,7 +36,6 @@ class MultimodalVLMServiceConfig(ModelslimV1ServiceConfig):
         return non_empty_string(v, "default_text")
 
 
-@dataclass
 class MultimodalVLMModelslimV1QuantConfig(ModelslimV1QuantConfig):
     """
     Quantization configuration for Multimodal VLM V1 service.
