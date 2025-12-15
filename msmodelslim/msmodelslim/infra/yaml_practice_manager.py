@@ -1,5 +1,4 @@
 # Copyright Huawei Technologies Co., Ltd. 2025. All rights reserved.
-from abc import ABC
 from pathlib import Path
 from typing import Dict, Generator, Optional
 
@@ -10,7 +9,9 @@ from msmodelslim.utils.security import get_valid_read_path
 from msmodelslim.utils.yaml_database import YamlDatabase
 
 
-class PracticeManager(nqpm, ABC):
+class YamlPracticeManager(
+    nqpm,
+):
     def __init__(self, official_config_dir: Path, custom_config_dir: Optional[Path] = None):
         get_valid_read_path(str(official_config_dir), is_dir=True)
         self.official_config_dir = official_config_dir
@@ -44,7 +45,7 @@ class PracticeManager(nqpm, ABC):
             raise UnsupportedError(f"Practice {config_id} of ModelType {model_pedigree} not found",
                                    action='Please check the practice id and model type')
 
-        quant_config = PracticeConfig.from_dict(value)
+        quant_config = PracticeConfig.model_validate(value)
 
         if config_id != quant_config.metadata.config_id:
             raise SecurityError(f"name {config_id} not match config_id {quant_config.metadata.config_id}",
@@ -55,10 +56,10 @@ class PracticeManager(nqpm, ABC):
         tasks = []
         if model_pedigree in self.custom_databases:
             for value in self.custom_databases[model_pedigree].values():
-                tasks.append(PracticeConfig.from_dict(value))
+                tasks.append(PracticeConfig.model_validate(value))
         if model_pedigree in self.official_databases:
             for value in self.official_databases[model_pedigree].values():
-                tasks.append(PracticeConfig.from_dict(value))
+                tasks.append(PracticeConfig.model_validate(value))
 
         if not tasks:
             raise UnsupportedError(f"Model type {model_pedigree} not found in practice repository",

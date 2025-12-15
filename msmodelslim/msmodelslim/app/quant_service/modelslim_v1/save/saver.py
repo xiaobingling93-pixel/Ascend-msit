@@ -18,6 +18,7 @@ from collections.abc import Callable
 from typing import Optional, Dict, Type, Any, Set, List, Literal
 
 import torch.distributed as dist
+from pydantic import SerializeAsAny
 from pydantic.functional_validators import BeforeValidator
 from torch import nn
 from typing_extensions import Annotated
@@ -30,7 +31,7 @@ from msmodelslim.utils.logging import get_logger
 
 
 class AutoSaverBaseConfig(AutoProcessorConfig):
-    type: Literal['auto_save'] = "auto_save"
+    type: Literal['_auto_save'] = "_auto_save"
 
     @abstractmethod
     def set_save_directory(self, save_directory):
@@ -54,7 +55,7 @@ def validate_auto_saver_processor_config_list(v: Any) -> List['AutoProcessorConf
 
 
 AutoSaverConfigList = Annotated[
-    List[AutoSaverBaseConfig],
+    List[SerializeAsAny[AutoSaverBaseConfig]],
     BeforeValidator(validate_auto_saver_processor_config_list)
 ]
 

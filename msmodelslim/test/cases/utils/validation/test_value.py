@@ -53,7 +53,7 @@ def test_greater_than_zero(input_val: float, expect_return: float, should_raise:
         with pytest.raises(SchemaValidateError) as exc_info:
             greater_than_zero(input_val)
         assert "value must be greater than 0" in str(exc_info.value)
-        assert exc_info.value.action == "Please check the float value"
+        assert exc_info.value.action == "Please check the numeric value"
     else:
         # 验证正常返回值
         result = greater_than_zero(input_val)

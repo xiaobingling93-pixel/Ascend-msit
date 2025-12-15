@@ -12,9 +12,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from dataclasses import dataclass
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field
 from typing_extensions import Self
 
 from msmodelslim.core.const import RunnerType
@@ -29,10 +28,7 @@ class ModelslimV1ServiceConfig(BaseModel):
     save: AutoSaverConfigList = Field(default_factory=list)
     dataset: str = Field(default='mix_calib.jsonl')
 
-    model_config = ConfigDict(use_enum_values=True)
 
-
-@dataclass
 class ModelslimV1QuantConfig(BaseQuantConfig):
     spec: ModelslimV1ServiceConfig  # quantization config specification
 
@@ -46,6 +42,8 @@ class ModelslimV1QuantConfig(BaseQuantConfig):
 
 def load_specific_config(yaml_spec: object) -> ModelslimV1ServiceConfig:
     """Load specific configuration from YAML spec"""
+    if isinstance(yaml_spec, ModelslimV1ServiceConfig):
+        return yaml_spec
     if not isinstance(yaml_spec, dict):
         raise ValueError("task spec must be dict")
     return ModelslimV1ServiceConfig.model_validate(yaml_spec)

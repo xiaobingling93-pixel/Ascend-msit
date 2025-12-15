@@ -12,10 +12,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from typing import Any, List, Type, ClassVar, Union, Set, Literal, get_origin, get_args
 
-from typing import Any, List, Type, ClassVar, Union, Optional, Set
-
-from pydantic import BaseModel, ConfigDict, BeforeValidator, TypeAdapter, Field
+from pydantic import BaseModel, ConfigDict, BeforeValidator, TypeAdapter, Field, model_validator, SerializeAsAny
 from torch import nn
 from typing_extensions import Annotated
 from typing_extensions import Self
@@ -38,25 +37,33 @@ class AutoProcessorConfig(BaseModel):
         if 'type' not in cls.model_fields:
             raise TypeError(f"Must provide a type field for {cls.__bases__}'s subclass")
 
+        cls._registry.add(cls)
         get_logger().debug(f"Add subclass {cls.__name__} to registry")
 
-        cls._registry.add(cls)
         return super().__pydantic_init_subclass__(**kwargs)
 
+    @model_validator(mode='wrap')
     @classmethod
-    def model_validate(
-            cls,
-            obj: Any,
-            *,
-            strict: Optional[bool] = None,
-            from_attributes: Optional[bool] = None,
-            context: Optional[Any] = None,
-    ) -> Self:
+    def _validate_subclass(cls: Type['AutoProcessorConfig'], value: Any, handler: Any) -> 'AutoProcessorConfig':
         union_type = TypeAdapter(Annotated[
                                      Union[tuple(cls._registry)],
                                      Field(discriminator='type')
                                  ])
-        return union_type.validate_python(obj, strict=strict, from_attributes=from_attributes, context=context)
+        # 检查 cls 的 type 字段是否是 Literal 且值以 _ 开头
+        type_field = cls.model_fields.get('type')
+        is_literal_with_underscore = False
+        if type_field is not None:
+            type_annotation = type_field.annotation
+            if get_origin(type_annotation) is Literal:
+                literal_args = get_args(type_annotation)
+                is_literal_with_underscore = any(
+                    isinstance(arg, str) and arg.startswith('_')
+                    for arg in literal_args
+                )
+        if is_literal_with_underscore or cls not in cls._registry:
+            # 排除 type 字段以 _ 开头的配置
+            return union_type.validate_python(value)
+        return handler(value)
 
 
 def validate_auto_processor_config_list(v: Any) -> List['AutoProcessorConfig']:
@@ -74,7 +81,7 @@ def validate_auto_processor_config_list(v: Any) -> List['AutoProcessorConfig']:
 
 
 AutoProcessorConfigList = Annotated[
-    List[AutoProcessorConfig],
+    List[SerializeAsAny[AutoProcessorConfig]],
     BeforeValidator(validate_auto_processor_config_list)
 ]
 

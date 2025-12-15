@@ -4,7 +4,7 @@ from pathlib import Path
 
 from msmodelslim.app.analysis import LayerAnalysisApplication
 from msmodelslim.app.analysis_service import LayerSelectorAnalysisService
-from msmodelslim.infra.dataset_loader import FileDatasetLoader
+from msmodelslim.infra.file_dataset_loader import FileDatasetLoader
 from msmodelslim.model import PluginModelFactory
 from msmodelslim.utils.logging import get_logger
 from msmodelslim.utils.security.path import get_valid_read_path

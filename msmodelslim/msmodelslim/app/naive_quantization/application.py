@@ -125,7 +125,7 @@ class NaiveQuantizationApplication:
         # Handle explicit config path
         if config_path is not None:
             config_dict = yaml_safe_load(str(config_path))
-            config = PracticeConfig.from_dict(config_dict)
+            config = PracticeConfig.model_validate(config_dict)
             get_logger().info(f"Naive Quant apply config_path: {config_path}")
             return config
 
