@@ -27,9 +27,12 @@ def main(args):
 
         # Create analysis service
         analysis_service = LayerSelectorAnalysisService(dataset_loader)
+        # Create model factory
+        model_factory = PluginModelFactory()
         # Create analysis app
         analysis_app = LayerAnalysisApplication(
-            analysis_service=analysis_service, model_factory=PluginModelFactory
+            analysis_service=analysis_service,
+            model_factory=model_factory,
         )
 
         # Run analysis

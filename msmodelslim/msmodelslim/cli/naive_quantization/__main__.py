@@ -107,7 +107,7 @@ def main(args):
     app = NaiveQuantizationApplication(
         practice_manager=practice_manager,
         quant_service=quant_service,
-        model_factory=PluginModelFactory,
+        model_factory=PluginModelFactory(),
     )
 
     app.quant(

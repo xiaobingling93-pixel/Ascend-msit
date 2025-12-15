@@ -15,8 +15,6 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from msmodelslim.utils.exception import ToDoError
-
 
 class IModel(ABC):
     """
@@ -27,30 +25,25 @@ class IModel(ABC):
     @property
     @abstractmethod
     def model_type(self) -> str:
-        raise ToDoError("model_type is not implemented",
-                        action="Please implement model_type for your model.")
+        ...
 
     @property
     @abstractmethod
     def model_path(self) -> Path:
-        raise ToDoError("model_path is not implemented",
-                        action="Please implement model_path for your model.")
+        ...
 
     @property
     @abstractmethod
     def trust_remote_code(self) -> bool:
-        raise ToDoError("trust_remote_code is not implemented",
-                        action="Please implement trust_remote_code for your model.")
+        ...
 
 
 class IModelFactory(ABC):
 
-    @classmethod
     @abstractmethod
-    def create(
-        cls, model_type: str, model_path: Path, trust_remote_code: bool = False
-    ) -> IModel:
-        raise ToDoError(
-            "create is not implemented",
-            action="Please implement create for your model.",
-        )
+    def create(self,
+               model_type: str,
+               model_path: Path,
+               trust_remote_code: bool = False,
+               ) -> IModel:
+        ...

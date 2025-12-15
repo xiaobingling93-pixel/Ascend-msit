@@ -31,7 +31,7 @@ def test_create_valid_model(mock_entry_points, mock_check_plugin):
     eps = EntryPoints([ep])
     mock_entry_points.return_value.select.return_value = eps
 
-    model = PluginModelFactory.create("deepseek", Path("/tmp/path"))
+    model = PluginModelFactory().create("deepseek", Path("/tmp/path"))
 
     ep.load.assert_called_once()
     assert isinstance(model, DummyAdapter)
@@ -49,7 +49,7 @@ def test_create_fallback_default(mock_check_plugin, mock_logger, mock_entry_poin
     mock_entry_points.return_value.select.return_value = eps
     mock_check_plugin.return_value = None
 
-    model = PluginModelFactory.create("not_exist", Path("/tmp/path"))
+    model = PluginModelFactory().create("not_exist", Path("/tmp/path"))
 
     mock_logger().warning.assert_called_once()
     assert model.model_type == DEFAULT
@@ -65,4 +65,4 @@ def test_no_adapter_registered_should_raise(mock_check_plugin, mock_entry_points
     mock_check_plugin.return_value = None
 
     with pytest.raises(UnsupportedError):
-        PluginModelFactory.create("not_exist", Path("/tmp/path"))
+        PluginModelFactory().create("not_exist", Path("/tmp/path"))

@@ -211,7 +211,7 @@ def yaml_safe_dump(obj, path, extensions=("yml", "yaml"), check_user_stat=True):
 
     default_mode = stat.S_IWUSR | stat.S_IRUSR  # 600
     with os.fdopen(os.open(write_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode=default_mode), "w") as yaml_file:
-        yaml.safe_dump(obj, yaml_file)
+        yaml.safe_dump(obj, yaml_file, sort_keys=False)
 
 
 def json_safe_dump(obj, path, indent=None, extensions="json", check_user_stat=True):

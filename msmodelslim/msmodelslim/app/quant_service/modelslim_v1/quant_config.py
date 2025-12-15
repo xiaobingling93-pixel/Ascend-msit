@@ -12,10 +12,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
 from dataclasses import dataclass
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing_extensions import Self
 
 from msmodelslim.core.const import RunnerType
@@ -29,6 +28,8 @@ class ModelslimV1ServiceConfig(BaseModel):
     process: AutoProcessorConfigList = Field(default_factory=list)
     save: AutoSaverConfigList = Field(default_factory=list)
     dataset: str = Field(default='mix_calib.jsonl')
+
+    model_config = ConfigDict(use_enum_values=True)
 
 
 @dataclass

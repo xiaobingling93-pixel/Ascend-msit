@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
+import shutil
 from pathlib import Path
 from typing import Optional, Literal, List
 
@@ -60,7 +60,7 @@ class ModelslimV1QuantService(BaseQuantService):
         if quant_config.spec.runner == RunnerType.LAYER_WISE:
             get_logger().info("Layer-wise runner detected, using layer-wise pipeline.")
             return RunnerType.LAYER_WISE
-        
+
         if quant_config.spec.runner == RunnerType.DP_LAYER_WISE:
             get_logger().info("Distributed layer-wise runner detected, using distributed layer-wise pipeline.")
             return RunnerType.DP_LAYER_WISE
@@ -68,7 +68,7 @@ class ModelslimV1QuantService(BaseQuantService):
         if quant_config.spec.runner == RunnerType.AUTO and device_indices is not None and len(device_indices) > 1:
             get_logger().info("multi device configuration detected, using distributed layer-wise pipeline.")
             return RunnerType.DP_LAYER_WISE
-        
+
         get_logger().info("Runner type not detected, using layer-wise pipeline.")
         return RunnerType.LAYER_WISE
 
@@ -105,6 +105,15 @@ class ModelslimV1QuantService(BaseQuantService):
                       device: DeviceType = DeviceType.NPU,
                       device_indices: Optional[List[int]] = None,
                       ):
+        # clear quant_model_path before quantization
+        if save_path and save_path.exists():
+            # 只清除目录内容，不删除目录本身
+            for item in save_path.iterdir():
+                if item.is_dir():
+                    shutil.rmtree(item)
+                else:
+                    item.unlink()
+            get_logger().info("Cleared save_path: %s", save_path)
 
         common_seed = 42
         seed_all(seed=common_seed, mode=True)
