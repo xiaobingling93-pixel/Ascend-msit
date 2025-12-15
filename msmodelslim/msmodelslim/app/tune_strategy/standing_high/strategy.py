@@ -1,7 +1,7 @@
 # Copyright Huawei Technologies Co., Ltd. 2025. All rights reserved.
-from typing import Generator, List, Optional, Literal
+from typing import Generator, List, Optional, Literal, Annotated
 
-from pydantic import Field, model_validator
+from pydantic import Field, model_validator, AfterValidator
 
 from msmodelslim.app.practice.interface import PracticeConfig, Metadata
 from msmodelslim.app.quant_service.modelslim_v1.quant_config import ModelslimV1ServiceConfig
@@ -21,6 +21,7 @@ from msmodelslim.quant.quantizer.base import QConfig
 from msmodelslim.quant.quantizer.linear import LinearQConfig
 from msmodelslim.utils.exception import SchemaValidateError, UnsupportedError
 from msmodelslim.utils.logging import logger_setter, get_logger
+from msmodelslim.utils.validation.pydantic import at_least_one_element
 
 
 def _create_default_template() -> ModelslimV1ServiceConfig:
@@ -65,7 +66,7 @@ class StandingHighStrategyConfig(StrategyConfig):
     """摸高算法策略配置（V1框架）"""
     type: Literal["standing_high"] = "standing_high"
 
-    anti_outlier_strategies: List[AutoProcessorConfigList]
+    anti_outlier_strategies: Annotated[List[AutoProcessorConfigList], AfterValidator(at_least_one_element)]
 
     template: ModelslimV1ServiceConfig = Field(
         default_factory=_create_default_template,
@@ -113,6 +114,9 @@ class StandingHighStrategy(BaseTuningStrategy, ITuningStrategy):
         dataset = self.dataset_loader.get_dataset_by_name(self.config.template.dataset)
         calib_tokens = model.handle_dataset(dataset, device=device)
         layer_selector.run(calib_tokens)
+
+        # 释放显存
+        loaded_model.to('meta')
 
         zero_evaluation = yield self._build_practice_config(self.config.anti_outlier_strategies[0], [])
 
