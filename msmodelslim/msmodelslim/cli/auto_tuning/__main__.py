@@ -2,11 +2,15 @@
 import os
 from pathlib import Path
 
-from msmodelslim.app.naive_quantization import NaiveQuantizationApplication
+from msmodelslim.app.auto_tuning import AutoTuningApplication
 from msmodelslim.app.quant_service.proxy import QuantServiceProxy
+from msmodelslim.app.tune_strategy.plugin_factory import PluginTuningStrategyFactory
 from msmodelslim.cli.utils import parse_device_string
 from msmodelslim.infra.file_dataset_loader import FileDatasetLoader
+from msmodelslim.infra.service_oriented_evaluate_service import ServiceOrientedEvaluateService
 from msmodelslim.infra.vlm_dataset_loader import VLMDatasetLoader
+from msmodelslim.infra.yaml_plan_manager import YamlTuningPlanManager
+from msmodelslim.infra.yaml_practice_history_manager import YamlTuningHistoryManager
 from msmodelslim.infra.yaml_practice_manager import YamlPracticeManager
 from msmodelslim.model import PluginModelFactory
 from msmodelslim.utils.config import msmodelslim_config
@@ -28,32 +32,43 @@ def get_dataset_dir():
 
 
 def main(args):
-    config_dir = get_practice_dir()
+    plan_manager = YamlTuningPlanManager()
+    practice_dir = get_practice_dir()
     custom_practice_dir = msmodelslim_config.env_vars.custom_practice_repo
     custom_practice_path = Path(custom_practice_dir) if custom_practice_dir else None
     practice_manager = YamlPracticeManager(
-        official_config_dir=config_dir,
+        official_config_dir=practice_dir,
         custom_config_dir=custom_practice_path
     )
     dataset_dir = get_dataset_dir()
     dataset_loader = FileDatasetLoader(dataset_dir)
     vlm_dataset_loader = VLMDatasetLoader(dataset_dir)
-    device_type, device_index = parse_device_string(args.device)
+    evaluation_service = ServiceOrientedEvaluateService()
     quant_service = QuantServiceProxy(dataset_loader, vlm_dataset_loader)
+    model_factory = PluginModelFactory()
+    tuning_history_manager = YamlTuningHistoryManager()
 
-    app = NaiveQuantizationApplication(
+    strategy_factory = PluginTuningStrategyFactory(dataset_loader)
+
+    app = AutoTuningApplication(
+        plan_manager=plan_manager,
         practice_manager=practice_manager,
-        quant_service=quant_service,
-        model_factory=PluginModelFactory(),
+        evaluation_service=evaluation_service,
+        tuning_history_manager=tuning_history_manager,
+        quantization_service=quant_service,
+        model_factory=model_factory,
+        strategy_factory=strategy_factory,
     )
 
-    app.quant(
+    device_type, device_indices = parse_device_string(args.device)
+
+    app.tune(
         model_type=args.model_type,
         model_path=args.model_path,
         save_path=args.save_path,
-        device_type=device_type,
-        device_index=device_index,
-        quant_type=args.quant_type,
-        config_path=args.config_path,
+        plan_id=args.config,
+        device=device_type,
+        device_indices=device_indices,
+        timeout=args.timeout,
         trust_remote_code=args.trust_remote_code
     )

@@ -12,7 +12,6 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-import shutil
 from pathlib import Path
 from typing import Optional, Literal, List
 
@@ -107,13 +106,11 @@ class ModelslimV1QuantService(BaseQuantService):
                       ):
         # clear quant_model_path before quantization
         if save_path and save_path.exists():
-            # 只清除目录内容，不删除目录本身
+            # 仅清理 safetensors 文件，保留其他文件与目录
             for item in save_path.iterdir():
-                if item.is_dir():
-                    shutil.rmtree(item)
-                else:
+                if item.is_file() and item.suffix == ".safetensors":
                     item.unlink()
-            get_logger().info("Cleared save_path: %s", save_path)
+            get_logger().info("Cleared safetensors under save_path: %s", save_path)
 
         common_seed = 42
         seed_all(seed=common_seed, mode=True)
