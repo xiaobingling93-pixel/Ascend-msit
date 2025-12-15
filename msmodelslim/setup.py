@@ -94,5 +94,8 @@ setup(
         "msmodelslim.strategy.plugins": [
             "standing_high=msmodelslim.app.tune_strategy.standing_high.strategy:StandingHighStrategy",
         ],
+        "msmodelslim.evaluate_config.plugins": [
+            "service_oriented=msmodelslim.infra.service_oriented_evaluate_service:ServiceOrientedEvaluateServiceConfig",
+        ],
     },
 )

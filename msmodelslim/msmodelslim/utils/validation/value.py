@@ -2,6 +2,14 @@
 from typing import Any, List
 
 from msmodelslim.utils.exception import SchemaValidateError, SecurityError
+from msmodelslim.utils.security import validate_safe_host
+
+
+def at_least_one_element(v: Any, param_name: str = "value") -> Any:
+    if not v:
+        raise SchemaValidateError(f"{param_name} must have at least one element",
+                                  action=f"Please provide a list {param_name} with at least one element")
+    return v
 
 
 def greater_than_zero(v: Any, param_name: str = "value") -> Any:
@@ -74,6 +82,34 @@ def validate_str_length(input_str, str_name="string", max_len=4096):
     if len(input_str) > max_len:
         raise SecurityError(f"The length of {str_name} should be less than {max_len}.",
                             action=f"Please make sure the {str_name} is not longer than {max_len} characters.")
+
+
+def is_port(v: Any, param_name: str = "port") -> int:
+    """
+    校验端口号：必须是整数类型且在 [1, 65535] 范围内。
+    供 Pydantic AfterValidator 或普通代码统一使用。
+    """
+    if not 1 <= v <= 65535:
+        raise SchemaValidateError(
+            f"{param_name} must be between 1 and 65535, got {v}",
+            action=f"Please ensure {param_name} is between 1 and 65535.",
+        )
+    return v
+
+
+def is_safe_host(v: str, param_name: str = "host") -> str:
+    """
+    通用的 host 安全校验函数，接受 param_name 参数。
+    直接复用安全模块的 validate_safe_host。
+
+    Args:
+        v: 要验证的主机地址
+        param_name: 字段名称，用于错误消息，默认为 "host"
+
+    Returns:
+        验证后的主机地址
+    """
+    return validate_safe_host(v, field_name=param_name)
 
 
 def non_empty_string(v: str, field_name: str = "value") -> str:
