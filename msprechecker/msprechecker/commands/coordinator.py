@@ -69,6 +69,8 @@ from ..utils import (
     FrameworkType, ParserRegistry, update_model_type,
     CheckErrorHandler, ConfigErrorHandler, global_logger, singleton
 )
+from ..cmate import inspect, run
+from ..cmate.cmate import _parse_configs, _parse_contexts
 
 
 class CollectorFactory:
@@ -346,12 +348,28 @@ class CompareStrategy(CommandStrategy):
         return path_to_data
 
 
+class RunStrategy(CommandStrategy):
+    @staticmethod
+    def execute(args):
+        configs = _parse_configs(args.configs)
+        contexts = _parse_contexts(args.contexts)
+        return run(args.rule, configs, contexts, args.failfast, args.verbose, args.collect_only, args.severity)
+
+
+class InspectStrategy(CommandStrategy):
+    @staticmethod
+    def execute(args):
+        return inspect(args.rule, args.format)
+
+
 class CommandStrategyFactory:
     def __init__(self) -> None:
         self._registry = {
             CommandType.CMD_PRECHECK: PrecheckStrategy,
             CommandType.CMD_DUMP: DumpStrategy,
             CommandType.CMD_COMPARE: CompareStrategy,
+            CommandType.CMD_RUN: RunStrategy,
+            CommandType.CMD_INSPECT: InspectStrategy,
         }
 
     def register(self, cmd_type, strategy_class) -> None:

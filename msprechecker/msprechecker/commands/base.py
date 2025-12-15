@@ -22,6 +22,8 @@ class CommandType(Enum):
     CMD_PRECHECK = "precheck"
     CMD_DUMP = "dump"
     CMD_COMPARE = "compare"
+    CMD_RUN = "run"
+    CMD_INSPECT = "inspect"
 
 
 class CommandStrategy(ABC):
@@ -30,4 +32,3 @@ class CommandStrategy(ABC):
     def execute(args: argparse.Namespace) -> int:
         """Execute the command strategy"""
         pass
-

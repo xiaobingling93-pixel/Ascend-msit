@@ -21,6 +21,7 @@ from .commands import (
     setup_precheck_parser,
     setup_dump_parser,
     setup_compare_parser,
+    setup_cmate_parser,
     Coordinator
 )
 from .utils import global_logger
@@ -53,6 +54,7 @@ def main():
     setup_precheck_parser(subparsers)
     setup_dump_parser(subparsers)
     setup_compare_parser(subparsers)
+    setup_cmate_parser(subparsers)
 
     coordinator = Coordinator()
     return coordinator.execute(main_parser)
