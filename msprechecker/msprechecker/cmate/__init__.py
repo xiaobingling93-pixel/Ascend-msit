@@ -13,16 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__all__ = [
-    'setup_precheck_parser',
-    'setup_compare_parser',
-    'setup_dump_parser',
-    'Coordinator'
-]
+__all__ = ['run', 'inspect', 'parse', 'main']
 
 
-from .precheck import setup_precheck_parser
-from .compare import setup_compare_parser
-from .dump import setup_dump_parser
-from ._cmate import setup_cmate_parser
-from .coordinator import Coordinator
+from .cmate import run, inspect, parse, main
