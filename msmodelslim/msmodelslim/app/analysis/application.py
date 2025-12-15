@@ -1,8 +1,9 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+from enum import Enum
 from pathlib import Path
 from typing import List
 
-from msmodelslim.core.const import DeviceType, ExtendedEnum
+from msmodelslim.core.const import DeviceType
 from msmodelslim.model import IModelFactory
 from msmodelslim.utils.exception import SchemaValidateError, UnsupportedError
 from msmodelslim.utils.exception_decorator import exception_catcher
@@ -15,7 +16,7 @@ from ..analysis_service import BaseAnalysisService
 from ..analysis_service.pipeline_interface import PipelineInterface
 
 
-class AnalysisMetrics(ExtendedEnum):
+class AnalysisMetrics(str, Enum):
     """Enumeration of valid analysis metrics"""
     STD = 'std'
     QUANTILE = 'quantile'

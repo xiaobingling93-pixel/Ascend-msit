@@ -26,6 +26,58 @@ DEFAULT_PEDIGREE = 'default'
 DEFAULT_CONFIG_ID = 'default'
 
 
+def validate_device_index(device_index: Optional[List[int]], device_type: DeviceType):
+    """
+    Validate device_index parameter.
+
+    Args:
+        device_index: Device indices to validate
+        device_type: Device type for context validation
+
+    Raises:
+        SchemaValidateError: If device_index is invalid
+    """
+
+    # Value validation: check if indices are non-negative
+    if any(idx < 0 for idx in device_index):
+        negative_indices = [idx for idx in device_index if idx < 0]
+        raise SchemaValidateError(
+            f"Device indices must be non-negative integers, "
+            f"but got negative values: {negative_indices}"
+        )
+
+    # Value validation: check for duplicates
+    if len(device_index) != len(set(device_index)):
+        duplicates = [idx for idx in set(device_index) if device_index.count(idx) > 1]
+        raise SchemaValidateError(
+            f"Device indices must be unique, but found duplicates: {duplicates}"
+        )
+
+    # CPU does not support multi-device
+    if device_type == DeviceType.CPU and len(device_index) > 1:
+        raise SchemaValidateError(
+            f"CPU does not support multi-device configuration. "
+            f"Got device indices: {device_index}. "
+            f"Please use NPU for multi-device parallel, or use single CPU device."
+        )
+
+    # Value validation: check device availability
+    if device_type == DeviceType.NPU:
+        max_device_count = torch.npu.device_count()
+    else:
+        # CPU doesn't need device count validation
+        max_device_count = None
+
+    # Check if indices exceed available devices
+    if max_device_count is not None:
+        invalid_indices = [idx for idx in device_index if idx >= max_device_count]
+        if invalid_indices:
+            raise SchemaValidateError(
+                f"Device indices {invalid_indices} exceed maximum available device index "
+                f"({max_device_count - 1}). Available device indices: 0 to {max_device_count - 1}"
+            )
+
+
 @logger_setter('msmodelslim.app.naive_quantization')
 class NaiveQuantizationApplication:
 
@@ -51,58 +103,6 @@ class NaiveQuantizationApplication:
         if use_kv_cache ^ label.get('kv_cache', False):
             return False
         return True
-    
-    @staticmethod
-    def validate_device_index(device_index: Optional[List[int]], device_type: DeviceType):
-        """
-        Validate device_index parameter.
-        
-        Args:
-            device_index: Device indices to validate
-            device_type: Device type for context validation
-            
-        Raises:
-            SchemaValidateError: If device_index is invalid
-        """
-        
-        # Value validation: check if indices are non-negative
-        if any(idx < 0 for idx in device_index):
-            negative_indices = [idx for idx in device_index if idx < 0]
-            raise SchemaValidateError(
-                f"Device indices must be non-negative integers, "
-                f"but got negative values: {negative_indices}"
-            )
-        
-        # Value validation: check for duplicates
-        if len(device_index) != len(set(device_index)):
-            duplicates = [idx for idx in set(device_index) if device_index.count(idx) > 1]
-            raise SchemaValidateError(
-                f"Device indices must be unique, but found duplicates: {duplicates}"
-            )
-        
-        # CPU does not support multi-device
-        if device_type == DeviceType.CPU and len(device_index) > 1:
-            raise SchemaValidateError(
-                f"CPU does not support multi-device configuration. "
-                f"Got device indices: {device_index}. "
-                f"Please use NPU for multi-device parallel, or use single CPU device."
-            )
-        
-        # Value validation: check device availability
-        if device_type == DeviceType.NPU:
-            max_device_count = torch.npu.device_count()
-        else:
-            # CPU doesn't need device count validation
-            max_device_count = None
-        
-        # Check if indices exceed available devices
-        if max_device_count is not None:
-            invalid_indices = [idx for idx in device_index if idx >= max_device_count]
-            if invalid_indices:
-                raise SchemaValidateError(
-                    f"Device indices {invalid_indices} exceed maximum available device index "
-                    f"({max_device_count - 1}). Available device indices: 0 to {max_device_count - 1}"
-                )
 
     def get_default_practice(self,
                              prompt="No configuration found.",
@@ -212,7 +212,7 @@ class NaiveQuantizationApplication:
         if not isinstance(device_type, DeviceType):
             raise SchemaValidateError(f"device_type must be a DeviceType, but got {type(device_type)}")
         if device_index is not None:
-            self.validate_device_index(device_index, device_type)
+            validate_device_index(device_index, device_type)
         if config_path is not None:
             validate_str_length(input_str=config_path, str_name='config_path')
             config_path = convert_to_readable_file(config_path)

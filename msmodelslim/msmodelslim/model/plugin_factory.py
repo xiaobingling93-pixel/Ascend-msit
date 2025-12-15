@@ -3,11 +3,11 @@ import sys
 from importlib.metadata import entry_points
 from pathlib import Path
 
+from msmodelslim.model.interface import IModel, IModelFactory
 from msmodelslim.utils.config import msmodelslim_config
-from msmodelslim.utils.exception import ToDoError, UnsupportedError
+from msmodelslim.utils.exception import UnsupportedError
 from msmodelslim.utils.logging import get_logger
 from msmodelslim.utils.dependency_check import DependencyChecker, get_require_packages
-from msmodelslim.model.interface import IModel, IModelFactory
 
 MODEL_ADAPTER_ENTRY_POINTS = "msmodelslim.model_adapter.plugins"
 
@@ -16,38 +16,6 @@ DEFAULT = "default"
 
 class PluginModelFactory(IModelFactory):
     _model_map = None
-
-    @classmethod
-    def create(
-            cls,
-            model_type: str,
-            model_path: Path,
-            trust_remote_code: bool = False,
-    ) -> IModel:
-        model_map = cls._get_model_map()
-
-        if model_type not in model_map:
-            if DEFAULT in model_map:
-                get_logger().warning(
-                    f"Model adapter '{model_type}' not found, trying default adapter..."
-                )
-                model_type = DEFAULT
-            else:
-                raise UnsupportedError(
-                    f"No adapter found for '{model_type}' and no default adapter registered. "
-                    f"Registered adapters: {list(model_map.keys())}"
-                )
-
-        adapter_class = model_map[model_type].load()
-
-        cls._check_plugin_require_packages(model_type, adapter_class)
-
-        adapter_instance = adapter_class(
-            model_type=model_type,
-            model_path=model_path,
-            trust_remote_code=trust_remote_code,
-        )
-        return adapter_instance
 
     @classmethod
     def _get_model_map(cls) -> dict:
@@ -69,6 +37,37 @@ class PluginModelFactory(IModelFactory):
 
         if plugin_name in msmodelslim_config.model_adapter_dependencies:
             DependencyChecker.set_plugin(plugin_name,
-                        msmodelslim_config.model_adapter_dependencies[plugin_name])
+                                         msmodelslim_config.model_adapter_dependencies[plugin_name])
         DependencyChecker.set_plugin(plugin_name, get_require_packages(adapter_class))
         DependencyChecker.check_plugin(plugin_name)
+
+    def create(
+            self,
+            model_type: str,
+            model_path: Path,
+            trust_remote_code: bool = False,
+    ) -> IModel:
+        model_map = self._get_model_map()
+
+        if model_type not in model_map:
+            if DEFAULT in model_map:
+                get_logger().warning(
+                    f"Model adapter '{model_type}' not found, trying default adapter..."
+                )
+                model_type = DEFAULT
+            else:
+                raise UnsupportedError(
+                    f"No adapter found for '{model_type}' and no default adapter registered. "
+                    f"Registered adapters: {list(model_map.keys())}"
+                )
+
+        adapter_class = model_map[model_type].load()
+
+        self._check_plugin_require_packages(model_type, adapter_class)
+
+        adapter_instance = adapter_class(
+            model_type=model_type,
+            model_path=model_path,
+            trust_remote_code=trust_remote_code,
+        )
+        return adapter_instance

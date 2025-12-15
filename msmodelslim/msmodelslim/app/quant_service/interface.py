@@ -14,7 +14,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 from msmodelslim.core.const import DeviceType
 from msmodelslim.model import IModel
@@ -45,5 +45,6 @@ class IQuantService(ABC):
             model_adapter: IModel,
             save_path: Optional[Path] = None,
             device: DeviceType = DeviceType.NPU,
+            device_indices: Optional[List[int]] = None
     ) -> None:
         ...
