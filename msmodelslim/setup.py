@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import logging
+import os
 from configparser import ConfigParser
 
 from setuptools import setup, find_packages
@@ -88,5 +88,11 @@ setup(
             "msmodelslim.app.quant_service.multimodal_vlm_v1:MultimodalVLMModelslimV1QuantService",
         ],
         "msmodelslim.model_adapter.plugins": model_adapter_plugins,
+        "msmodelslim.strategy_config.plugins": [
+            "standing_high=msmodelslim.app.tune_strategy.standing_high.strategy:StandingHighStrategyConfig",
+        ],
+        "msmodelslim.strategy.plugins": [
+            "standing_high=msmodelslim.app.tune_strategy.standing_high.strategy:StandingHighStrategy",
+        ],
     },
 )

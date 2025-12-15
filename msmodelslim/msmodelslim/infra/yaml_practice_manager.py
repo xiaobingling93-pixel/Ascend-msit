@@ -2,15 +2,17 @@
 from pathlib import Path
 from typing import Dict, Generator, Optional
 
+from msmodelslim.app.auto_tuning import PracticeManagerInfra as atpm
 from msmodelslim.app.naive_quantization import PracticeManagerInfra as nqpm
 from msmodelslim.app.practice.interface import PracticeConfig
-from msmodelslim.utils.exception import SecurityError, UnsupportedError
+from msmodelslim.utils.exception import SecurityError, UnsupportedError, SpecError
 from msmodelslim.utils.security import get_valid_read_path
 from msmodelslim.utils.yaml_database import YamlDatabase
 
 
 class YamlPracticeManager(
     nqpm,
+    atpm,
 ):
     def __init__(self, official_config_dir: Path, custom_config_dir: Optional[Path] = None):
         get_valid_read_path(str(official_config_dir), is_dir=True)
@@ -68,3 +70,22 @@ class YamlPracticeManager(
         tasks.sort(key=lambda x: (-x.metadata.score, x.metadata.config_id))
         for task in tasks:
             yield task
+
+    def is_saving_supported(self) -> bool:
+        return self.custom_config_dir is not None
+
+    def save_practice(self, model_pedigree: str, practice: PracticeConfig) -> None:
+        if not self.is_saving_supported():
+            raise UnsupportedError("Can NOT save practice without custom practice directory",
+                                   action="Please set custom practice directory")
+
+        if model_pedigree not in self.custom_databases:
+            self.custom_databases[model_pedigree] = YamlDatabase(
+                config_dir=self.custom_config_dir / model_pedigree,
+                read_only=False
+            )
+
+        if practice.metadata.config_id in self.custom_databases[model_pedigree]:
+            raise SpecError(f"Practice {practice.metadata.config_id} already exists")
+
+        self.custom_databases[model_pedigree][practice.metadata.config_id] = practice

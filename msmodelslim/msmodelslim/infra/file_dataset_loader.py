@@ -2,14 +2,18 @@
 from pathlib import Path
 from typing import List, Any
 
-from msmodelslim.app.quant_service.dataset_loader_infra import DatasetLoaderInfra
+from msmodelslim.app.quant_service.dataset_loader_infra import DatasetLoaderInfra as qsdl
+from msmodelslim.app.tune_strategy.dataset_loader_infra import DatasetLoaderInfra as tsdl
 from msmodelslim.utils.exception import InvalidDatasetError, SchemaValidateError
 from msmodelslim.utils.security import get_valid_read_path
 from msmodelslim.utils.security.model import SafeGenerator
 from msmodelslim.utils.security.path import json_safe_load
 
 
-class FileDatasetLoader(DatasetLoaderInfra):
+class FileDatasetLoader(
+    qsdl,
+    tsdl,
+):
     def __init__(self, dataset_dir: Path):
         self.dir = dataset_dir
 
@@ -28,7 +32,7 @@ class FileDatasetLoader(DatasetLoaderInfra):
         if not isinstance(dataset_id, str):
             raise SchemaValidateError(f'dataset_id must be a str',
                                       action='Please make sure the dataset_id is a string')
-        
+
         # Check if dataset_id is an absolute path or relative path
         dataset_path = Path(dataset_id)
         if dataset_path.is_absolute() or dataset_path.exists():
@@ -37,13 +41,13 @@ class FileDatasetLoader(DatasetLoaderInfra):
         else:
             # If it's not a path, combine with self.dir
             dataset_path = self.dir / dataset_id
-        
+
         # Determine file type and validate path
         if dataset_id.endswith('.json'):
             get_valid_read_path(str(dataset_path), "json")
         else:
             get_valid_read_path(str(dataset_path), "jsonl")
-        
+
         try:
             # Load based on file extension
             if dataset_id.endswith('.json'):
@@ -56,4 +60,3 @@ class FileDatasetLoader(DatasetLoaderInfra):
         except Exception as e:
             raise InvalidDatasetError(f'Failed to load dataset {dataset_id}',
                                       action='Please check the dataset path and format') from e
-
