@@ -32,7 +32,7 @@ msserviceprofiler 是一款基于昇腾平台，支持MindIE Service框架和vLL
 
 基于benchmark 输出结果以及 service 的 config.json 配置，提供分析提高 TFTT / Throughput 等的优化点能力。
 
-### ️[服务化多维度解析工具](docs/服务化多维度解析工具.md)
+### ️[服务化多维度解析工具](docs/msserviceprofiler_multi_analyze_instruct.md)
 
 基于msserviceprofiler工具采集的性能数据，提供性能数据多维度分析能力，可以对性能数据进行batch维度、request维度和service维度分析。
 
