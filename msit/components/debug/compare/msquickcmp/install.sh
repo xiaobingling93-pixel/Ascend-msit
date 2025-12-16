@@ -18,7 +18,7 @@ CURRENT_DIR=$(dirname $(readlink -f $0))
 build_om_so() {
   echo "Installing libsaveom.so"
   echo "This part is used for the accuracy comparison of mindir and onnx models. "
-  echo "If installation failed, the usage of other components will not be affected."
+  echo "If can not install libsaveom.so, the usage of other components will not be affected."
   SITE_PACKAGES_PATH=$(python3 -c "import site; print(site.getsitepackages()[0])")
 
   if [ "$ASCEND_TOOLKIT_HOME" != "" ]; then
@@ -38,7 +38,7 @@ build_om_so() {
           -I ${ge_dev_path}/include \
           -L ${ge_dev_path}/lib64 \
           -lge_compiler $COMPILE_OPTIONS \
-          --std=c++11 -fPIC -shared -D_GLIBCXX_USE_CXX11_ABI=0 -o ${CURRENT_DIR}/libsaveom.so
+          --std=c++11 -fPIC -shared -D_GLIBCXX_USE_CXX11_ABI=0 -O2 -o ${CURRENT_DIR}/libsaveom.so
   
   if [ ! -f "${CURRENT_DIR}/libsaveom.so" ]
   then
@@ -50,7 +50,12 @@ build_om_so() {
       rm libsaveom.so
       echo "msquickcmp not exist, failed to install libsaveom.so"
     else
-      cp libsaveom.so "${SITE_PACKAGES_PATH}/msquickcmp/"
+      if [ -f "${SITE_PACKAGES_PATH}/msquickcmp/libsaveom.so" ]
+      then
+        true
+      else
+        cp "${CURRENT_DIR}/libsaveom.so" "${SITE_PACKAGES_PATH}/msquickcmp/"
+      fi
       echo "Finish libsaveom.so installation."
     fi
   fi
