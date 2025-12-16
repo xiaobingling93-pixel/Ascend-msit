@@ -26,6 +26,7 @@ from components.debug.compare.msquickcmp.common.args_check import is_saved_model
 from components.debug.compare.msquickcmp.common.convert import convert_npy_to_bin
 from components.debug.compare.msquickcmp.common.utils import AccuracyCompareException, get_shape_to_directory_name
 from components.debug.compare.msquickcmp.dump.args_adapter import DumpArgsAdapter
+from components.utils.file_utils import create_directory
 
 
 def _generate_golden_data_model(args: DumpArgsAdapter, npu_dump_npy_path):
@@ -123,10 +124,10 @@ def check_and_dump(args, use_cli: bool):
     if args.fusion_switch_file:
         utils.check_file_or_directory_path(args.fusion_switch_file)
     utils.check_device_param_valid(args.device)
-    utils.check_file_or_directory_path(os.path.realpath(args.out_path), True)
     time_dir = time.strftime("%Y%m%d%H%M%S", time.localtime())
     original_out_path = os.path.realpath(os.path.join(args.out_path, time_dir))
     args.out_path = original_out_path
+    create_directory(args.out_path)
     # deal with the dymShape_range param if exists
     input_shapes = []
     if args.dym_shape_range:

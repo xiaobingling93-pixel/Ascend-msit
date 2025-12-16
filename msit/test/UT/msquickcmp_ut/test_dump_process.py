@@ -106,6 +106,7 @@ class TestCpuDumpProcess(unittest.TestCase):
 
 
 class TestCheckAndDump(unittest.TestCase):
+    @patch("components.debug.compare.msquickcmp.dump.dump_process.create_directory", return_value=None)
     @patch("components.debug.compare.msquickcmp.dump.dump_process.dump_data")
     @patch("components.debug.compare.msquickcmp.dump.dump_process.utils.parse_dym_shape_range", return_value=["shape1", "shape2"])
     @patch("components.debug.compare.msquickcmp.dump.dump_process.utils.check_file_or_directory_path")
@@ -114,7 +115,7 @@ class TestCheckAndDump(unittest.TestCase):
     @patch("os.path.realpath", side_effect=lambda p: f"/abs/{p}")
     @patch("time.strftime", return_value="20250610123456")
     def test_check_and_dump_with_dym_shapes(self, mock_time, mock_realpath, mock_valid, mock_check_device,
-                                            mock_check_file, mock_parse_shape, mock_dump):
+                                            mock_check_file, mock_parse_shape, mock_dump, mock_create_dir):
         args = MagicMock(
             model_path="model",
             weight_path="weight",
@@ -126,6 +127,7 @@ class TestCheckAndDump(unittest.TestCase):
         check_and_dump(args, use_cli=True)
         self.assertTrue(mock_dump.call_count == 2)
 
+    @patch("components.debug.compare.msquickcmp.dump.dump_process.create_directory", return_value=None)
     @patch("components.debug.compare.msquickcmp.dump.dump_process.dump_data")
     @patch("components.debug.compare.msquickcmp.dump.dump_process.utils.check_file_or_directory_path")
     @patch("components.debug.compare.msquickcmp.dump.dump_process.utils.check_device_param_valid")
@@ -133,7 +135,7 @@ class TestCheckAndDump(unittest.TestCase):
     @patch("os.path.realpath", side_effect=lambda p: f"/abs/{p}")
     @patch("time.strftime", return_value="20250610123456")
     def test_check_and_dump_no_dym_shape(self, mock_time, mock_realpath, mock_valid, mock_check_device,
-                                         mock_check_file, mock_dump):
+                                         mock_check_file, mock_dump, mock_create_dir):
         args = MagicMock(
             model_path="model",
             weight_path=None,
