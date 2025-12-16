@@ -52,7 +52,7 @@ pip install -e .
 
 - **服务化多维度解析工具**
 
-基于msServiceProfiler工具采集的性能数据，提供性能数据多维度分析能力，可以对性能数据进行batch维度、request维度和service维度分析。具体请参见[服务化多维度解析工具](docs/msServiceProfiler_multi_analyze_instruct.md)。
+基于msServiceProfiler工具采集的性能数据，提供性能数据多维度分析能力，可以对性能数据进行batch维度、request维度和service维度分析。具体请参见[服务化多维度解析工具](docs/msserviceprofiler_multi_analyze_instruct.md)。
 
 - **服务化拆解工具**
 
