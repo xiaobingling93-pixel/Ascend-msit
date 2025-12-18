@@ -78,6 +78,7 @@ class DatasetConfig(BaseModel):
     config_name: str = Field(..., description="数据集在 ais_bench 中的配置名称（必需）")
     mode: str = Field(default="", description="该数据集的评测模式，空字符串表示使用全局模式")
     request_rate: float = Field(default=0.0, description="该数据集的请求速率，0.0 表示使用全局默认值")
+    max_out_len: Optional[int] = Field(default=None, description="该数据集的最大输出长度，None 表示使用全局默认值")
     api_chat_type: str = Field(default="VLLMCustomAPIChat", description="该数据集使用的 API Chat 类型")
     chat_template_kwargs: Dict = Field(
         default_factory=dict,
@@ -163,7 +164,9 @@ class AisBenchServer:
                         request_rate = dataset_cfg.request_rate
                     else:
                         request_rate = self.ais_config.request_rate
-                    self._write_model_config(request_rate=request_rate, api_chat_type=dataset_cfg.api_chat_type,
+                    max_out_len = dataset_cfg.max_out_len if dataset_cfg.max_out_len is not None else self.ais_config.max_out_len
+                    self._write_model_config(max_out_len=max_out_len, request_rate=request_rate,
+                                             api_chat_type=dataset_cfg.api_chat_type,
                                              chat_template_kwargs=dataset_cfg.chat_template_kwargs)
                     cmd_options = self._build_command_options(dataset_cfg)
                 except Exception as exc:
@@ -232,7 +235,8 @@ class AisBenchServer:
         self.model_config_path = self.model_config_dir / f"{self.model_config_name}.py"
         get_logger().debug(f"AISBench model config will be written to: {self.model_config_path}")
 
-    def _write_model_config(self, request_rate: float = 0.0, api_chat_type: str = "VLLMCustomAPIChat",
+    def _write_model_config(self, max_out_len: int, request_rate: float = 0.0,
+                            api_chat_type: str = "VLLMCustomAPIChat",
                             chat_template_kwargs: Optional[Dict] = None):
         """根据当前量化结果生成 vllm_api model config。"""
         if not self.model_config_path or str(self.model_config_path) == ".":
@@ -248,6 +252,7 @@ class AisBenchServer:
             postproc_field = f"        pred_postprocessor=dict(type={cfg.pred_postprocessor})\n"
 
         request_rate_value = request_rate if request_rate > 0.0 else cfg.request_rate
+        max_out_len_value = max_out_len
         host_port_value = self.eval_config.port
 
         chat_template_kwargs_field = ""
@@ -270,7 +275,7 @@ class AisBenchServer:
             f"        retry={cfg.retry},\n"
             f"        host_ip={repr(self.eval_config.host)},\n"
             f"        host_port={repr(host_port_value)},\n"
-            f"        max_out_len={cfg.max_out_len},\n"
+            f"        max_out_len={max_out_len_value},\n"
             f"        batch_size={cfg.batch_size},\n"
             f"        trust_remote_code={cfg.trust_remote_code},\n"
             f"        generation_kwargs={repr(cfg.generation_kwargs)},\n"
