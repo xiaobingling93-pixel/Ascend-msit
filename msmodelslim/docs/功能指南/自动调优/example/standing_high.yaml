@@ -71,6 +71,7 @@ evaluation:
       gsm8k:
         config_name: "gsm8k_gen_0_shot_cot_str"
         mode: all
+        # max_out_len not specified, will use global max_out_len (512) from aisbench section
       aime25:
         config_name: "aime2025_gen_0_shot_chat_prompt"
         mode: all
@@ -79,8 +80,10 @@ evaluation:
       bfcl-simple:
         config_name: "BFCL_gen_simple"
         mode: all
+        max_out_len: 1024  # dataset-specific max output length, will override global max_out_len
         api_chat_type: VLLMFunctionCallAPIChat
       # add other datasets aisbench supports here
+      # Note: max_out_len is optional for each dataset. If not specified, the global max_out_len from aisbench section will be used
     host: localhost
     port: 1234 # replace with your own port, equal to port in inference_engine.port
     served_model_name: served_model_name
