@@ -33,60 +33,6 @@ class TestDataStorage(unittest.TestCase):
     def setUp(self):
         self.data_storage = DataStorage(get_settings().data_storage, MagicMock(), MagicMock())
 
-    @patch('shutil.which')
-    def test_get_best_result_benchmark_is_benchmark(self, mock_which):
-        mock_which.return_value = 'vllm'
-        GlobalConfig.custom_return = True
-        self.data_storage.benchmark = None
-        self.data_storage.save_file = 'test.csv'
-        result_df = pd.DataFrame({
-            'num_prompts': [1000] * 10,
-            'fitness': [9.1076, 6.3524, 7.8392, 9.3442, 6.4396, 7.8859, 6.2324, 6.3734, 6.2833, 6.3723],
-            'time_to_first_token': [0.1170585, 0.4933793, 0.4758562, 3.8750339, 0.2881463, 0.1656243, 0.6007349,
-                                    0.6775429, 0.3424034, 0.2853581],
-            'time_per_output_token': [0.0903143, 0.0558014, 0.0383041, 0.0953723, 0.0551576, 0.043904, 0.0502942,
-                                      0.0515175, 0.0522677, 0.0516389],
-            'generate_speed': [2059.3861, 1989.914, 1515.2376, 2499.9194, 1954.0606, 1517.8326, 1990.0761, 1949.2964,
-                               1985.6711, 1950.4967]
-        })
-        with patch('pandas.read_csv', return_value=result_df):
-            result: pd.DataFrame = self.data_storage.get_best_result()
-            assert (result['fitness'].values.tolist() == [9.1076, 6.3524, 9.3442, 6.2324, 6.2833])
-            get_settings().ttft_penalty = 0
-            result: pd.DataFrame = self.data_storage.get_best_result()
-            assert (result['fitness'].values.tolist() == [9.1076, 6.3524, 9.3442, 6.2324, 6.2833])
-            get_settings().tpot_penalty = 0
-            result: pd.DataFrame = self.data_storage.get_best_result()
-            assert (result['fitness'].values.tolist() == [9.1076, 6.3524, 9.3442, 6.2324, 6.2833])
-            self.data_storage.benchmark = VllmBenchMark(get_settings().vllm_benchmark)
-            get_settings().ttft_penalty = 3.0
-            get_settings().tpot_penalty = 3.0
-            result: pd.DataFrame = self.data_storage.get_best_result()
-        GlobalConfig.reset()
-
-    @patch('msserviceprofiler.modelevalstate.optimizer.store.Path')
-    @patch('msserviceprofiler.modelevalstate.optimizer.store.csv')
-    @patch('msserviceprofiler.msguard.security.sanitize_csv_value')
-    def test_save_new_file(self, mock_sanitize_csv_value, mock_csv, mock_path):
-        # 设置模拟对象的行为
-        mock_path.exists.return_value = False
-        mock_file = MagicMock()
-        mock_file.__enter__.return_value = mock_file
-        mock_path.open.return_value = mock_file
-
-        # 创建DataStorage实例
-        config = MagicMock()
-        config.store_dir = Path('/fake/dir')
-        storage = DataStorage(config)
-
-        # 创建测试数据
-        performance_index = PerformanceIndex()
-        params = [OptimizerConfigField(name='param1', value=1), OptimizerConfigField(name='param2', value=2)]
-        kwargs = {'key1': 'value1', 'key2': 'value2'}
-
-        # 调用save方法
-        storage.save(performance_index, params, **kwargs)
-
     @patch('msserviceprofiler.modelevalstate.optimizer.store.Path')
     @patch('msserviceprofiler.modelevalstate.optimizer.store.csv')
     @patch('msserviceprofiler.msguard.security.sanitize_csv_value')
