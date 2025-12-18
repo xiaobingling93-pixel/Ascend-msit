@@ -44,6 +44,7 @@ python3 -m coverage run --branch --source=${code_dir} -p -m pytest ${route}/case
 python3 -m coverage run --branch --source=${code_dir} -p -m pytest ${route}/cases/anti --junitxml="${route}/report/final_anti.xml" || ret=1
 python3 -m coverage run --branch --source=${code_dir} -p -m pytest ${route}/cases/model --junitxml="${route}/report/final_model.xml" || ret=1
 python3 -m coverage run --branch --source=${code_dir} -p -m pytest ${route}/smoke --junitxml="${route}/report/final_smoke.xml" || ret=1
+python3 -m coverage run --branch --source=${code_dir} -p -m pytest ${route}/cases/infra --junitxml="${route}/report/final_infra.xml" || ret=1
 
 python3 -m coverage combine
 python3 -m coverage xml -o ${route}/report/coverage.xml
