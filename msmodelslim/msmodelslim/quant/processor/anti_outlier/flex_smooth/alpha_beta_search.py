@@ -203,10 +203,7 @@ class FlexAWQSSZAlphaBetaSearcher(BaseAlphaBetaSearcher):
             scaled_act = act / scale
             scaled_w_scale = linear.weight * scale
             linear.weight.data = scaled_w_scale
-            linear_qconfig = LinearQConfig(
-                act=self.qconfig.act, weight=self.qconfig.weight
-            )
-            quantizer = LinearQuantizer(config=linear_qconfig)
+            quantizer = LinearQuantizer(config=self.qconfig)
             quantizer.setup(linear)
             get_logger().debug(
                 "  - Created quantizer with input_quantizer: %s",
@@ -216,6 +213,7 @@ class FlexAWQSSZAlphaBetaSearcher(BaseAlphaBetaSearcher):
                 "  - Created quantizer with weight_quantizer: %s",
                 type(quantizer.weight_quantizer).__name__
             )
+            _ = quantizer.forward(scaled_act)
             ir_module = quantizer.deploy()
             
             get_logger().debug("  - Deployed IR module: %s", type(ir_module).__name__)
