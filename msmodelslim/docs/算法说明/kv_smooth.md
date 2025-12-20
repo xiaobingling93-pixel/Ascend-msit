@@ -124,18 +124,18 @@ class KVSmoothFusedInterface(ABC):
 ## 常见问题排查
 
 1. **回退未命中**
-    - **现象**：日志告警 `are not matched any module`
-    - **解决方案**：核对完整模块名，是否填错 `include` 或 `exclude`
+    - **现象**：告警日志中出现 `are not matched any module` 描述。
+    - **解决方案**：核对完整模块名，是否填错 `include` 或 `exclude`。
 
 2. **头维度信息缺失**
-    - **现象**：抛出 `UnsupportedError`，指明 `get_head_dim`、`get_num_key_value_groups`、`get_num_key_value_heads` 缺失
-    - **解决方案**：对应模型适配器确保实现 `KVSmoothFusedInterface` 接口，否则模型不适用算法
+    - **现象**：抛出 `UnsupportedError`，指明 `get_head_dim`、`get_num_key_value_groups`、`get_num_key_value_heads` 缺失。
+    - **解决方案**：对应模型适配器确保实现 `KVSmoothFusedInterface` 接口，否则模型不适用算法。
 
 3. **注意力不适用**
-    - **现象**：日志告警 `past_key_values and past_key_value both are None`
+    - **现象**：日志告警 `past_key_values and past_key_value both are None`。
     - **解决方案**：检查 `Transformers` 中的模型文件，确保 `Attention` 层 `forward` 传入 `past_key_values` 和
-      `past_key_value`，否则模型不适用算法
+      `past_key_value`，否则模型不适用算法。
 
 4. **模块名不一致**
-    - **现象**：抛出 `ToDoError`，指明 `has no submodule`
-    - **解决方案**：检查模型适配器，确认 `fused_from_query_states_name` 和 `fused_from_key_states_name` 取值与实际融合子模块命名一致
+    - **现象**：抛出 `ToDoError`，指明 `has no submodule`。
+    - **解决方案**：检查模型适配器，确认 `fused_from_query_states_name` 和 `fused_from_key_states_name` 取值与实际融合子模块命名一致。
