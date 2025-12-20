@@ -201,8 +201,13 @@ class StandingHighStrategy(BaseTuningStrategy, ITuningStrategy):
             layer_selector: LayerSelector
     ) -> Generator[PracticeConfig, Optional[EvaluateResult], None]:
         """执行摸高算法：逐步减少disable level，尝试不同的离群值抑制策略"""
+        # 获得最小回退层级的量化配置
+        anti_outlier_processors = self.config.anti_outlier_strategies[0]
+        exclude_names = layer_selector.select_layers_by_disable_level(init_disable_level)
+        best_practice_config = self._build_practice_config(anti_outlier_processors, exclude_names)
+
+        # 初始化步长和当前回退级别
         reduce_level = 1
-        best_practice_config: Optional[PracticeConfig] = None
         current_disable_level = init_disable_level
 
         while current_disable_level - reduce_level >= 0:
@@ -223,10 +228,11 @@ class StandingHighStrategy(BaseTuningStrategy, ITuningStrategy):
                     break
             else:
                 if reduce_level == 1:
-                    if best_practice_config:
-                        yield best_practice_config
+                    yield best_practice_config
                     return
                 reduce_level = 1
                 get_logger().info("Reset reduce level to 1")
+            
+        yield best_practice_config
 
         get_logger().info("No disable layer can satisfy demand")
