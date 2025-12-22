@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
 import subprocess
+import os
+import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, patch, call
 
 import pytest
 
 from msserviceprofiler.modelevalstate.config.config import (
     CUSTOM_OUTPUT,
     MODEL_EVAL_STATE_CONFIG_PATH,
-    OptimizerConfigField
+    OptimizerConfigField, get_settings
 )
-from msserviceprofiler.modelevalstate.optimizer.interfaces.custom_process import CustomProcess, tempfile, os
+from msserviceprofiler.modelevalstate.optimizer.interfaces.custom_process import CustomProcess, tempfile, os, BaseDataField
 
 
 def test_before_run_no_run_params(monkeypatch):
@@ -204,3 +206,92 @@ def test_get_log_run_log_not_exists(mock_exists):
     process.run_log = 'nonexistent.log'
     assert process.get_log() is None
  
+
+class TestCustomProcessSupplement:
+    def test_get_log_file_not_found(self):
+        """测试get_log方法处理文件不存在的情况"""
+        process = CustomProcess()
+        process.run_log = "/nonexistent/path/test.log"
+        
+        result = process.get_log()
+        
+        assert result is None
+    
+
+class TestBaseDataField:
+    @pytest.mark.parametrize("target_field,expected", [
+        ([], ()),
+        ([OptimizerConfigField(name="field1", config_position="pos1", min=0, max=100, dtype="int")], 
+         (OptimizerConfigField(name="field1", config_position="pos1", min=0, max=100, dtype="int"),)),
+        (None, ())
+    ])
+    def test_data_field_property(self, target_field, expected):
+        """测试data_field属性获取"""
+        mock_config = MagicMock()
+        if target_field is not None:
+            mock_config.target_field = target_field
+        else:
+            delattr(mock_config, 'target_field')
+        
+        data_field = BaseDataField(config=mock_config)
+        
+        result = data_field.data_field
+        
+        assert result == expected
+    
+    def test_data_field_setter_add_new_field(self):
+        """测试data_field属性设置器添加新字段"""
+        mock_config = MagicMock()
+        mock_config.target_field = [
+            OptimizerConfigField(name="existing_field", config_position="existing.position", min=0, max=100, dtype="int")
+        ]
+        
+        data_field = BaseDataField(config=mock_config)
+        new_fields = (
+            OptimizerConfigField(name="new_field", config_position="new.position", min=0, max=50, dtype="float"),
+            OptimizerConfigField(name="existing_field", config_position="updated.position", min=0, max=200, dtype="int")
+        )
+        
+        # 设置新字段
+        data_field.data_field = new_fields
+        
+        # 验证只有existing_field被更新，new_field被忽略
+        assert len(mock_config.target_field) == 1
+        assert mock_config.target_field[0].name == "existing_field"
+        assert mock_config.target_field[0].config_position == "updated.position"
+        assert mock_config.target_field[0].max == 200
+    
+    def test_data_field_setter_empty_input(self):
+        """测试data_field属性设置器使用空输入"""
+        mock_config = MagicMock()
+        mock_config.target_field = [
+            OptimizerConfigField(name="field1", config_position="pos1", min=0, max=100, dtype="int")
+        ]
+        
+        data_field = BaseDataField(config=mock_config)
+        
+        # 设置空字段
+        data_field.data_field = ()
+        
+        # 验证原始字段没有被修改
+        assert len(mock_config.target_field) == 1
+        assert mock_config.target_field[0].name == "field1"
+    
+    def test_data_field_setter_no_target_field(self):
+        """测试data_field属性设置器在config没有target_field时的情况"""
+        mock_config = MagicMock()
+        # 模拟config没有target_field属性
+        if hasattr(mock_config, 'target_field'):
+            delattr(mock_config, 'target_field')
+        
+        data_field = BaseDataField(config=mock_config)
+        new_fields = (
+            OptimizerConfigField(name="test_field", config_position="test.position", min=0, max=100, dtype="int"),
+        )
+        
+        # 设置新字段（应该没有效果）
+        data_field.data_field = new_fields
+        
+        # 验证config没有被修改
+        assert not hasattr(mock_config, 'target_field') or mock_config.target_field == []
+

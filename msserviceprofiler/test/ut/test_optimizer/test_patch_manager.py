@@ -124,3 +124,147 @@ class TestPatchManager(unittest.TestCase):
             # 注意：2.0.1 > 2.0，所以应该在范围外
             Patch2rc1.check_version("2.0.1")
             mock_warning.assert_called_once_with("The version may not match.")
+
+
+# Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import tempfile
+import shutil
+from pathlib import Path
+from unittest.mock import patch, MagicMock
+import pytest
+
+from msserviceprofiler.modelevalstate.patch.patch_manager import check_flag, add_patch, Patch2rc1
+
+
+@pytest.fixture
+def temp_dir():
+    """创建临时目录的fixture"""
+    temp_dir = Path(tempfile.mkdtemp())
+    yield temp_dir
+    shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+class TestCheckFlagPytest:
+    """使用pytest测试check_flag函数"""
+
+    def test_check_flag_same_content(self, temp_dir):
+        """测试相同内容的情况"""
+        target_file = temp_dir / "target.txt"
+        patch_file = temp_dir / "patch.txt"
+
+        content = "test content\n"
+        target_file.write_text(content, encoding="utf-8")
+        patch_file.write_text(content, encoding="utf-8")
+
+        result = check_flag(str(target_file), str(patch_file))
+        assert result is False
+
+    def test_check_flag_different_content(self, temp_dir):
+        """测试不同内容的情况"""
+        target_file = temp_dir / "target.txt"
+        patch_file = temp_dir / "patch.txt"
+
+        target_file.write_text("target content\n", encoding="utf-8")
+        patch_file.write_text("patch content\n", encoding="utf-8")
+
+        result = check_flag(str(target_file), str(patch_file))
+        assert result is True
+
+    def test_check_flag_partial_content_match(self, temp_dir):
+        """测试部分内容匹配的情况"""
+        target_file = temp_dir / "target.txt"
+        patch_file = temp_dir / "patch.txt"
+
+        target_file.write_text("line1\npatch1\nline3\n", encoding="utf-8")
+        patch_file.write_text("patch1\npatch2\n", encoding="utf-8")
+
+        result = check_flag(str(target_file), str(patch_file))
+        assert result is True
+
+
+class TestAddPatchPytest:
+    """使用pytest测试add_patch函数"""
+
+    def test_add_patch_normal_case(self, temp_dir):
+        """测试正常添加补丁的情况"""
+        target_file = temp_dir / "target.txt"
+        patch_file = temp_dir / "patch.txt"
+
+        target_file.write_text("original\n", encoding="utf-8")
+        patch_file.write_text("patch\n", encoding="utf-8")
+
+        add_patch(str(target_file), str(patch_file))
+
+        result_content = target_file.read_text(encoding="utf-8")
+        assert "original" in result_content
+        assert "patch" in result_content
+
+    def test_add_patch_empty_file(self, temp_dir):
+        """测试空文件的情况"""
+        target_file = temp_dir / "target.txt"
+        patch_file = temp_dir / "patch.txt"
+
+        # 创建空文件
+        target_file.touch()
+        patch_file.touch()
+
+        add_patch(str(target_file), str(patch_file))
+
+        # 文件应该仍然为空
+        assert target_file.read_text(encoding="utf-8") == ""
+
+
+class TestPatch2rc1Pytest:
+    """使用pytest测试Patch2rc1类"""
+
+    @pytest.mark.parametrize("version_str,should_warn", [
+        ("2.0", True),      # 低于下限
+        ("2.1rc1", True),   # 等于下限（应该警告）
+        ("2.1.5", False),   # 在范围内
+        ("2.2", False),     # 等于上限
+        ("2.3", True),      # 高于上限
+        ("2.1.5.dev1", False),  # 开发版本
+    ])
+    def test_check_version_warnings(self, version_str, should_warn):
+        """测试版本检查的警告行为"""
+        with patch('msserviceprofiler.modelevalstate.patch.patch_manager.logger.warning') as mock_warning:
+            result = Patch2rc1.check_version(version_str)
+            assert result is True
+            
+            if should_warn:
+                mock_warning.assert_called_once_with("The version may not match.")
+            else:
+                mock_warning.assert_not_called()
+
+
+# 性能测试
+@pytest.mark.performance
+class TestPerformance:
+    """性能测试类"""
+
+    def test_check_flag_performance(self, temp_dir):
+        """测试check_flag的性能"""
+        target_file = temp_dir / "target.txt"
+        patch_file = temp_dir / "patch.txt"
+        
+        # 创建大文件
+        large_content = "line\n" * 10000
+        target_file.write_text(large_content, encoding="utf-8")
+        patch_file.write_text("line\n", encoding="utf-8")
+        
+        # 测试性能（这里只是基本测试，实际应该使用timeit）
+        result = check_flag(str(target_file), str(patch_file))
+        assert isinstance(result, bool)

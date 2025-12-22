@@ -27,6 +27,8 @@ from msserviceprofiler.modelevalstate.config.config import PerformanceIndex, get
 from msserviceprofiler.modelevalstate.optimizer.plugins.benchmark import parse_result, AisBench, VllmBenchMark
 from msserviceprofiler.msguard import GlobalConfig
 
+settings = get_settings()
+
 
 class TestParseResult(unittest.TestCase):
     def test_string_with_ms(self):
@@ -122,3 +124,52 @@ def results_per_request_file(tmpdir):
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(data, f)
     return file_path
+
+
+class TestBenchMarkGetPerformanceIndex(unittest.TestCase):
+    @patch("msserviceprofiler.modelevalstate.config.custom_command.shutil.which")
+    def setUp(self, mock_which):
+        # 创建一个模拟的 benchmark_config 对象
+        self.mock_benchmark_config = MagicMock()
+        mock_which.return_value = "/usr/local/bin/vllm"
+        # 创建测试对象并传递 benchmark_config
+        self.benchmark = VllmBenchMark(self.mock_benchmark_config)
+        
+        # 设置 command 属性
+        self.benchmark.config.command = MagicMock()
+        self.test_dir = Path("test_dir")
+        self.benchmark.config.command.result_dir = self.test_dir
+        self.test_dir.mkdir(exist_ok=True)
+        self.json_path = self.test_dir / "result.json"
+        json_data = {
+            "output_throughput": 2000.0,
+            "mean_ttft_ms": 600.0,
+            "mean_tpot_ms": 140.0,
+            "num_prompts": 10,
+            "completed": 10,
+            "request_throughput": 4.0
+        }
+        with open(self.json_path, 'w') as f:
+            json.dump(json_data, f)
+
+    
+    def tearDown(self):
+        # 清理临时目录
+        shutil.rmtree(self.test_dir)
+    
+    def test_get_performance_index_normal(self):
+        GlobalConfig.custom_return = True
+        """测试正常情况下的get_performance_index方法"""
+        
+        # 调用方法
+        result = self.benchmark.get_performance_index()
+        
+        # 验证结果
+        self.assertIsInstance(result, PerformanceIndex)
+        self.assertEqual(result.generate_speed, 2000.0)
+        self.assertEqual(result.time_to_first_token, 0.6)  
+        self.assertEqual(result.time_per_output_token, 0.14)
+        self.assertEqual(result.success_rate, 1.0)
+        self.assertEqual(result.throughput, 4.0)
+    
+        GlobalConfig.reset()
