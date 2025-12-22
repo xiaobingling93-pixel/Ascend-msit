@@ -351,8 +351,16 @@ class CompareStrategy(CommandStrategy):
 class RunStrategy(CommandStrategy):
     @staticmethod
     def execute(args):
-        configs = _parse_configs(args.configs)
-        contexts = _parse_contexts(args.contexts)
+        BannerPresenter().print_banner()
+
+        ret, configs = _parse_configs(args.configs)
+        if not ret:
+            return 1
+
+        ret, contexts = _parse_contexts(args.contexts)
+        if not ret:
+            return 1
+
         return run(args.rule, configs, contexts, args.failfast, args.verbose, args.collect_only, args.severity)
 
 

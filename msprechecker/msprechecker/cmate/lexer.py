@@ -67,7 +67,7 @@ class Lexer:
     t_GT = r'>'
     t_LE = r'<='
     t_LT = r'<'
-    t_RE = r'~='
+    t_RE = r'=~'
 
     # arithmetic_tokens
     t_POW = r'\*\*'

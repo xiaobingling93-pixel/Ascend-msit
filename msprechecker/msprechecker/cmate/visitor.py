@@ -15,6 +15,7 @@
 
 import re
 import os
+import inspect
 import operator
 from collections import defaultdict
 
@@ -40,7 +41,7 @@ class NodeVisitor:
 
     def generic_visit(self, node):
         if node is None or not hasattr(node, '__slots__'):
-            return
+            return None
 
         for attr in node.__slots__:
             val = getattr(node, attr, None)
@@ -53,23 +54,136 @@ class NodeVisitor:
                         self.visit(item)
 
 
-class MetaVisitor(NodeVisitor):
-    def __init__(self):
-        self._meta_data = {}
-
+class InfoCollector(NodeVisitor):
+    def __init__(self) -> None:
+        self._metadata_map = {}
+        self._dependency_map = {}
+        self._partition_map = {}
+        self._context_map = defaultdict(set)
+        
+        self._required_targets = None
+        self._required_contexts = None
+    
     def visit_meta(self, node: _ast.Meta):
-        if self._meta_data:
-            raise CMateError('Multiple meta declarations found')
+        if self._metadata_map:
+            cmate_logger.warning(
+                "Multiple dependency declarations found. "
+                "Previous declaration will be overwritten."
+            )
+            self._metadata_map = {}
 
         for assign_node in node.body:
             target_node = assign_node.target
             value_node = assign_node.value
-            self._meta_data[target_node.id] = self._retrieve_value(value_node)
+            self._metadata_map[target_node.id] = self._retrieve_value(value_node)
+    
+    def visit_dependency(self, node: _ast.Dependency):
+        if self._dependency_map:
+            cmate_logger.warning(
+                "Multiple dependency declarations found. "
+                "Previous declaration will be overwritten."
+            )
+            self._dependency_map = {}
 
-    def visit(self, node):
-        super().visit(node)
+        for desc_node in node.body:
+            name = desc_node.target.id
 
-        return self._meta_data
+            if name in self._dependency_map:
+                cmate_logger.warning(
+                    "Name '%s' is redefined at line %d, column %d. "
+                    "Previous definition will be overwritten.",
+                    name, desc_node.lineno, desc_node.col
+                )
+
+            self._dependency_map[name] = (desc_node.desc, desc_node.parse_type)
+    
+    def visit_global(self, node):
+        pass
+
+    def visit_partition(self, node: _ast.Partition):
+        self._namespace = node.target.id
+
+        self._required_targets = set()
+        self._required_contexts = set()
+
+        if self._namespace in self._partition_map:
+            cmate_logger.warning(
+                "Multiple partition target %s declarations found. "
+                "Previous declaration will be overwritten.",
+                self._namespace
+            )
+            self._partition_map[self._namespace] = {}
+        
+        for rule_node in node.body:
+            self.visit(rule_node)
+        
+        if self._namespace not in self._dependency_map:
+            cmate_logger.warning('')
+            
+        desc, parse_type = self._dependency_map.get(self._namespace, (None, None))
+        
+        self._partition_map[self._namespace] = {
+            'desc': desc,
+            'parse_type': parse_type,
+            'required_targets': self._required_targets or None,
+            'required_contexts': self._required_contexts or None
+        }
+        self._namespace = None
+        self._required_targets = None
+        self._required_contexts = None
+    
+    def visit_compare(self, node: _ast.Compare):
+        if (isinstance(node.left, _ast.DictPath) and 
+            node.left.namespace == 'context' and 
+            isinstance(node.comparator, _ast.Constant)):
+                self._context_map[node.left.path].add(node.comparator.value)
+
+        self.visit(node.left)
+        self.visit(node.comparator)
+    
+    def visit_dictpath(self, node: _ast.DictPath):
+        namespace = node.namespace
+
+        if namespace is None or namespace == 'global':
+            return
+
+        if namespace not in {'context', 'global', 'env'} and namespace not in self._dependency_map:
+            cmate_logger.warning(
+                "Undefined namespace '%s' referenced at line %d, column %d. "
+                "The dict path '%s::%s' is used but not defined in the dependency section. "
+                "This may cause undefined behavior. Please contact the rule provider for clarification.",
+                namespace, node.lineno, node.col_offset, namespace, node.path
+            )
+
+        if namespace == 'context':
+            self._required_contexts.add(node.path)
+        else:
+            self._required_targets.add(namespace)
+    
+    def collect(self, node):
+        try:
+            self.visit(node)
+        except Exception as e:
+            raise CMateError(f'CMATE configuration parsing failed at position: {str(e)}') from e
+
+        for target in self._partition_map:
+            for required_item in ('required_targets', 'required_contexts'):
+                if self._partition_map[target][required_item] is not None:
+                    self._partition_map[target][required_item] = list(self._partition_map[target][required_item])
+
+        contexts = {
+            ctx_var: {
+                'desc': self._dependency_map.get(ctx_var),
+                'options': list(options)
+            }
+            for ctx_var, options in self._context_map.items()
+        }
+        
+        return {
+            'metadata': self._metadata_map,
+            'targets': self._partition_map,
+            'contexts': contexts
+        }
 
     def _retrieve_value(self, node):
         if node is None:
@@ -89,92 +203,63 @@ class MetaVisitor(NodeVisitor):
         raise CMateError(f'Unsupported node type: {type(node).__name__}')
 
 
-class RequirementGenerator(NodeVisitor):
-    def __init__(self):
-        self._current_namespace = None
-        self._partition_map = {}
-        self._dependency_map = {}
-
-    def visit_meta(self, node):
-        pass
-
-    def visit_global(self, node):
-        pass
-
-    def visit_dependency(self, node: _ast.Dependency):
-        if self._dependency_map:
-            raise CMateError('Multiple dependency declarations found')
-
-        for desc_node in node.body:
-            self._dependency_map[desc_node.target.id] = (desc_node.desc, desc_node.parse_type)
-
-    def visit_partition(self, node: _ast.Partition):
-        self._current_namespace = node.target.id
-        if self._current_namespace in self._partition_map:
-            raise CMateError
-        
-        self._partition_map[self._current_namespace] = defaultdict(set)
-
-        for rule_node in node.body:
-            self.visit(rule_node)
-        
-        self._current_namespace = None
-    
-    def visit_compare(self, node: _ast.Compare):
-        if (isinstance(node.left, _ast.DictPath) and 
-            node.left.namespace == 'context' and 
-            isinstance(node.comparator, _ast.Constant)):
-
-            possible_val = node.comparator.value
-            self._partition_map[self._current_namespace][node.left.path].add(possible_val)
-
-        self.visit(node.left)
-        self.visit(node.comparator)
-
-    def generate(self, node):
-        self.visit(node)
-        
-        res = {}
-        for namespace in self._partition_map:
-            contexts = {}
-            desc, parse_type = self._dependency_map.get(namespace, (None, None))
-
-            res[namespace] = {
-                'desc': desc,
-                'parse_type': parse_type,
-                'contexts': contexts
-            }
-            for name, possible_values in self._partition_map[namespace].items():
-                desc = self._dependency_map.get(name)
-                contexts[name] = {
-                    'desc': desc,
-                    'possible_values': list(possible_values)
-                }
-
-        return res
-
-
 class Evaluator(NodeVisitor):
     def __init__(self, data_source):
         self.data_source = data_source
         self.op_map = {
-            '==': operator.eq,
+            '<': operator.lt,
             '<=': operator.le,
-            '>=': operator.gt,
+            '>': operator.gt,
+            '>=': operator.ge,
+            '==': operator.eq,
             '!=': operator.ne,
+            '=~': lambda a, b: re.search(b, a),
             'or': lambda a, b: a or b,
             'in': lambda a, b: a in b,
             'and': lambda a, b: a and b,
+            'not in': lambda a, b: a not in b,
             '*': operator.mul,
-            '+': operator.add
+            '+': operator.add,
+            '-': operator.sub,
+            '/': operator.truediv,
+            '//': operator.floordiv,
+            '%': operator.mod,
+            '**': operator.pow
         }
-        self.func_map = {
+        self.builtin_fn = {
             'int': int,
+            'float': float,
+            'bool': bool,
+            'str': str,
+            'list': list,
+            'tuple': tuple,
+            'set': set,
             'len': len,
             'range': range,
-            'PathExists': lambda a: a is not None and a is not NA and os.path.exists(a)
+            'sum': sum,
+            'min': min,
+            'max': max
+        }
+        self.func_map = {
+            **self.builtin_fn, **self._load_custom_fn()
         }
         self.history = None
+    
+    @staticmethod
+    def _load_custom_fn():
+        from . import custom_fn
+
+        custom_fn_map = {}
+        for name in dir(custom_fn):
+            obj = getattr(custom_fn, name)
+
+            if (inspect.isfunction(obj) and 
+                not name.startswith('_') and
+                obj.__module__ == custom_fn.__name__):
+
+                custom_fn_map[name] = obj
+        
+        return custom_fn_map
     
     def visit_name(self, node: _ast.Name):
         path = f'global::{node.id}'
@@ -278,7 +363,8 @@ class PrettyFormatter(NodeVisitor):
 
 
 class RuleVisitor(NodeVisitor):
-    def __init__(self, data_source, severity):
+    def __init__(self, input_configs, data_source, severity):
+        self._input_configs = input_configs
         self._data_source = data_source
         self._severity = Severity[severity.upper()]
 
@@ -304,6 +390,9 @@ class RuleVisitor(NodeVisitor):
         self._section = None
     
     def visit_partition(self, node: _ast.Partition):
+        if node.target.id not in self._input_configs:
+            return
+
         self._section = 'partition'
         self._current_namespace = node.target.id
 
@@ -345,12 +434,25 @@ class RuleVisitor(NodeVisitor):
 
     def visit_assign(self, node: _ast.Assign):
         target = node.target.id
-    
-        self.visit(node.value) # visit first
+        
+        self.visit(node.value)  # visit first
+        try:
+            value = self._evaluator.eval(node.value)
+        except KeyError as e:
+            cmate_logger.warning(
+                "Failed to assign value to '%s' at line %d, column %d. "
+                "KeyError encountered: %s. "
+                "This typically occurs when: "
+                "1. Incorrect context variables are passed through cli, or "
+                "2. The cmate configuration references an undefined value in an expression. "
+                "Please verify that all referenced variables are properly defined.",
+                target, node.value.lineno, node.value.col_offset, e
+            )
+            return
 
         path = f'global::{target}'
         self._data_source[path] = (
-            self._evaluator.eval(node.value),
+            value,
             self._pretty_formatter.format(node.value)
         )
 
@@ -383,7 +485,7 @@ class RuleVisitor(NodeVisitor):
 class SetEnvGenerator(NodeVisitor):
     def __init__(self, data_source):
         self._evaluator = Evaluator(data_source)
-        self._white_list = re.compile(r'[a-zA-Z0-9_\-:.]+')
+        self._white_list = re.compile(r'[a-zA-Z0-9_\-:.;]+')
         self._environ = os.environ.copy()
         self._set_scripts = []
         self._undo_scripts = []
@@ -449,11 +551,11 @@ class SetEnvGenerator(NodeVisitor):
 
         original_val = self._environ.get(env_var)
 
-        self._set_scripts.append(f'export {env_var}={expected_val}')
+        self._set_scripts.append(f'export {env_var}="{expected_val}"')
         if original_val is None:
             self._undo_scripts.append(f'unset {env_var}')
         else:
-            self._undo_scripts.append(f'export {env_var}={original_val}')
+            self._undo_scripts.append(f'export {env_var}="{original_val}"')
     
     def generate(self, node):
         self.visit(node)
@@ -465,13 +567,16 @@ class SetEnvGenerator(NodeVisitor):
             '#   source set_env.sh    # Apply environment changes\n'
             '#   source set_env.sh 0  # Revert changes\n\n'
             'if [ "$1" = "0" ]; then\n'
-            "    {set}\n"
-            "else\n"
             "    {undo}\n"
+            "else\n"
+            "    {set}\n"
             "fi\n"
         )
 
         with open_s('set_env.sh', 'w') as f:
+            self._set_scripts = self._set_scripts or [':']
+            self._undo_scripts = self._undo_scripts or [':']
+
             script = script_format.format(
                 set='\n    '.join(self._set_scripts),
                 undo='\n    '.join(self._undo_scripts)

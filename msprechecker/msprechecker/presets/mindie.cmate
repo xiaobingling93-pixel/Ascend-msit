@@ -225,8 +225,8 @@ if ${context::deploy_mode} == 'pd_mix':
         assert ${TASK_QUEUE_ENABLE} == '2', '建议开启 task_queue 算子下发队列 Level 2 优化', info
 
         if ${context::npu_type} == 'A2':
-            assert PathExists(${RANK_TABLE_FILE}), '需要配置为 rank table 文件路径，在 MindIE 2.0 及以下版本忽略此提示', info
-            assert PathExists(${RANKTABLEFILE}), '需要配置为 rank table 文件路径，在 MindIE 2.1 及以上版本忽略此提示', info
+            assert path_exists(${RANK_TABLE_FILE}), '需要配置为 rank table 文件路径，在 MindIE 2.0 及以下版本忽略此提示', info
+            assert path_exists(${RANKTABLEFILE}), '需要配置为 rank table 文件路径，在 MindIE 2.1 及以上版本忽略此提示', info
             assert ${MIES_CONTAINER_IP} == ${global::cur_ip}, 'MIES_CONTAINER_IP 表示当前容器 IP 地址，需要设置为当前容器 IP', error
             assert ${MASTER_IP} != NA, 'MASTER_IP 注意需要设置为主 server 的 IP 地址', error
             assert ${HCCL_BUFFSIZE} == '64', '用于控制两个 NPU 之间共享数据的缓存区大小，Atlas 800I A2 双机 DeepSeek 场景下建议设置的 HCCL_BUFFSIZE 为 64', info
@@ -263,7 +263,7 @@ if ${context::deploy_mode} == 'pd_mix':
     assert ${ServerConfig.interCommTLSEnabled} == false, '如果确实配置了安全证书，建议开启为 true，此条校验为提示', info
     assert ${BackendConfig.ModelDeployConfig.maxSeqLen} >= ${BackendConfig.ModelDeployConfig.maxInputTokenLen}, 'maxSeqLen 不应该小于 maxInputTokenLen，表示输入 token 加输出 token 的上限', error
     assert ${BackendConfig.ModelDeployConfig.maxInputTokenLen} >= 1, 'maxInputTokenLen 应该大于等于 1，表示输入 token 的上限', error
-    assert PathExists(${BackendConfig.ModelDeployConfig.ModelConfig[0].modelWeightPath}), 'modelWeightPath 需要配置为当前容器中挂载的模型权重路径，该路径需要存在', error
+    assert path_exists(${BackendConfig.ModelDeployConfig.ModelConfig[0].modelWeightPath}), 'modelWeightPath 需要配置为当前容器中挂载的模型权重路径，该路径需要存在', error
     assert ${BackendConfig.ModelDeployConfig.ModelConfig[0].ignore_eos} == false, 'ignore_eos 表示是否忽略 eos token，测试固定长度输出时可以设置为 true', info
     assert ${BackendConfig.ScheduleConfig.maxPrefillBatchSize} >= 1, '表示 prefill 的最大 batch size，不能小于 1', error
     assert ${BackendConfig.ScheduleConfig.maxPrefillTokens} >= ${BackendConfig.ModelDeployConfig.maxInputTokenLen}, 'maxPrefillTokens 需要设置大于 maxInputTokenLen，表示 prefill 最大 token 数', error
@@ -337,7 +337,7 @@ elif ${context::deploy_mode} == 'lwd':
     assert ${ServerConfig.inferMode} in ['standard', 'Standard'], '分布式推理场景下，inferMode 应该是 standard 或者 Standard', error
     assert ${BackendConfig.ModelDeployConfig.maxSeqLen} >= ${BackendConfig.ModelDeployConfig.maxInputTokenLen}, 'maxSeqLen 不应该小于 maxInputTokenLen，表示输入 token 加输出 token 的上限', error
     assert ${BackendConfig.ModelDeployConfig.maxInputTokenLen} >= 1, 'maxInputTokenLen 应该大于等于 1，表示输入 token 的上限', error
-    assert PathExists(${BackendConfig.ModelDeployConfig.ModelConfig[0].modelWeightPath}) == 1, 'modelWeightPath 需要配置为当前容器中挂载的模型权重路径，该路径需要存在', error
+    assert path_exists(${BackendConfig.ModelDeployConfig.ModelConfig[0].modelWeightPath}), 'modelWeightPath 需要配置为当前容器中挂载的模型权重路径，该路径需要存在', error
     assert ${BackendConfig.ScheduleConfig.maxPrefillBatchSize} >= 1, '表示 prefill 的最大 batch size，不能小于 1', error
     assert ${BackendConfig.ScheduleConfig.maxPrefillTokens} >= ${BackendConfig.ModelDeployConfig.maxInputTokenLen}, 'maxPrefillTokens 需要设置大于 maxInputTokenLen，表示 prefill 最大 token 数', error
     assert ${BackendConfig.ScheduleConfig.maxIterTimes} in range(1, ${BackendConfig.ModelDeployConfig.maxSeqLen}), 'maxIterTimes 应该大于等于 1 小于等于 maxSeqLen', error
@@ -370,7 +370,7 @@ fi
 [par ms_config]
 if ${context::deploy_mode} == 'pd_disaggregation_single_container':
     assert ${pp} == 1, '单机 PD 分离场景下，conf/config.json 中，pp 取值只能等于 1', error
-    assert PathExists(${config_model_weight_path}) and ${config_model_weight_path} == ${host_model_path}, '单机 PD 分离场景下，conf/config.json 中 modelWeightPath 需要和 deployment/mindie_service_single_container.yaml 中挂载在容器中的权重路径一致', error
+    assert path_exists(${config_model_weight_path}) and ${config_model_weight_path} == ${host_model_path}, '单机 PD 分离场景下，conf/config.json 中 modelWeightPath 需要和 deployment/mindie_service_single_container.yaml 中挂载在容器中的权重路径一致', error
     assert ${sp} in [1, ${tp}], '单机 PD 分离场景下，conf/config.json 中，sp 取值只能等于 1 或者等于 tp 的值', error
     assert ${ServerConfig.httpsEnabled} == false, '如果确实配置了安全证书，建议开启为 true，此条校验为提示', info
     assert ${ServerConfig.inferMode} == 'dmi', '单机 PD 分离场景下，conf/config.json 的 inferMode 应该是 dmi', error
@@ -441,8 +441,8 @@ if ${context::deploy_mode} == 'pd_disaggregation_single_container' and ${context
         assert int(${p_rate}) + int(${d_rate}) <= int(${global::npu_count}), '单机 PD 分离场景下，MINDIE_MS_P_RATE 和 MINDIE_MS_D_RATE 之和不能大于单机 NPU 总卡数', error
     fi
     
-    assert PathExists(${host_model_path}), '单机 PD 分离场景下，deployment/mindie_service_single_container.yaml 中，model-path 挂载的宿主机路径需要存在', error
-    assert PathExists(${container_model_path}), '单机 PD 分离场景下，deployment/mindie_service_single_container.yaml 中，model-path 挂载的宿主机路径需要存在', error
+    assert path_exists(${host_model_path}), '单机 PD 分离场景下，deployment/mindie_service_single_container.yaml 中，model-path 挂载的宿主机路径需要存在', error
+    assert path_exists(${container_model_path}), '单机 PD 分离场景下，deployment/mindie_service_single_container.yaml 中，model-path 挂载的宿主机路径需要存在', error
     assert ${[1].spec.replicas} == 1, '表示拉起的 pod 数，单机 PD 分离中 P 和 D 的 server 实例在同 pod 中，该值需要等于 1', error
     assert ${ms_config::world_size} <= ${[1].spec.template.spec.containers[0].resources.requests.huawei.com/Ascend910} and ${[1].spec.template.spec.containers[0].resources.requests.huawei.com/Ascend910} <= 8, '单机 PD 分离场景下，huawei.com/Ascend910 应该大于等于 conf/config.json 中的 worldSize 且小于等于 8', error
     assert ${ms_config::world_size} <= ${[1].spec.template.spec.containers[0].resources.limits.huawei.com/Ascend910} and ${[1].spec.template.spec.containers[0].resources.limits.huawei.com/Ascend910} <= 8, '单机 PD 分离场景下，huawei.com/Ascend910 应该大于等于 conf/config.json 中的 worldSize 且小于等于 8', error
@@ -464,8 +464,8 @@ if ${context::deploy_mode} == 'pd_disaggregation_single_container' and ${context
         assert int(${p_rate}) + int(${d_rate}) <= int(${global::npu_count}), '单机 PD 分离场景下，MINDIE_MS_P_RATE 和 MINDIE_MS_D_RATE 之和不能大于单机 NPU 总卡数', error
     fi
     
-    assert PathExists(${host_model_path}), '单机 PD 分离场景下，deployment/mindie_service_single_container_base_A3.yaml 中，model-path 挂载的宿主机路径需要存在', error
-    assert PathExists(${container_model_path}), '单机 PD 分离场景下，deployment/mindie_service_single_container_base_A3.yaml 中，model-path 挂载的宿主机路径需要存在', error
+    assert path_exists(${host_model_path}), '单机 PD 分离场景下，deployment/mindie_service_single_container_base_A3.yaml 中，model-path 挂载的宿主机路径需要存在', error
+    assert path_exists(${container_model_path}), '单机 PD 分离场景下，deployment/mindie_service_single_container_base_A3.yaml 中，model-path 挂载的宿主机路径需要存在', error
     assert ${[1].metadata.annotations.sp-block} == str(${[1].spec.template.spec.containers[0].resources.requests.huawei.com/Ascend910}), 'sp-block 表示 super-pod 块大小，指代虚拟超节点的 NPU 数量，应该等于 huawei.com/Ascend910 的值', error
     assert ${[1].spec.replicas} == 1, '表示拉起的 pod 数，单机 PD 分离中 P 和 D 的 server 实例在同 pod 中，该值需要等于 1', error
     assert ${ms_config::world_size} <= ${[1].spec.template.spec.containers[0].resources.requests.huawei.com/Ascend910} and ${[1].spec.template.spec.containers[0].resources.requests.huawei.com/Ascend910} <= 16, '单机 PD 分离场景下，huawei.com/Ascend910 应该大于等于 conf/config.json 中的 worldSize 且小于等于 16', error
