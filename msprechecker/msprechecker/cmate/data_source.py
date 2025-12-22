@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 # Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
 #
@@ -14,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 from collections import defaultdict, deque
 from .util import get_cur_ip
 
@@ -82,8 +80,6 @@ class DataSource:
     def __init__(self):
         self._nss = defaultdict(Namespace)
 
-        # init os
-        self.flatten('env', dict(os.environ.items()))
         self._nss['global']['cur_ip'] = get_cur_ip()
 
     def __contains__(self, key):

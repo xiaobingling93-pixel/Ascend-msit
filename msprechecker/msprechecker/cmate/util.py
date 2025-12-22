@@ -28,9 +28,9 @@ from msguard.security import open_s
 
 class ANSIColoredFormatter(logging.Formatter):
     COLORS = {
-        'WARNING': '\033[33m',    # 黄色
-        'ERROR': '\033[31m',      # 红色
-        'RESET': '\033[0m'        # 重置
+        'WARNING': '\033[33m',
+        'ERROR': '\033[31m',
+        'RESET': '\033[0m'
     }
 
     def format(self, record):

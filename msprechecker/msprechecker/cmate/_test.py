@@ -51,16 +51,17 @@ class RuleAssertionError(AssertionError):
 
 
 class RuleTestResult(unittest.TestResult):
-    def __init__(self, stream=None, descriptions=None, verbosity=1, total_cnt=None, failfast=False):
-        super().__init__()
+    def __init__(self, stream=None, descriptions=None, verbosity=False, total_cnt=None, failfast=False):
+        super().__init__(stream=stream, descriptions=descriptions, verbosity=verbosity)
         self.stream = stream
+        self.failfast = failfast
+        self.verbosity = verbosity
+
         self.seen = set()
         self.total_cnt = total_cnt
         self.cols, _ = shutil.get_terminal_size()
         self.status_chars = []
         self.on_sub_test = False
-        self.verbosity = verbosity or 1
-        self.failfast = failfast
         self.shouldStop = False
 
     def startTestRun(self):
@@ -76,11 +77,10 @@ class RuleTestResult(unittest.TestResult):
         # Only print per-scope compact header when not in verbose mode.
         if namespace not in self.seen:
             self.seen.add(namespace)
-            if getattr(self, 'verbosity', 1) == 1:
-                header = f"{namespace}: "
-                self.stream.write(header)
-                self.status_chars.clear()
-                self.stream.flush()
+            header = f"{namespace}: "
+            self.stream.write(header)
+            self.status_chars.clear()
+            self.stream.flush()
 
     def addError(self, test, err):
         super().addError(test, err)
@@ -89,8 +89,8 @@ class RuleTestResult(unittest.TestResult):
             last = self.errors.pop()
             exc_val = last[1][1] if isinstance(last[1], tuple) and len(last[1]) >= 2 else last[1]
             self.errors.append((last[0], exc_val))
-        # verbosity: print immediate line
-        if self.verbosity > 1:
+
+        if self.verbosity:
             # print pytest-like verbose line
             self._print_verbose_line(test, 'ERROR')
         else:
@@ -105,7 +105,8 @@ class RuleTestResult(unittest.TestResult):
         # change to store test instance and err instance instead
         self.failures.pop()
         self.failures.append((test, err[1]))
-        if self.verbosity > 1:
+
+        if self.verbosity:
             self._print_verbose_line(test, 'FAILED')
         else:
             self._update(test, 'F')
@@ -115,14 +116,14 @@ class RuleTestResult(unittest.TestResult):
 
     def addSuccess(self, test):
         super().addSuccess(test)
-        if self.verbosity > 1:
+        if self.verbosity:
             self._print_verbose_line(test, 'PASSED')
         else:
             self._update(test, '.')
 
     def addSkip(self, test, reason):
         super().addSkip(test, reason)
-        if self.verbosity > 1:
+        if self.verbosity:
             # include reason in parentheses but keep left width reasonable
             label = 'SKIPPED'
             self._print_verbose_line(test, label)
@@ -152,12 +153,12 @@ class RuleTestResult(unittest.TestResult):
             # change to store test instance and err instance instead
             self.failures.pop()
             self.failures.append((test, err[1]))
-            if self.verbosity > 1:
+            if self.verbosity:
                 self.stream.writeln('')
                 self.stream.writeln(f"{test.id()} ... \033[31mFAILED\033[0m (subtest)")
         else:
             self._update(test, 'E')
-            if self.verbosity > 1:
+            if self.verbosity:
                 self.stream.writeln('')
                 self.stream.writeln(f"{test.id()} ... \033[31mERROR\033[0m (subtest)")
 
@@ -205,22 +206,21 @@ class RuleTestResult(unittest.TestResult):
         terminal_width = self.cols
         available_space = terminal_width - visible_len - len(pct_s)
 
-        if getattr(self, 'verbosity', 1) == 1:
-            if available_space > 0:
-                pad = ' ' * available_space
-                line = f"{header}{status_disp}{pad}{pct_s}"
+        if available_space > 0:
+            pad = ' ' * available_space
+            line = f"{header}{status_disp}{pad}{pct_s}"
+        else:
+            # if line too long, truncate raw status and recompute display
+            overflow = -available_space
+            if overflow >= len(self.status_chars):
+                trimmed_disp = ''
             else:
-                # if line too long, truncate raw status and recompute display
-                overflow = -available_space
-                if overflow >= len(self.status_chars):
-                    trimmed_disp = ''
-                else:
-                    trimmed_disp = ''.join(color_map.get(c, c) for c in self.status_chars[:-overflow])
-                line = f"{header}{trimmed_disp} {pct_s}"
+                trimmed_disp = ''.join(color_map.get(c, c) for c in self.status_chars[:-overflow])
+            line = f"{header}{trimmed_disp} {pct_s}"
 
-            # output and flush the compact progress line
-            self.stream.write('\r' + line)
-            self.stream.flush()
+        # output and flush the compact progress line
+        self.stream.write('\r' + line)
+        self.stream.flush()
     
     def _print_verbose_line(self, test, status_word):
         """Print a pytest-like verbose line: <testid> <STATUS> [  X%]
