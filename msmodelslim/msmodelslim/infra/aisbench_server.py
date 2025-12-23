@@ -79,6 +79,7 @@ class DatasetConfig(BaseModel):
     mode: str = Field(default="", description="该数据集的评测模式，空字符串表示使用全局模式")
     request_rate: float = Field(default=0.0, description="该数据集的请求速率，0.0 表示使用全局默认值")
     max_out_len: Optional[int] = Field(default=None, description="该数据集的最大输出长度，None 表示使用全局默认值")
+    returns_tool_calls: Optional[bool] = Field(default=None, description="是否返回工具调用，None 表示不写入该字段")
     api_chat_type: str = Field(default="VLLMCustomAPIChat", description="该数据集使用的 API Chat 类型")
     chat_template_kwargs: Dict = Field(
         default_factory=dict,
@@ -166,6 +167,7 @@ class AisBenchServer:
                         request_rate = self.ais_config.request_rate
                     max_out_len = dataset_cfg.max_out_len if dataset_cfg.max_out_len is not None else self.ais_config.max_out_len
                     self._write_model_config(max_out_len=max_out_len, request_rate=request_rate,
+                                             returns_tool_calls=dataset_cfg.returns_tool_calls,
                                              api_chat_type=dataset_cfg.api_chat_type,
                                              chat_template_kwargs=dataset_cfg.chat_template_kwargs)
                     cmd_options = self._build_command_options(dataset_cfg)
@@ -236,6 +238,7 @@ class AisBenchServer:
         get_logger().debug(f"AISBench model config will be written to: {self.model_config_path}")
 
     def _write_model_config(self, max_out_len: int, request_rate: float = 0.0,
+                            returns_tool_calls: Optional[bool] = None,
                             api_chat_type: str = "VLLMCustomAPIChat",
                             chat_template_kwargs: Optional[Dict] = None):
         """根据当前量化结果生成 vllm_api model config。"""
@@ -261,6 +264,11 @@ class AisBenchServer:
             comma = "," if postproc_field else ""
             chat_template_kwargs_field = f"        chat_template_kwargs={repr(chat_template_kwargs)}{comma}\n"
 
+        # Only include returns_tool_calls if explicitly specified in yaml (not None)
+        returns_tool_calls_field = ""
+        if returns_tool_calls is not None:
+            returns_tool_calls_field = f"        returns_tool_calls={returns_tool_calls},\n"
+
         content = (
             f"from ais_bench.benchmark.models import {api_chat_type}\n"
             f"{import_line}"
@@ -277,6 +285,7 @@ class AisBenchServer:
             f"        host_port={repr(host_port_value)},\n"
             f"        max_out_len={max_out_len_value},\n"
             f"        batch_size={cfg.batch_size},\n"
+            f"{returns_tool_calls_field}"
             f"        trust_remote_code={cfg.trust_remote_code},\n"
             f"        generation_kwargs={repr(cfg.generation_kwargs)},\n"
             f"{chat_template_kwargs_field}{postproc_field}\n"

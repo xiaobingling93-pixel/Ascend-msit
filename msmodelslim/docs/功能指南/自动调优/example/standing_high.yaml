@@ -81,6 +81,7 @@ evaluation:
         config_name: "BFCL_gen_simple"
         mode: all
         max_out_len: 1024  # dataset-specific max output length, will override global max_out_len
+        returns_tool_calls: true
         api_chat_type: VLLMFunctionCallAPIChat
       # add other datasets aisbench supports here
       # Note: max_out_len is optional for each dataset. If not specified, the global max_out_len from aisbench section will be used
@@ -110,6 +111,8 @@ evaluation:
       max-model-len: 8192 # replace with your own max model length, according to your dataset
       max-num-batched-tokens: 8192 # replace with your own max number of batched tokens, according to your dataset
       gpu-memory-utilization: 0.9
+      enable-auto-tool-choice: true
+      tool-call-parser: hermes
       additional_config:
         ascend_scheduler_config:
           enable: true
