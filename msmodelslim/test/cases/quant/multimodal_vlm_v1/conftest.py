@@ -22,6 +22,9 @@ during import time.
 
 import sys
 from unittest.mock import MagicMock
+
+import pytest
+
 from testing_utils.mock import mock_kia_library, mock_security_library, mock_init_config
 
 
@@ -36,12 +39,27 @@ mock_init_config()
 mock_kia_library()
 mock_security_library()
 
-# Additionally mock check_dirpath_before_read which is called by get_valid_read_path
-# but not included in mock_security_library()
-if 'msmodelslim.utils.security.path' not in sys.modules:
-    sys.modules['msmodelslim.utils.security.path'] = MagicMock()
-sys.modules['msmodelslim.utils.security.path'].check_dirpath_before_read = _mock_check_dirpath_before_read
+_wcmatch_original = None
+_wcmatch_mock_used = False
 
-# Mock optional third-party dependency wcmatch to avoid ModuleNotFoundError in tests
-if 'wcmatch' not in sys.modules:
-    sys.modules['wcmatch'] = MagicMock()
+try:
+    import wcmatch
+
+    _wcmatch_original = sys.modules.get("wcmatch")
+except ImportError:
+    _wcmatch_mock_used = True
+    _wcmatch_original = None
+    sys.modules["wcmatch"] = MagicMock()
+    sys.modules["wcmatch"].fnmatch = MagicMock()
+
+
+def pytest_unconfigure(config):
+    """在测试结束后清理按需 mock 的模块，恢复原始模块或属性（如果存在）。"""
+    global _wcmatch_original, _wcmatch_mock_used
+
+    # 1. 清理 wcmatch mock
+    if _wcmatch_mock_used:
+        if "wcmatch" in sys.modules:
+            del sys.modules["wcmatch"]
+        if _wcmatch_original is not None:
+            sys.modules["wcmatch"] = _wcmatch_original
