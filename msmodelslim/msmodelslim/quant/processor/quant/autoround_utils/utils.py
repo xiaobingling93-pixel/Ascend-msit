@@ -169,6 +169,7 @@ def quant_tensor_sym(
         tensor_max=None,
         q_scale_thresh=torch.finfo(torch.float32).eps,
         output_qdq=True,
+        use_quantile=False,
         **kwargs
 ):
     """Quantize and de-quantize tensor asymmetrically. full range, credict goes to llamacpp community
@@ -195,15 +196,14 @@ def quant_tensor_sym(
 
     if tensor_min is None or tensor_max is None:
 
-        if bits != 4:
-            robust_quantile = 1.0
-
-        q_lo = torch.quantile(tensor.to(torch.float32), 1 - robust_quantile, dim=-1)
-        q_hi = torch.quantile(tensor.to(torch.float32), robust_quantile, dim=-1)
-
-
-        wmin_tmp = torch.clamp(q_lo, max=0)
-        wmax_tmp = torch.clamp(q_hi, min=0)
+        if use_quantile and bits == 4:
+            q_lo = torch.quantile(tensor.to(torch.float32), 1 - robust_quantile, dim=-1)
+            q_hi = torch.quantile(tensor.to(torch.float32), robust_quantile, dim=-1)
+            wmin_tmp = torch.clamp(q_lo, max=0)
+            wmax_tmp = torch.clamp(q_hi, min=0)
+        else:
+            wmin_tmp = torch.clamp(tensor.min(-1)[0], max=0)
+            wmax_tmp = torch.clamp(tensor.max(-1)[0], min=0)
 
     else:
         wmin_tmp = tensor_min
@@ -211,14 +211,21 @@ def quant_tensor_sym(
 
     wmin_abs = -(wmin_tmp * min_scale)
     wmax_abs = wmax_tmp * max_scale
-    max_v = (2 * (wmax_abs < wmin_abs).int() - 1) * torch.max(wmax_abs, wmin_abs)
+    max_v = torch.max(wmax_abs, wmin_abs)
     scale = (max_v / maxq).to(scale_dtype)
     scale = torch.where(scale < 0, torch.clamp(scale, max=-q_scale_thresh), torch.clamp(scale, min=q_scale_thresh))
 
     scale = scale.unsqueeze(dim=-1)
     zp = torch.full_like(scale, 0)
 
-    int_w = round_ste(tensor / scale + w_corr)
+    if isinstance(w_corr, torch.Tensor) and bits==4:
+        W_corr = torch.clamp(w_corr, min=-0.5, max=0.5)
+    elif isinstance(w_corr, torch.Tensor) and bits==8:
+        W_corr = torch.clamp(w_corr, min=-1.0, max=1.0)
+    else:
+        W_corr = w_corr
+
+    int_w = round_ste(tensor / scale + W_corr)
 
     q = torch.clamp(int_w, -maxq - 1, maxq)
     if not output_qdq:
