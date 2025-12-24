@@ -98,7 +98,7 @@ class TestDitCacheSearchConfig(BaseDitCacheTestCase):
         """测试 cache_ratio 必须在 [1.0, 2.0] 范围内"""
         with self.assertRaises(ValueError) as context:
             self.dit_cache_search_config(cache_ratio=2.5, num_sampling_steps=100)
-        self.assertIn("cache_ratio should be in the range of [1.0, 2.0]", str(context.exception))
+        self.assertIn("cache_ratio should be in the range of (1.0, 2.0]", str(context.exception))
 
     def test_invalid_dit_block_num(self):
         """测试 dit_block_num 不能为负数或 0"""
