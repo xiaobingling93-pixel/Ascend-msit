@@ -101,6 +101,8 @@ class WrapperLinear(torch.nn.Module):
         self.orig_forward = self.linear_forward if isinstance(self.orig_layer, torch.nn.Linear) else self.conv1d_forward
         self.config = config
 
+        self.train_with_act_quant = False  # quant activations during Autoround calibration
+
     def unwrapper(self, best_params):
         """Restores the original layer by applying the best tuning parameters.
 
@@ -185,7 +187,7 @@ class WrapperLinear(torch.nn.Module):
             torch.Tensor: Output tensor after applying the wrapped layer.
         """
 
-        w_corr = torch.clamp(self.value, min=-0.5, max=0.5)
+        w_corr = self.value
 
         if self.enable_trainable_smooth:
             weight_q, _, _ = self._qdq_weight(w_corr, self.min_scale, self.max_scale, self.act_smooth_scale)
@@ -197,7 +199,7 @@ class WrapperLinear(torch.nn.Module):
             for hook in self.orig_layer._forward_pre_hooks.values():
                 x = hook(self.orig_layer, (x,))[0]
 
-        if self.enable_act_quant:
+        if self.enable_act_quant and self.train_with_act_quant:
             act_max = self.orig_layer.act_max if hasattr(self.orig_layer, "act_max") else None
             if self.enable_trainable_smooth:
                 x, _, _ = self._qdq_act(x, act_max_scale=self.act_max_scale, act_smooth_scale=self.act_smooth_scale,

@@ -63,6 +63,7 @@ class BlockQuantTrainer:
         self.shared_cache_keys = shared_cache_keys
         self.optimizer = self.get_optimizer()
         self.lr_scheduler = lr_scheduler
+        self.lr_multiplier = 5
 
     @staticmethod
     def get_optimizer():
@@ -175,11 +176,11 @@ class BlockQuantTrainer:
         # 设置优化器
         if self.enable_minmax_tuning:
             optimizer = self.optimizer(
-                [{"params": round_params}, {"params": minmax_params, "lr": self.minmax_lr}],
-                lr=self.lr, weight_decay=0
+                [{"params": round_params}, {"params": minmax_params, "lr": self.minmax_lr*self.lr_multiplier}],
+                lr=self.lr*self.lr_multiplier, weight_decay=0
             )
         else:
-            optimizer = self.optimizer(round_params, lr=self.lr, weight_decay=0)
+            optimizer = self.optimizer(round_params, lr=self.lr*self.lr_multiplier, weight_decay=0)
 
         # 设置学习率调度器
         if self.lr_scheduler is None:
@@ -204,7 +205,7 @@ class BlockQuantTrainer:
         if self.gradient_accumulate_steps != 1:
             mse_reduction = "sum"
 
-        mse_loss = torch.nn.MSELoss(reduction="none")
+        mse_loss = torch.nn.L1Loss(reduction="none")
         init_loss = best_loss
         best_params = {}
         total_loss = 0

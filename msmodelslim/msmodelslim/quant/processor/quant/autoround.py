@@ -554,7 +554,7 @@ class AutoroundQuantProcessor(AutoSessionProcessor):
         self.iters = config.iters
         self.enable_minmax_tuning = config.enable_minmax_tuning
         self.enable_round_tuning = config.enable_round_tuning
-        self.enable_quanted_input = True
+        self.enable_quanted_input = False
         self.enable_trainable_smooth = False
 
         self.device = torch.device("cpu")
