@@ -1,0 +1,9 @@
+[project]
+name = "vllm_inference_optimization"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.8"
+dependencies = []
+
+[project.entry-points.'modelevalstate.plugins']
+vllm_inference_optimization="vllm_inference_optimization:register"
