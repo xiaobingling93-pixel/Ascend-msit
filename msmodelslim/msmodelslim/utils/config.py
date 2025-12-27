@@ -3,6 +3,7 @@
 import json
 import os
 from configparser import ConfigParser
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -33,7 +34,7 @@ class URLs(BaseModel):
 
 class EnvVars(BaseModel):
     log_level: str
-    custom_practice_repo: str | None = None
+    custom_practice_repo: Optional[str] = None
 
 
 class ModelSlimConfig(BaseModel):
