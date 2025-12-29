@@ -28,7 +28,7 @@ from msmodelslim.core.base.protocol import ProcessRequest
 from msmodelslim.core.const import DeviceType
 from msmodelslim.core.graph import AdapterConfig, MappingConfig, FusionConfig
 from msmodelslim.model.deepseek_v3.quarot import get_ln_fuse_map, get_rotate_map
-from msmodelslim.quant.processor.quarot import QuaRotInterface
+from msmodelslim.processor.quarot import QuaRotInterface
 from msmodelslim.utils.exception import InvalidModelError
 from msmodelslim.utils.logging import logger_setter, get_logger
 from msmodelslim.utils.security import get_valid_read_path, json_safe_load, MAX_READ_FILE_SIZE_32G

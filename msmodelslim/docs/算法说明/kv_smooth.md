@@ -50,7 +50,7 @@ spec:
 
 ### 实现
 
-- 算法在 `msmodelslim/quant/processor/kv_smooth` 中实现，处理流程分两阶段：
+- 算法在 `msmodelslim/processor/kv_smooth` 中实现，处理流程分两阶段：
     1. **观察阶段（preprocess）**：
         - 通过注入观察器封装 `past_key_values`，在注意力模块调用 `Cache.update()` 时捕获 `key_states`。
         - 使用观测器在维度 [batch, seq] 上聚合 min/max，得到每层每通道的绝对值的最大值，作为缩放的统计基准。
@@ -102,7 +102,7 @@ class KVSmoothFusedInterface(ABC):
     - 目标通路符合 `Linear/Norm → RoPE → KVCache` 的结构。
 - **步骤**：
     1. 模型适配器继承`KVSmoothFusedInterface`接口，并实现所有方法， 可参考
-       `msmodelslim/model/qwen3.py`。
+       `msmodelslim/model/qwen3/model_adapter.py`。
     2. 在 `get_kvsmooth_fused_subgraph()` 中，为每层返回 `KVSmoothFusedUnit`，指定：
         - `attention_name`：与 `named_modules()` 一致的完整路径（如 `model.layers.{i}.self_attn`）。
         - `layer_idx`：层索引， 用于 Cache.update()。

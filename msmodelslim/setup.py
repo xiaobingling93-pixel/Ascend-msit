@@ -80,19 +80,19 @@ setup(
             'msmodelslim=msmodelslim.cli.__main__:main'
         ],
         "msmodelslim.quant_service.plugins": [
-            "modelslim_v0=msmodelslim.app.quant_service.modelslim_v0.quant_service:ModelslimV0QuantService",
-            "modelslim_v1=msmodelslim.app.quant_service.modelslim_v1:ModelslimV1QuantService",
+            "modelslim_v0=msmodelslim.core.quant_service.modelslim_v0.quant_service:ModelslimV0QuantService",
+            "modelslim_v1=msmodelslim.core.quant_service.modelslim_v1:ModelslimV1QuantService",
             "multimodal_sd_modelslim_v1="
-            "msmodelslim.app.quant_service.multimodal_sd_v1:MultimodalSDModelslimV1QuantService",
+            "msmodelslim.core.quant_service.multimodal_sd_v1:MultimodalSDModelslimV1QuantService",
             "multimodal_vlm_modelslim_v1="
-            "msmodelslim.app.quant_service.multimodal_vlm_v1:MultimodalVLMModelslimV1QuantService",
+            "msmodelslim.core.quant_service.multimodal_vlm_v1:MultimodalVLMModelslimV1QuantService",
         ],
         "msmodelslim.model_adapter.plugins": model_adapter_plugins,
         "msmodelslim.strategy_config.plugins": [
-            "standing_high=msmodelslim.app.tune_strategy.standing_high.strategy:StandingHighStrategyConfig",
+            "standing_high=msmodelslim.core.tune_strategy.standing_high.strategy:StandingHighStrategyConfig",
         ],
         "msmodelslim.strategy.plugins": [
-            "standing_high=msmodelslim.app.tune_strategy.standing_high.strategy:StandingHighStrategy",
+            "standing_high=msmodelslim.core.tune_strategy.standing_high.strategy:StandingHighStrategy",
         ],
         "msmodelslim.evaluate_config.plugins": [
             "service_oriented=msmodelslim.infra.service_oriented_evaluate_service:ServiceOrientedEvaluateServiceConfig",

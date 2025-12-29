@@ -44,11 +44,11 @@ spec:
 
 ### 实现位置
 
-- 量化校准：[`msmodelslim/quant/quantizer/impl/minmax.py`](../../msmodelslim/quant/quantizer/impl/minmax.py) 中的
+- 量化校准：[`msmodelslim/core/quantizer/impl/minmax.py`](../../msmodelslim/core/quantizer/impl/minmax.py) 中的
   `ActPDMixMinmax`
-- 量化模式 IR：[`msmodelslim/quant/ir/w8a8_pdmix.py`](../../msmodelslim/quant/ir/w8a8_pdmix.py) 中的
+- 量化模式 IR：[`msmodelslim/ir/w8a8_pdmix.py`](../../msmodelslim/ir/w8a8_pdmix.py) 中的
   `W8A8PDMixFakeQuantLinear`
-- 相关常量：[`msmodelslim/quant/ir/const.py`](../../msmodelslim/quant/ir/const.py) 定义 `int8_pd_mix_asym`
+- 相关常量：[`msmodelslim/ir/const.py`](../../msmodelslim/ir/const.py) 定义 `int8_pd_mix_asym`
 
 ## 适用范围与局限性
 

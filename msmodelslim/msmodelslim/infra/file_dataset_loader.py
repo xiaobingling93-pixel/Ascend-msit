@@ -2,8 +2,8 @@
 from pathlib import Path
 from typing import List, Any
 
-from msmodelslim.app.quant_service.dataset_loader_infra import DatasetLoaderInfra as qsdl
-from msmodelslim.app.tune_strategy.dataset_loader_infra import DatasetLoaderInfra as tsdl
+from msmodelslim.core.quant_service import DatasetLoaderInfra as qsdl
+from msmodelslim.core.tune_strategy.dataset_loader_infra import DatasetLoaderInfra as tsdl
 from msmodelslim.utils.exception import InvalidDatasetError, SchemaValidateError
 from msmodelslim.utils.security import get_valid_read_path
 from msmodelslim.utils.security.model import SafeGenerator

@@ -23,7 +23,7 @@ from typing import Dict, Literal, List, Optional
 from pydantic import BaseModel, Field, AfterValidator
 
 from msmodelslim.app.auto_tuning.evaluation_service_infra import EvaluateContext
-from msmodelslim.app.tune_strategy import EvaluateAccuracy
+from msmodelslim.core.tune_strategy import EvaluateAccuracy
 from msmodelslim.utils.exception import SpecError
 from msmodelslim.utils.logging import get_logger
 from msmodelslim.utils.plugin import TypedConfig

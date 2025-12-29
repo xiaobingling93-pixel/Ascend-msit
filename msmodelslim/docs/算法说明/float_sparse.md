@@ -60,7 +60,7 @@ spec:
 
 ### 实现
 
-- 算法在 `msmodelslim/quant/processor/sparse/float_sparse.py` 和 `admm.py` 中实现：
+- 算法在 `msmodelslim/processor/sparse/float_sparse.py` 和 `admm.py` 中实现：
 
 #### ADMM稀疏器核心类
 

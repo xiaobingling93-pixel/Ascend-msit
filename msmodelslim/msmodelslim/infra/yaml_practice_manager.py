@@ -4,7 +4,7 @@ from typing import Dict, Generator, Optional
 
 from msmodelslim.app.auto_tuning import PracticeManagerInfra as atpm
 from msmodelslim.app.naive_quantization import PracticeManagerInfra as nqpm
-from msmodelslim.app.practice.interface import PracticeConfig
+from msmodelslim.core.practice import PracticeConfig
 from msmodelslim.utils.exception import SecurityError, UnsupportedError, SpecError
 from msmodelslim.utils.security import get_valid_read_path
 from msmodelslim.utils.yaml_database import YamlDatabase
