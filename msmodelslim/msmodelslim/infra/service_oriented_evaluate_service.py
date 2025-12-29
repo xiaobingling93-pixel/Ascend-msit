@@ -99,7 +99,7 @@ def is_demand_satisfied(
 
     for d in demand:
         r = result_map[d.dataset]
-        if abs(r.accuracy - d.target) > d.tolerance:
+        if d.target - r.accuracy > d.tolerance:
             return False
 
     return True
