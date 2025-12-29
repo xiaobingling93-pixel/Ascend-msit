@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 
 from msmodelslim.app.naive_quantization import NaiveQuantizationApplication
-from msmodelslim.app.quant_service.proxy import QuantServiceProxy
+from msmodelslim.core.quant_service.proxy import QuantServiceProxy
 from msmodelslim.cli.utils import parse_device_string
 from msmodelslim.infra.file_dataset_loader import FileDatasetLoader
 from msmodelslim.infra.vlm_dataset_loader import VLMDatasetLoader

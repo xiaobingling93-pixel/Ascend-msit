@@ -15,13 +15,13 @@ from safetensors import safe_open
 from torch import distributed as dist
 from tqdm import tqdm
 
+from msmodelslim import ir as qir
 from msmodelslim.core.base.protocol import ProcessRequest
 from msmodelslim.core.const import DeviceType
 from msmodelslim.core.graph import AdapterConfig, MappingConfig, FusionConfig
 from msmodelslim.model.common.layer_wise_forward import generated_decoder_layer_visit_func, \
     TransformersForwardBreak
 from msmodelslim.model.common.transformers import TransformersModel
-from msmodelslim.quant import ir as qir
 from msmodelslim.utils.exception import InvalidModelError
 from msmodelslim.utils.logging import logger_setter, get_logger
 from msmodelslim.utils.security import json_safe_load, json_safe_dump, get_valid_read_path, MAX_READ_FILE_SIZE_32G

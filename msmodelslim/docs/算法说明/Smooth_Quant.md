@@ -94,7 +94,7 @@ y = torch.cat([linear(x) for linear in linears], dim=-1)
 
 ### 实现
 
-算法在 `msmodelslim/quant/processor/anti_outlier/smooth_quant/` 中实现，处理流程分两阶段：
+算法在 `msmodelslim/processor/anti_outlier/smooth_quant/` 中实现，处理流程分两阶段：
 
 #### 1) 预处理阶段（preprocess）
 

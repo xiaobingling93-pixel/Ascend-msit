@@ -12,22 +12,3 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
-__all__ = [
-    "KIAManager",
-
-    "QDType",
-    "QParam",
-    "QStorage",
-
-    "calculate_qparam",
-    "quantize",
-    "dequantize",
-    "fake_quantize"
-]
-
-from .KIA import KIAManager
-from .QAL import QDType, QParam, QStorage
-from .api import calculate_qparam, quantize, dequantize, fake_quantize
-KIAManager.init_module()
-KIAManager.check_version()

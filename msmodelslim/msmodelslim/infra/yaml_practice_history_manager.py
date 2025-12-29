@@ -19,7 +19,7 @@ from typing import Dict, List
 from pydantic import BaseModel, Field, ConfigDict
 
 from msmodelslim.app.auto_tuning import TuningHistoryManagerInfra, TuningHistory
-from msmodelslim.app.tune_strategy import EvaluateResult
+from msmodelslim.core.tune_strategy import EvaluateResult
 from msmodelslim.utils.security import yaml_safe_load, yaml_safe_dump
 from msmodelslim.utils.yaml_database import YamlDatabase
 

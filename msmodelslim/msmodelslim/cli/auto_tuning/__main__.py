@@ -3,8 +3,8 @@ import os
 from pathlib import Path
 
 from msmodelslim.app.auto_tuning import AutoTuningApplication
-from msmodelslim.app.quant_service.proxy import QuantServiceProxy
-from msmodelslim.app.tune_strategy.plugin_factory import PluginTuningStrategyFactory
+from msmodelslim.core.quant_service.proxy import QuantServiceProxy
+from msmodelslim.core.tune_strategy.plugin_factory import PluginTuningStrategyFactory
 from msmodelslim.cli.utils import parse_device_string
 from msmodelslim.infra.file_dataset_loader import FileDatasetLoader
 from msmodelslim.infra.service_oriented_evaluate_service import ServiceOrientedEvaluateService
