@@ -139,8 +139,8 @@ class IterSmoothProcessor(BaseSmoothProcessor):
         self._validate_parameters()
         self.stats_collector = IterStatsCollector(symmetric=config.symmetric)
 
-        if self.support_distributed() and dist.is_initialized():
-            self.stats_collector.enable_sync()
+        # 初始化分布式辅助类
+        self.dist_helper = None
 
         if not config.symmetric:
             supported_types = ', '.join(IterStatsCollector.ASYM_SUPPORT_SUBGRAPH_TYPES)
