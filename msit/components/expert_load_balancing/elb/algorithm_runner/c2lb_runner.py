@@ -19,9 +19,10 @@ from components.expert_load_balancing.elb.data_loader.base_loader import DataTyp
 from components.expert_load_balancing.elb.algorithm_runner.base_algorithm_runner import \
     BaseAlgorithmRunner, AlgorithmType, DEPLOYMENT_JSON_FILE
 from components.utils.security_check import check_int
-from c2lb import lb_and_intra_layer_affinity_redundancy_deploy
-from c2lb_dynamic import lb_redundancy_deploy_for_dynamic
-from c2lb_a3 import lb_and_intra_layer_affinity_redundancy_deploy_a3
+from components.expert_load_balancing.elb.algorithm.computing_communication import \
+    lb_and_intra_layer_affinity_redundancy_deploy
+from components.expert_load_balancing.elb.algorithm.c2lb_dynamic import lb_redundancy_deploy_for_dynamic
+from components.expert_load_balancing.elb.algorithm.c2lb_a3 import lb_and_intra_layer_affinity_redundancy_deploy_a3
 
 
 class StaticC2lbRunner(BaseAlgorithmRunner):

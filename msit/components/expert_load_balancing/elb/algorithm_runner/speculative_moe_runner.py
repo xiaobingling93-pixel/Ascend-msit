@@ -10,7 +10,8 @@ from components.expert_load_balancing.elb.algorithm_runner.base_algorithm_runner
 from components.expert_load_balancing.elb.constant import A2, A3
 from components.utils.security_check import check_int, check_type, get_valid_read_path
 from components.utils.file_open_check import ms_open, MAX_SIZE_LIMITE_NORMAL_FILE
-from speculative_moe import ExpSolver, ExpILPSolver, second_optim, all_to_all_algorithm_multi_process
+from components.expert_load_balancing.elb.algorithm.speculative_moe import ExpSolver, ExpILPSolver, second_optim, \
+    all_to_all_algorithm_multi_process
 
 
 class SpeculativeArgs:
