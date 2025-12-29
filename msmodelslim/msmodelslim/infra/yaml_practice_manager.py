@@ -6,7 +6,7 @@ from msmodelslim.app.auto_tuning import PracticeManagerInfra as atpm
 from msmodelslim.app.naive_quantization import PracticeManagerInfra as nqpm
 from msmodelslim.core.practice import PracticeConfig
 from msmodelslim.utils.exception import SecurityError, UnsupportedError, SpecError
-from msmodelslim.utils.security import get_valid_read_path
+from msmodelslim.utils.security import get_valid_read_path, get_write_directory
 from msmodelslim.utils.yaml_database import YamlDatabase
 
 
@@ -18,6 +18,7 @@ class YamlPracticeManager(
         get_valid_read_path(str(official_config_dir), is_dir=True)
         self.official_config_dir = official_config_dir
         if custom_config_dir is not None:
+            get_write_directory(str(custom_config_dir))
             get_valid_read_path(str(custom_config_dir), is_dir=True)
         self.custom_config_dir = custom_config_dir
 
