@@ -56,60 +56,6 @@ class TestExpertLoadBalanceCommandHandle(unittest.TestCase):
         mock_logger.info.assert_any_call("===================load balancing algorithm start====================")
         mock_logger.info.assert_any_call("===================load balancing algorithm end====================")
 
-
-    @patch('os.path.exists')
-    @patch('components.expert_load_balancing.elb.__main__.logger')
-    def test_handle_cann_path_not_exist(self, mock_logger, mock_exists):
-        mock_exists.return_value = False
-        
-        with self.assertRaises(FileNotFoundError):
-            self.command.handle(self.args)
-        
-        mock_logger.error.assert_called_with("CANN toolkit path does not exist. Please check your environment variables.")
-
-    @patch('os.path.exists')
-    @patch('os.stat')
-    @patch('os.getuid')
-    @patch('pwd.getpwuid')
-    @patch('components.expert_load_balancing.elb.__main__.logger')
-    def test_handle_unsafe_permissions(self, mock_logger, mock_getpwuid, mock_getuid, mock_stat, mock_exists):
-        os.environ["ASCEND_TOOLKIT_HOME"] = "/valid/path"
-        mock_exists.return_value = True
-    
-        mock_stat.return_value.st_uid = 1000
-        mock_stat.return_value.st_mode = 0o777  # 不安全权限
-        mock_getuid.return_value = 1000
-        mock_getpwuid.return_value.pw_name = "testuser"
-        with patch.dict('sys.modules', {'elb.eplb_runner': MagicMock()}):
-            self.command.handle(self.args)
-
-        mock_logger.warning.assert_called_with(
-            "Algorithm path has unsafe permissions. Recommended permissions are <= 750."
-        )
-    
-    @patch('os.path.exists')
-    @patch('os.stat')
-    @patch('os.getuid')
-    @patch('pwd.getpwuid')
-    @patch('components.expert_load_balancing.elb.__main__.logger')
-    def test_handle_different_owner(self, mock_logger, mock_getpwuid, mock_getuid, mock_stat, mock_exists):
-        os.environ["ASCEND_TOOLKIT_HOME"] = "/valid/path"
-        
-        mock_exists.return_value = True
-        mock_stat.return_value.st_uid = 1001  # 不同用户
-        mock_getuid.return_value = 1000
-        mock_getpwuid.side_effect = [
-            MagicMock(pw_name="testuser"),  # 当前用户
-            MagicMock(pw_name="otheruser")  # 路径属主
-        ]
-
-        with patch.dict('sys.modules', {'elb.eplb_runner': MagicMock()}):
-            self.command.handle(self.args)
-    
-        mock_logger.warning.assert_called_with(
-            "Algorithm path is owned by another userinstead of the current user. This may cause permission issues."
-        )
-
     @patch('os.path.exists')
     @patch('os.stat')
     @patch('os.getuid')
@@ -128,7 +74,6 @@ class TestExpertLoadBalanceCommandHandle(unittest.TestCase):
             self.command.handle(self.args)
         
         self.assertEqual(str(context.exception), "Failed to import load_balancing module")
-
 
 
 class TestExpertLoadBalanceCommmandAddArguments(unittest.TestCase):

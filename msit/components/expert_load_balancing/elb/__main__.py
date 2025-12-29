@@ -106,44 +106,13 @@ class ExpertLoadBalanceCommmand(BaseCommand):
                            "Running with privileges may compromise system security. "
                            "Use a regular account."
                            )
-        logger.info("===================load balancing algorithm start====================")
-        cann_path = os.environ.get("ASCEND_TOOLKIT_HOME", "/usr/local/Ascend/ascend-toolkit/latest")
-        cann_path = os.path.normpath(cann_path)
-        if not os.path.exists(cann_path):
-            logger.error("CANN toolkit path does not exist. Please check your environment variables.")
-            raise FileNotFoundError(f"CANN toolkit path does not exist: {cann_path!r}")
-        
-        algorithm_path = os.path.join(cann_path, "tools", "operator_cmp", "load_balancing")
-        if not os.path.exists(algorithm_path):
-            logger.error("Algorithm path does not exist. Please verify the installation.")
-            raise FileNotFoundError(f"Algorithm path does not exist: {algorithm_path!r}")
 
-        # 检查路径属主和权限
-        stat_info = os.stat(algorithm_path)
-        owner_uid = stat_info.st_uid
-        permissions = stat_info.st_mode & 0o777  # 获取权限位
-
-        current_uid = os.getuid()
-        current_user = pwd.getpwuid(current_uid).pw_name
-        path_owner = pwd.getpwuid(owner_uid).pw_name
-
-        if owner_uid != current_uid:
-            logger.warning(
-                "Algorithm path is owned by another user"
-                "instead of the current user. This may cause permission issues."
-            )
-        elif permissions > 0o750:
-            logger.warning(
-                "Algorithm path has unsafe permissions. "
-                "Recommended permissions are <= 750."
-            )
-
-        sys.path.append(algorithm_path)
         try:
             from elb.eplb_runner import load_balancing
         except ImportError as e:
             raise Exception("Failed to import load_balancing module") from e
 
+        logger.info("===================load balancing algorithm start====================")
         load_balancing(args)
         logger.info("===================load balancing algorithm end====================")
 
