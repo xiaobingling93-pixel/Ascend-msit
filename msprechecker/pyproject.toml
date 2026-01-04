@@ -1,22 +1,32 @@
+# 构建相关
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.packages]
+find = { exclude = ["test*"] }
+
+[tool.setuptools.package-data]
+"msprechecker" = ["**/*.yaml"]
+"pics" = ["*.png"]
+
+# 运行相关
 [project]
 name = "msprechecker"
-version = "0.3.0"
+version = "0.3.1"
 description = "MindStudio Prechecker"
+authors = [
+    {name = "AvadaKedavrua", email = "anonymousdev@163.com"},
+]
 readme = "README.md"
-license = {text = "Apache-2.0"}
-keywords = ["ms", "prechecker"]
+license = "Apache-2.0"
+keywords = ["MindStudio", "precheck"]
 classifiers = [
-    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
-    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent"
 ]
 dependencies = [
@@ -24,9 +34,9 @@ dependencies = [
     "psutil",
     "importlib_metadata; python_version == '3.7'",
     "msguard",
-    "ply"
+    "ply",
+    "colorama"
 ]
-
 requires-python = ">=3.7"
 
 [project.scripts]
@@ -37,6 +47,6 @@ source = "https://gitcode.com/Ascend/msit/tree/master/msprechecker"
 documentation = "https://gitcode.com/Ascend/msit/tree/master/msprechecker"
 tracker = "https://gitcode.com/Ascend/msit/issues"
 
-[tool.setuptools]
-packages = {find = {}}
-include-package-data = true
+# 可选安装项
+[project.optional-dependencies]
+test = ['pytest', 'pytest-mocker'] # ut

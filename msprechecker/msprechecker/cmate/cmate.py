@@ -129,7 +129,7 @@ def _display_text_contexts(contexts):
     _format_section('Context Variables')
     if contexts:
         for ctx_var, ctx_info in contexts.items():
-            desc = ctx_info['desc'][0] or 'No description provided'
+            desc = ctx_info['desc'][0] if isinstance(ctx_info['desc'], tuple) else 'No description provided'
             options = ctx_info['options']
             _format_field(ctx_var, options)
             cmate_logger.info('    %s\n', desc)
@@ -149,8 +149,11 @@ def _display_text_targets(targets):
             required_targets = target_info['required_targets']
             required_contexts = target_info['required_contexts']
 
-            _format_field('type', parse_type, 4)
-            _format_field('description', desc, 4)
+            if target_name == 'env':
+                _format_field('description', 'Environment variables validation', 4)
+            else:
+                _format_field('type', parse_type, 4)
+                _format_field('description', desc, 4)
 
             if required_targets:
                 _format_field('required_targets', ', '.join(required_targets), 4)
@@ -302,7 +305,7 @@ def _log_missing_error(missing_deps, all_targets, all_contexts):
             for missing_context in missing_contexts:
                 if missing_context in all_contexts:
                     context_info = all_contexts[missing_context]
-                    desc = context_info['desc'][0] or 'No description available.'
+                    desc = context_info['desc'][0] if isinstance(context_info['desc'], tuple) else 'No description provided'
                     options = context_info['options']
                     error_parts.append(f'  - {missing_context} : {options}')
                     error_parts.append(f'      {desc}')
