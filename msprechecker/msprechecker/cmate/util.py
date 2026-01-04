@@ -17,33 +17,34 @@ import os
 import json
 import socket
 import logging
+import threading
 from typing import Any
 from enum import Enum
 from functools import total_ordering
 
 import yaml
 import psutil
+from colorama import Fore, Style
 from msguard.security import open_s
 
 
 class ANSIColoredFormatter(logging.Formatter):
     COLORS = {
-        'WARNING': '\033[33m',
-        'ERROR': '\033[31m',
-        'RESET': '\033[0m'
+        'WARNING': Fore.YELLOW,
+        'ERROR': Fore.RED
     }
 
     def format(self, record):
         message = super().format(record)
         if record.levelname in self.COLORS:
-            message = f"{self.COLORS[record.levelname]}{message}{self.COLORS['RESET']}"
+            message = f"{self.COLORS[record.levelname]}{message}{Fore.RESET}"
         return message
 
 
 def get_logger():
     logger = logging.getLogger("msprechecker")
     logger.propagate = False
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     if not logger.handlers:
         stream_handler = logging.StreamHandler()
         formatter = ANSIColoredFormatter("%(message)s")
@@ -69,8 +70,7 @@ class Severity(Enum):
     }
 
     def __str__(self):
-        reset = "\033[0m"
-        return f"{self.color_code}{self.value}{reset}"
+        return f"{self.color_code}{self.value}{Fore.RESET}"
 
     def __gt__(self, other):
         order_map = self._ORDER_MAP.value
@@ -85,9 +85,9 @@ class Severity(Enum):
     @property
     def color_code(self):
         return {
-            Severity.INFO: "\033[96m",
-            Severity.WARNING: "\033[93m",
-            Severity.ERROR: "\033[91m"
+            Severity.INFO: Style.BRIGHT + Fore.CYAN,
+            Severity.WARNING: Style.BRIGHT + Fore.YELLOW,
+            Severity.ERROR: Style.BRIGHT + Fore.RED
         }[self]
 
 
@@ -131,3 +131,25 @@ def get_cur_ip():
             if addr.family == socket.AF_INET and not addr.address.startswith("127"):
                 return addr.address
     return ''
+
+
+def func_timeout(timeout, func, *args, **kwargs):
+    result = {'value': None, 'exception': None}
+
+    def wrapper():
+        try:
+            result['value'] = func(*args, **kwargs)
+        except Exception as e:
+            result['exception'] = e
+
+    thread = threading.Thread(target=wrapper, daemon=True)
+    thread.start()
+    thread.join(timeout)
+
+    if thread.is_alive():
+        raise TimeoutError(f"Function {func.__name__} timed out after {timeout} seconds")
+
+    if result['exception'] is not None:
+        raise result['exception']
+
+    return result['value']

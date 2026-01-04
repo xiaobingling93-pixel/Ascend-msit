@@ -19,8 +19,10 @@ import shutil
 import unittest
 from typing import Set
 
-from .visitor import PrettyFormatter, Evaluator
+from colorama import Fore, Style
+
 from . import _ast
+from .visitor import PrettyFormatter, Evaluator
 
 
 class RuleAssertionError(AssertionError):
@@ -53,52 +55,34 @@ class RuleAssertionError(AssertionError):
 class RuleTestResult(unittest.TestResult):
     def __init__(self, stream=None, descriptions=None, verbosity=False, total_cnt=None, failfast=False):
         super().__init__(stream=stream, descriptions=descriptions, verbosity=verbosity)
+        if stream is None:
+            stream = unittest.runner._WritelnDecorator(sys.stderr)
         self.stream = stream
-        self.failfast = failfast
         self.verbosity = verbosity
-
-        self.seen = set()
         self.total_cnt = total_cnt
-        self.cols, _ = shutil.get_terminal_size()
-        self.status_chars = []
-        self.on_sub_test = False
-        self.shouldStop = False
+        self.failfast = failfast
+
+        self._cols = shutil.get_terminal_size()[0]
+        self._status_chars = []
+        self._colorcode_map = {
+            '.': Fore.GREEN, 'PASSED': Fore.GREEN,
+            'F': Fore.RED, 'E': Fore.RED, 'FAILED': Fore.RED, 'ERROR': Fore.RED,
+            's': Fore.YELLOW, 'SKIPPED': Fore.YELLOW
+        }
 
     def startTestRun(self):
         self.stream.writeln()
 
     def stopTestRun(self):
-        self.on_sub_test = False
         self.stream.writeln()
 
-    def startTest(self, test):
-        super().startTest(test)
-        namespace = test.namespace
-        # Only print per-scope compact header when not in verbose mode.
-        if namespace not in self.seen:
-            self.seen.add(namespace)
-            header = f"{namespace}: "
-            self.stream.write(header)
-            self.status_chars.clear()
-            self.stream.flush()
-
     def addError(self, test, err):
-        super().addError(test, err)
-        # replace stored tuple with exc_value for nicer formatting later
-        if self.errors:
-            last = self.errors.pop()
-            exc_val = last[1][1] if isinstance(last[1], tuple) and len(last[1]) >= 2 else last[1]
-            self.errors.append((last[0], exc_val))
-
         if self.verbosity:
-            # print pytest-like verbose line
-            self._print_verbose_line(test, 'ERROR')
+            self._update_verbose(test, 'ERROR')
         else:
             self._update(test, 'E')
-
-        # fail-fast support
-        if self.failfast:
-            self.shouldStop = True
+        
+        return super().addError(test, err)
 
     def addFailure(self, test, err):
         super().addFailure(test, err)
@@ -107,175 +91,129 @@ class RuleTestResult(unittest.TestResult):
         self.failures.append((test, err[1]))
 
         if self.verbosity:
-            self._print_verbose_line(test, 'FAILED')
+            self._update_verbose(test, 'FAILED')
         else:
             self._update(test, 'F')
-            
-        if self.failfast:
-            self.shouldStop = True
 
     def addSuccess(self, test):
-        super().addSuccess(test)
         if self.verbosity:
-            self._print_verbose_line(test, 'PASSED')
+            self._update_verbose(test, 'PASSED')
         else:
             self._update(test, '.')
+        return super().addSuccess(test)
 
     def addSkip(self, test, reason):
-        super().addSkip(test, reason)
         if self.verbosity:
-            # include reason in parentheses but keep left width reasonable
-            label = 'SKIPPED'
-            self._print_verbose_line(test, label)
+            self._update_verbose(test, 'SKIPPED')
         else:
             self._update(test, 's')
+        return super().addSkip(test, reason)
 
     def addExpectedFailure(self, test, err):
-        self._update(test, 'x')
+        if self.verbosity:
+            self._update_verbose(test, 'EXPECTEDFAILED')
+        else:
+            self._update(test, 'x')
         return super().addExpectedFailure(test, err)
 
     def addUnexpectedSuccess(self, test):
-        self._update(test, 'U')
-        return super().addUnexpectedSuccess(test)
-
-    def addSubTest(self, test, subtest, err):
-        super().addSubTest(test, subtest, err)
-
-        if self.on_sub_test: # sub test is a test that will add testsRun outside
-            self.total_cnt += 1
-            self.testsRun += 1
-        self.on_sub_test = True
-
-        if err is None:
-            self._update(test, '.')
-        elif issubclass(err[0], test.failureException):
-            self._update(test, 'F')
-            # change to store test instance and err instance instead
-            self.failures.pop()
-            self.failures.append((test, err[1]))
-            if self.verbosity:
-                self.stream.writeln('')
-                self.stream.writeln(f"{test.id()} ... \033[31mFAILED\033[0m (subtest)")
+        if self.verbosity:
+            self._update_verbose(test, 'UNEXPECTEDPASSED')
         else:
-            self._update(test, 'E')
-            if self.verbosity:
-                self.stream.writeln('')
-                self.stream.writeln(f"{test.id()} ... \033[31mERROR\033[0m (subtest)")
+            self._update(test, 'U')
+        return super().addUnexpectedSuccess(test)
 
     def printErrors(self):
         if self.errors:
-            self.stream.writeln('\033[31m' + ' ERRORS '.center(self.cols, '=') + '\033[0m')
+            self.stream.writeln(' ERRORS '.center(self._cols, '='))
             for test, exc in self.errors:
-                self.stream.writeln('\033[31m' + f' {test.id()} '.center(self.cols, '_') + '\033[0m')
+                self.stream.writeln(f'{Fore.RED}' + f' {test.id()} '.center(self._cols, '_') + f'{Fore.RESET}')
                 self.stream.writeln()
                 self.stream.write(str(exc))
         if self.failures:
-            self.stream.writeln(' FAILURES '.center(self.cols, '='))
+            self.stream.writeln(' FAILURES '.center(self._cols, '='))
             for test, err in sorted(self.failures, key=lambda item: item[1].rule_node.severity, reverse=True):
-                self.stream.writeln('\033[31m' + f' {test.id()} '.center(self.cols, '_') + '\033[0m')
+                self.stream.writeln(f'{Fore.RED}' + f' {test.id()} '.center(self._cols, '_') + f'{Fore.RESET}')
                 self.stream.writeln()
                 self.stream.writeln(err.build_err_msg())
         self.stream.writeln()
         self.stream.flush()
     
     def _update(self, test, ch):
-        namespace = test.namespace
-        # append raw char
-        self.status_chars.append(ch)
-        # prepare colored display mapping but compute widths from raw chars
-        color_map = {
-            '.': '\033[32m.\033[0m',
-            'F': '\033[31mF\033[0m',
-            'E': '\033[31mE\033[0m',
-            's': '\033[33ms\033[0m',
-            'x': 'x',
-            'U': 'U'
-        }
-        status_raw = ''.join(self.status_chars)
-        status_disp = ''.join(color_map.get(c, c) for c in self.status_chars)
-
-        # 计算百分比
-        total = self.total_cnt
-        pct = int(100 * (self.testsRun / total))
-        pct_s = f"[{pct:3d}%]"
+        PERCENT_PADDING = 1
         
-        # 构建输出行
-        header = f"{namespace}: "
+        color_code = self._colorcode_map.get(ch, Fore.RESET)
+        self._status_chars.append(f'{color_code}{ch}{Fore.RESET}')
+        
+        namespace = test.namespace
+        
+        total = self.total_cnt or 1
+        percent = int(100 * (self.testsRun / total))
+        percent_str = f'[{percent:3d}%]'
+        percent_width = len(percent_str) + PERCENT_PADDING        
+        colored_percent_str = f'{color_code}{percent_str}{Fore.RESET}'
+        
+        header = f'{namespace} '
         # use raw lengths for layout (colored sequences are invisible width-wise)
-        visible_len = len(header) + len(status_raw)
-        terminal_width = self.cols
-        available_space = terminal_width - visible_len - len(pct_s)
-
+        visible_len = len(header) + len(self._status_chars)
+        available_space = self._cols - visible_len - percent_width
+        
         if available_space > 0:
+            status_disp = ''.join(self._status_chars)
             pad = ' ' * available_space
-            line = f"{header}{status_disp}{pad}{pct_s}"
+            line = f"{header}{status_disp}{pad}{colored_percent_str}"
         else:
             # if line too long, truncate raw status and recompute display
             overflow = -available_space
-            if overflow >= len(self.status_chars):
+            if overflow >= len(self._status_chars):
                 trimmed_disp = ''
             else:
-                trimmed_disp = ''.join(color_map.get(c, c) for c in self.status_chars[:-overflow])
-            line = f"{header}{trimmed_disp} {pct_s}"
+                trimmed_disp = self._status_chars[:-overflow]
+            line = f"{header}{trimmed_disp} {colored_percent_str}"
 
-        # output and flush the compact progress line
-        self.stream.write('\r' + line)
+        self.stream.write(f'\r{line}')
         self.stream.flush()
     
-    def _print_verbose_line(self, test, status_word):
-        """Print a pytest-like verbose line: <testid> <STATUS> [  X%]
+    def _update_verbose(self, test, status_word):
+        MIN_COLUMNS = 10
+        ELLIPSIS = '...'
+        STATUS_PADDING = 1
+        PERCENT_PADDING = 1
+        
+        namespace = test.namespace
+        color_code = self._colorcode_map.get(status_word, Fore.RESET)
 
-        We compute visible widths using plain text (no ANSI) so the percent
-        column always aligns and we avoid terminal width jitter caused by
-        color escape sequences.
-        """
-        # recompute terminal width in case it changed
-        cols, _ = shutil.get_terminal_size((80, 20))
         total = self.total_cnt or 1
-        pct = int(100 * (self.testsRun / total))
-        pct_s = f"[{pct:3d}%]"
-
-        tid = test.id()
-        # reserve 1 space before pct
-        avail = cols - len(pct_s) - 1
-        if avail < 10:
-            avail = 10
-
-        # keep status word intact at right side; truncate test id if needed
-        status_len = len(status_word)
-        # one space between tid and status
-        reserved = status_len + 1
-        avail_for_tid = max(0, avail - reserved)
-
-        tid_part = tid
-        if len(tid_part) > avail_for_tid:
-            # truncate tid and append ellipsis
-            if avail_for_tid <= 3:
-                tid_part = tid_part[:avail_for_tid]
+        percent = int(100 * (self.testsRun / total))
+        percent_str = f'[{percent:3d}%]'
+        percent_width = len(percent_str) + PERCENT_PADDING
+        colored_percent_str = f'{color_code}{percent_str}{Fore.RESET}'
+        
+        available_space = max(self._cols - percent_width, MIN_COLUMNS)
+        
+        status_width = len(status_word) + STATUS_PADDING
+        test_id_width = max(0, available_space - status_width)
+        
+        test_id = test.id()
+        if len(test_id) > test_id_width:
+            if test_id_width <= len(ELLIPSIS):
+                test_id = test_id[:test_id_width]
             else:
-                tid_part = tid_part[: avail_for_tid - 3] + '...'
+                test_id = test_id[:test_id_width - len(ELLIPSIS)] + ELLIPSIS
 
-        left_text = f"{tid_part} {status_word}"
-        pad = avail - len(left_text)
-        if pad < 0:
-            pad = 0
+        uncolored_line = f'{namespace}::{test_id} {status_word}'
+        padding = max(0, available_space - len(uncolored_line))
 
-        # color only the status word; build colored left and append computed spaces
-        color_map = {
-            'PASSED': '\033[32mPASSED\033[0m',
-            'FAILED': '\033[31mFAILED\033[0m',
-            'ERROR': '\033[31mERROR\033[0m',
-            'SKIPPED': '\033[33mSKIPPED\033[0m',
-        }
-        colored_status = color_map.get(status_word, status_word)
-        colored_left = f"{tid_part} {colored_status}"
-
-        line = colored_left + (' ' * pad) + ' ' + pct_s
+        colored_status = f'{color_code}{status_word}{Fore.RESET}'
+        colored_line = f"{namespace}::{test_id} {colored_status}"
+        
+        line = f"{colored_line}{' ' * padding} {colored_percent_str}"
+        
         self.stream.writeln(line)
         self.stream.flush()
 
 
-class RuleTestRunner(object):
+class RuleTestRunner:
     rescls = RuleTestResult
 
     def __init__(self, stream=None, rescls=None, failfast=False, verbosity=False):
@@ -292,12 +230,12 @@ class RuleTestRunner(object):
     def run(self, suite):
         total = suite.countTestCases()
         res = self.rescls(stream=self.stream, verbosity=self.verbosity, total_cnt=total, failfast=self.failfast)
+        cols = shutil.get_terminal_size()[0]
         
-        self.stream.writeln(f"\033[1;38mcollected {total} items\033[0m")
-        cols, _ = shutil.get_terminal_size((80, 20))
+        self.stream.writeln(f'{Style.BRIGHT}collected {total} items{Style.RESET_ALL}')
         if total == 0:
             self.stream.writeln()
-            self.stream.writeln('\033[33m' + ' no tests ran in 0.00s '.center(cols, '=') + '\033[0m')
+            self.stream.writeln(f"{Fore.YELLOW}{' no tests ran in 0.00s '.center(cols, '=')}{Fore.RESET}")
             self.stream.flush()
             return res
 
@@ -312,38 +250,33 @@ class RuleTestRunner(object):
             if stop_run is not None:
                 stop_run()
         elapsed = time.perf_counter() - t0
-
         res.printErrors()
+    
+        counters = [
+            ("errors", "errors"),
+            ("failures", "failed"), 
+            ("expectedFailures", "expected failures"),
+            ("unexpectedSuccesses", "unexpected successes"),
+            ("skipped", "skipped"),
+        ]
 
-        cols, _ = shutil.get_terminal_size()
-        summary_parts = []
-        if res.errors:
-            summary_parts.append(f"{len(res.errors)} errors")
-        if res.failures:
-            summary_parts.append(f"{len(res.failures)} failed")
-        if res.expectedFailures:
-            summary_parts.append(f"{len(res.expectedFailures)} expected failures")
-        if res.unexpectedSuccesses:
-            summary_parts.append(f"{len(res.unexpectedSuccesses)} unexpected successes")
-        if res.skipped:
-            summary_parts.append(f"{len(res.skipped)} skipped")
+        count_data = [
+            (getattr(res, attr), label)
+            for attr, label in counters
+            if getattr(res, attr)
+        ]
 
-        num_passed = (
-            res.testsRun
-            - len(res.errors)
-            - len(res.failures)
-            - len(res.expectedFailures)
-            - len(res.unexpectedSuccesses)
-            - len(res.skipped)
-        )
-        summary = (" " + ", ".join(summary_parts) + (", " if summary_parts else "") +
-                   (f"{num_passed} passed" if num_passed else "no passed") + f" in {elapsed:.3f}s ")
+        summary_parts = [f"{len(counter)} {label}" for counter, label in count_data]
+        failed_total = sum(len(counter) for counter, _ in count_data)
+        num_passed = res.testsRun - failed_total
 
-        if num_passed == res.testsRun:
-            self.stream.writeln('\033[33m' + summary.center(cols, '=') + '\033[0m')
-        else:
-            self.stream.writeln('\033[31m' + summary.center(cols, '=') + '\033[0m')
+        passed_text = f"{num_passed} passed" if num_passed else "no passed"
+        summary = f" {', '.join(summary_parts + [passed_text])} in {elapsed:.3f}s "
+
+        term_color = Fore.GREEN if num_passed == res.testsRun else Fore.RED
+        self.stream.writeln(f"{term_color}{summary.center(cols, '=')}{Fore.RESET}")
         self.stream.flush()
+
         return res
 
 
