@@ -84,11 +84,11 @@ class Wan2Point2Adapter(BaseModelAdapter,
 
     def init_model(self, device: DeviceType = DeviceType.NPU) -> Dict[str, nn.Module]:
         if "ti2v" in self.model_args.task:
-            return {'quant_weights_anti': self.transformer}
+            return {'': self.transformer}
         else:
             return {
-                'quant_weights_anti_low': self.low_noise_model,
-                'quant_weights_anti_high': self.high_noise_model
+                'low_noise_model': self.low_noise_model,
+                'high_noise_model': self.high_noise_model
             }
 
     def generate_model_forward(self, model: torch.nn.Module,
@@ -539,19 +539,9 @@ class Wan2Point2Adapter(BaseModelAdapter,
             default=False,
             help="Whether to convert model paramerters dtype.")
         parser.add_argument(
-            "--quant_mode",
-            type=int,
-            default=0,
-            choices=[0, 1, 2, 3],
-            help="Quantization mode: "
-                 "0: Do not use quantized model for inference, "
-                 "1: Export calibration data, "
-                 "2: Export quantized model, "
-                 "3: Use quantized model for inference.")
-        parser.add_argument(
-            "--quant_data_dir",
+            "--quant_dit_path",
             type=str,
-            default="./output/quant_data",
+            default=None,
             help="Path for calibration data or weight export.")
         parser = self._add_attentioncache_args(parser)
         parser = self._add_rainfusion_args(parser)
@@ -671,7 +661,7 @@ class Wan2Point2Adapter(BaseModelAdapter,
             self.wan_t2v = wan.WanT2V(
                 config=cfg,
                 checkpoint_dir=args.ckpt_dir,
-                quant_data_dir=args.quant_data_dir,
+                quant_dit_path=args.quant_dit_path,
                 device_id=device,
                 rank=rank,
                 t5_fsdp=args.t5_fsdp,
@@ -679,8 +669,7 @@ class Wan2Point2Adapter(BaseModelAdapter,
                 use_sp=(args.ulysses_size > 1 or args.ring_size > 1),
                 t5_cpu=args.t5_cpu,
                 convert_model_dtype=args.convert_model_dtype,
-                use_vae_parallel=args.vae_parallel,
-                quant_mode=args.quant_mode
+                use_vae_parallel=args.vae_parallel
             )
 
             transformer_low = self.wan_t2v.low_noise_model
@@ -740,7 +729,7 @@ class Wan2Point2Adapter(BaseModelAdapter,
             self.wan_ti2v = wan.WanTI2V(
                 config=cfg,
                 checkpoint_dir=args.ckpt_dir,
-                quant_data_dir=args.quant_data_dir,
+                quant_dit_path=args.quant_dit_path,
                 device_id=device,
                 rank=rank,
                 t5_fsdp=args.t5_fsdp,
@@ -748,8 +737,7 @@ class Wan2Point2Adapter(BaseModelAdapter,
                 use_sp=(args.ulysses_size > 1),
                 t5_cpu=args.t5_cpu,
                 convert_model_dtype=args.convert_model_dtype,
-                use_vae_parallel=args.vae_parallel,
-                quant_mode=args.quant_mode
+                use_vae_parallel=args.vae_parallel
             )
 
             transformer = self.wan_ti2v.model
@@ -792,7 +780,7 @@ class Wan2Point2Adapter(BaseModelAdapter,
             self.wan_i2v = wan.WanI2V(
                 config=cfg,
                 checkpoint_dir=args.ckpt_dir,
-                quant_data_dir=args.quant_data_dir,
+                quant_dit_path=args.quant_dit_path,
                 device_id=device,
                 rank=rank,
                 t5_fsdp=args.t5_fsdp,
@@ -800,8 +788,7 @@ class Wan2Point2Adapter(BaseModelAdapter,
                 use_sp=(args.ulysses_size > 1 or args.ring_size > 1),
                 t5_cpu=args.t5_cpu,
                 convert_model_dtype=args.convert_model_dtype,
-                use_vae_parallel=args.vae_parallel,
-                quant_mode=args.quant_mode
+                use_vae_parallel=args.vae_parallel
             )
 
             transformer_low = self.wan_i2v.low_noise_model
