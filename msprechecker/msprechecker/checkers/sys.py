@@ -15,7 +15,7 @@
 
 import subprocess
 from .base import NodeChecker
-from ..utils import Traverser
+from ..utils import Traverser, get_conn_mode
 
 
 class SysChecker(NodeChecker):
@@ -35,6 +35,8 @@ class SysChecker(NodeChecker):
         visited_nodes = Traverser.traverse(results)
         rules = self._get_rules()
         self._validate_nodes(rules, visited_nodes)
+
+        self._check_connected_route()
         
         # 在vllm框架下额外检查jemalloc安装
         if self.rule_manager.framework == "vllm":
@@ -84,3 +86,19 @@ class SysChecker(NodeChecker):
             pass
 
         return False
+
+    def _check_connected_route(self):
+        connect_mode = get_conn_mode()
+        warning_msg = (
+            "检测到网线对端设备为昇腾 NPU。"
+            '请确认当前部署环境是否为“双机背靠背直连”（即双机一体机）架构。'
+            '此架构下，HCCL 不支持全互联通信链路的自动建立，模型通信可能会受到影响。'
+        )
+        if connect_mode in {'fiber', None}:
+            self.error_handler.add_error(
+                path="HCCL 链路层协议",
+                actual=connect_mode or '未知协议',
+                expected="-",
+                reason=warning_msg,
+                severity="medium"
+            )
