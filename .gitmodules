@@ -1,0 +1,18 @@
+[submodule "msprof"]
+	path = msprof
+	url = https://gitcode.com/Ascend/msprof.git
+[submodule "msprof-analyze"]
+	path = msprof-analyze
+	url = https://gitcode.com/Ascend/msprof-analyze.git
+[submodule "msmemscope"]
+	path = msmemscope
+	url = https://gitcode.com/Ascend/msmemscope.git
+[submodule "msmonitor"]
+	path = msmonitor
+	url = https://gitcode.com/Ascend/msmonitor.git
+[submodule "msinsight"]
+	path = msinsight
+	url = https://gitcode.com/Ascend/msinsight.git
+[submodule "msprobe"]
+	path = msprobe
+	url = https://gitcode.com/Ascend/msprobe.git
