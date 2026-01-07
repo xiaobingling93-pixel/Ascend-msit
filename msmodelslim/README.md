@@ -16,23 +16,34 @@
 </div>
 
 ## 🔥🔥🔥Latest News
-- [2025/12/25] 🚀 msModelSlim 支持 [DeepSeek-V3.2 W8A8](./example/DeepSeek/README.md#deepseek-v32-w8a8-quarot) 量化，单卡64G显存，100G内存即可执行。
-- [2025/12/10] 🚀 msModelSlim 支持 [DeepSeek-V3.2-Exp W4A8](./example/DeepSeek/README.md#deepseek-v32-w4a8) 量化，单卡64G显存，100G内存即可执行。
-- [2025/12/5] 🚀 msModelSlim 支持 [Qwen3-VL-235B-A22B W8A8](./example/multimodal_vlm/Qwen3-VL-MoE/README.md) 量化。
-- [2025/10/16] 🚀 msModelSlim 支持 [Qwen3-235B-A22B W4A8](./example/Qwen3-MOE/README.md#qwen3-235b-a22b-w4a8-混合量化)、[Qwen3-30B-A3B W4A8](./example/Qwen3-MOE/README.md#qwen3-30b-a3b-w4a8-混合量化) 量化。vLLM Ascend已支持量化模型推理部署 [部署指导](https://vllm-ascend.readthedocs.io/en/latest/user_guide/feature_guide/quantization.html#)
-- [2025/09/30] 🚀 msModelSlim 支持 [DeepSeek-V3.2-Exp W8A8](./example/DeepSeek/README.md#deepseek-v32-w8a8) 量化，单卡64G显存，100G内存即可执行
-- [2025/09/18] 🚀 msModelSlim 现已解决Qwen3-235B-A22B在W8A8量化下频繁出现“游戏副本”等异常token的问题 [Qwen3-MoE 量化推荐实践](./example/Qwen3-MOE/README.md)
-- [2025/09/18] 🚀 msModelSlim 支持DeepSeek R1 W4A8 per-channel 量化【Prototype】
-- [2025/09/03] 🤝 msModelSlim 支持大模型量化敏感层分析
-- [2025/08/30] 🌴 msModelSlim 支持Wan2.1模型一键量化
-- [2025/08/25] 🌱 msModelSlim 支持大模型逐层量化
 
-<details close>
-<summary>Previous News</summary>
+### 2026年1月
+- 📦 msModelSlim 已完成迁仓，新仓库地址：[https://gitcode.com/Ascend/msmodelslim](https://gitcode.com/Ascend/msmodelslim)，欢迎大家使用
 
-- [2025/08/21] 🌱 msModelSlim 支持大模型SSZ权重量化算法
+### 2025年12月
+- 🎯 msModelSlim 支持[量化精度反馈自动调优](./docs/功能指南/自动调优/使用说明.md)，可根据精度需求自动搜索最优量化配置
+- 🎨 msModelSlim 支持[自主量化多模态理解模型](./docs/自主量化/多模态理解模型接入.md)，支持多模态理解模型的量化接入
+- ⚡ msModelSlim [一键量化支持多卡量化](./docs/功能指南/一键量化/features/dp_layer_wise_quantization.md)，支持分布式逐层量化，提升大模型量化效率
+- 🚀 msModelSlim 支持 [DeepSeek-V3.2 W8A8](./example/DeepSeek/README.md#deepseek-v32-w8a8-quarot) 量化，单卡64G显存、100G内存即可执行
+- 🚀 msModelSlim 支持 [DeepSeek-V3.2-Exp W4A8](./example/DeepSeek/README.md#deepseek-v32-w4a8) 量化，单卡64G显存、100G内存即可执行
+- 🚀 msModelSlim 支持 [Qwen3-VL-235B-A22B W8A8](./example/multimodal_vlm/Qwen3-VL-MoE/README.md) 量化
 
-</details>
+### 2025年11月
+- 🚀 msModelSlim 模型适配支持插件化和配置注册，支持依赖预检
+
+### 2025年10月
+- 🚀 msModelSlim 支持 [Qwen3-235B-A22B W4A8](./example/Qwen3-MOE/README.md#qwen3-235b-a22b-w4a8-混合量化)、[Qwen3-30B-A3B W4A8](./example/Qwen3-MOE/README.md#qwen3-30b-a3b-w4a8-混合量化) 量化。vLLM Ascend已支持量化模型推理部署 [部署指导](https://vllm-ascend.readthedocs.io/en/latest/user_guide/feature_guide/quantization.html#)
+
+### 2025年9月
+- 🚀 msModelSlim 支持 [DeepSeek-V3.2-Exp W8A8](./example/DeepSeek/README.md#deepseek-v32-w8a8) 量化，单卡64G显存，100G内存即可执行
+- 🚀 msModelSlim 现已解决Qwen3-235B-A22B在W8A8量化下频繁出现"游戏副本"等异常token的问题 [Qwen3-MoE 量化推荐实践](./example/Qwen3-MOE/README.md)
+- 🚀 msModelSlim 支持DeepSeek R1 W4A8 per-channel 量化【Prototype】
+- 🤝 msModelSlim 支持大模型量化敏感层分析
+
+### 2025年8月
+- 🎨 msModelSlim 支持 [Wan2.1 模型一键量化](./example/multimodal_sd/Wan2_1/README.md)
+- 📊 msModelSlim 支持[大模型逐层量化](./docs/功能指南/一键量化/features/layer_wise_quantization.md)，显著降低大模型量化内存占用
+- ⚙️ msModelSlim 支持[大模型 SSZ 权重量化算法](./docs/算法说明/ssz.md)，通过迭代搜索最优缩放因子和偏移量提升量化精度
 
 > 注： **Prototype**特性未经过充分验证，可能存在不稳定和bug问题，**beta**表示非商用特性
 
