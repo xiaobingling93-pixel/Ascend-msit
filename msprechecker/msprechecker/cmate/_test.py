@@ -133,7 +133,8 @@ class RuleTestResult(unittest.TestResult):
         if self.failures:
             self.stream.writeln(' FAILURES '.center(self._cols, '='))
             for test, err in sorted(self.failures, key=lambda item: item[1].rule_node.severity, reverse=True):
-                self.stream.writeln(f'{Fore.RED}' + f' {test.id()} '.center(self._cols, '_') + f'{Fore.RESET}')
+                color_code = err.rule_node.severity.color_code # Keep the same color as the severity
+                self.stream.writeln(f'{color_code}' + f' {test.id()} '.center(self._cols, '_') + f'{Fore.RESET}')
                 self.stream.writeln()
                 self.stream.writeln(err.build_err_msg())
         self.stream.writeln()

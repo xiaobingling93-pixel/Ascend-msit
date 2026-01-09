@@ -7,19 +7,19 @@ build-backend = "setuptools.build_meta"
 find = { exclude = ["test*"] }
 
 [tool.setuptools.package-data]
-"msprechecker" = ["**/*.yaml"]
+"msprechecker" = ["**/*.yaml", "**/*.cmate"]
 "pics" = ["*.png"]
 
 # 运行相关
 [project]
 name = "msprechecker"
-version = "0.3.2"
+version = "0.3.3"
 description = "MindStudio Prechecker"
 authors = [
     {name = "AvadaKedavrua", email = "anonymousdev@163.com"},
 ]
 readme = "README.md"
-license = "Apache-2.0"
+license = {text = "Apache-2.0"}
 keywords = ["MindStudio", "precheck"]
 classifiers = [
     "Programming Language :: Python :: 3.7",
