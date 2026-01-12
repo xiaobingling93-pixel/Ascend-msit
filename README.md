@@ -1,6 +1,7 @@
 # **msIT**
 
 ## 最新消息
+- [2026.1.12]：[msit仓库License变更通知](https://gitcode.com/Ascend/msit/discussions/1)
 - [2025.12.31]：昇腾平台MindStudio推理工具链全面开源。
 
 ## 简介
