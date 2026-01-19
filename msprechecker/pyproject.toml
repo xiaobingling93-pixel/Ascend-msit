@@ -13,7 +13,7 @@ find = { exclude = ["test*"] }
 # 运行相关
 [project]
 name = "msprechecker"
-version = "0.3.3"
+version = "0.3.4"
 description = "MindStudio Prechecker"
 authors = [
     {name = "AvadaKedavrua", email = "anonymousdev@163.com"},

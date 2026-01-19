@@ -63,7 +63,7 @@ class ConfigCollector(BaseCollector):
         parent_key = ''
         last_key = ''
 
-        key_pattern = re.compile('\s*"([^"]+)"\s*:\s*')
+        key_pattern = re.compile(r'\s*"([^"]+)"\s*:\s*')
         with open_s(self.config_path, 'r', encoding='utf-8') as f:
             for line_no, line in enumerate(f):
                 line = line.rstrip('\n')

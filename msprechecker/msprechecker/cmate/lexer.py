@@ -185,7 +185,7 @@ class Lexer:
 
     @staticmethod
     def t_doublequote_escape(t):
-        r'\\"'
+        r'\\.'
         char = t.value[1]
         t.lexer.buffer.write('\n' if char == 'n' else char)
 
