@@ -24,9 +24,9 @@ from msguard.security import open_s
 
 from .parser import Parser
 from .data_source import DataSource
-from .util import load, cmate_logger
+from .util import load, cmate_logger, LOG_LEVELS
 from ._test import make_test_suite, RuleTestRunner
-from .visitor import RuleVisitor, PrettyFormatter, SetEnvGenerator, InfoCollector
+from .visitor import RuleCollector, ASTFormatter, AssignmentProcessor, EnvironmentScriptGenerator, InfoCollector
 
 
 def _parse_configs(configs: List[str]):
@@ -333,7 +333,7 @@ def _validate_and_load_contexts(input_contexts, all_contexts, data_source):
 
 
 def _collect_only(ruleset):
-    pretty_formatter = PrettyFormatter()
+    pretty_formatter = ASTFormatter()
 
     msg = []
     for namespace in ruleset:
@@ -391,10 +391,11 @@ def run(
     if not ret:
         return 1
 
-    rule_visitor = RuleVisitor(configs, data_source, severity)
+    AssignmentProcessor(configs, data_source).process(node) # process global section
+    rule_collector = RuleCollector(configs, data_source, severity) # collect rule
 
     try:
-        ruleset = rule_visitor.visit(node)
+        ruleset = rule_collector.collect(node)
     except KeyError as e:
         cmate_logger.error(
             "Rule collection failed: %s. " \
@@ -403,8 +404,8 @@ def run(
             e
         )
         return 1
-
-    SetEnvGenerator(data_source).generate(node)
+    
+    EnvironmentScriptGenerator(data_source).generate(node) # try to generate env script
 
     if collect_only:
         return _collect_only(ruleset)
@@ -489,6 +490,13 @@ def main():
         )
     )
 
+    run_parser.add_argument(
+        '-l', '--log-level',
+        choices=LOG_LEVELS,
+        default='info',
+        help='Set the logging level.'
+    )
+
     # Inspect command
     inspect_parser = subparsers.add_parser(
         'inspect',
@@ -519,6 +527,7 @@ def main():
         return inspect(args.rule, args.format)
 
     elif args.command == 'run':
+        cmate_logger.setLevel(LOG_LEVELS[args.log_level.lower()])
         ret, configs = _parse_configs(args.configs)
         if not ret:
             return 1

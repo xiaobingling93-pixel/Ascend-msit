@@ -16,8 +16,8 @@
 import os
 import json
 import socket
+import signal
 import logging
-import threading
 from typing import Any
 from enum import Enum
 from functools import total_ordering
@@ -39,6 +39,16 @@ class ANSIColoredFormatter(logging.Formatter):
         if record.levelname in self.COLORS:
             message = f"{self.COLORS[record.levelname]}{message}{Fore.RESET}"
         return message
+
+
+LOG_LEVELS = {
+    "debug": logging.DEBUG,
+    "info": logging.INFO,
+    "warning": logging.WARNING,
+    "error": logging.ERROR,
+    "fatal": logging.FATAL,
+    "critical": logging.CRITICAL,
+}
 
 
 def get_logger():
@@ -134,22 +144,13 @@ def get_cur_ip():
 
 
 def func_timeout(timeout, func, *args, **kwargs):
-    result = {'value': None, 'exception': None}
+    def handler(signum, frame):
+        raise TimeoutError(f"Function '{func.__qualname__}' timed out after {timeout} seconds.")
 
-    def wrapper():
-        try:
-            result['value'] = func(*args, **kwargs)
-        except Exception as e:
-            result['exception'] = e
+    signal.signal(signal.SIGALRM, handler)
+    signal.alarm(timeout)
 
-    thread = threading.Thread(target=wrapper, daemon=True)
-    thread.start()
-    thread.join(timeout)
-
-    if thread.is_alive():
-        raise TimeoutError(f"Function {func.__name__} timed out after {timeout} seconds")
-
-    if result['exception'] is not None:
-        raise result['exception']
-
-    return result['value']
+    try:
+        return func(*args, **kwargs)
+    finally:
+        signal.alarm(0)
