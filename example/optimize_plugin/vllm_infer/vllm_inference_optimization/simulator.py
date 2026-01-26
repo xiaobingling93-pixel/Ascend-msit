@@ -27,7 +27,7 @@ class VllmSimulator(SimulatorInterface):
 
         """
         logger.info(f"http://127.0.0.1:{self.config.command.port}/health")
-        return f"127.0.0.1:{self.config.command.port}/health"
+        return f"http://127.0.0.1:{self.config.command.port}/health"
 
     def update_command(self):
         self.command = VllmCommand(self.config.command).command
