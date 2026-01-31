@@ -166,4 +166,4 @@ python3 -m auto_optimizer extract origin_model.onnx sub_model.onnx "s_node1,s_no
 ```
 ## 许可证
 
-[Apache License 2.0](../../../../../LICENSE)
+[Mulan PSL v2](../../../../../LICENSE)

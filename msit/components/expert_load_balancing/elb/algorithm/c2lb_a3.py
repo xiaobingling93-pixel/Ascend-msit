@@ -14,7 +14,6 @@
 # MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 # See the Mulan PSL v2 for more details.
 # -------------------------------------------------------------------------
-
 """
  @copyright Copyright (c) Huawei Technologies Co., Ltd. 2025-2026. All rights reserved.
  @brief speculative-moe algorithm, output the expert placement table

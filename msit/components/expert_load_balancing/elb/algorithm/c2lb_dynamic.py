@@ -1,4 +1,3 @@
-# coding=utf-8
 # -------------------------------------------------------------------------
 #  This file is part of the MindStudio project.
 # Copyright (c) 2025 Huawei Technologies Co.,Ltd.
@@ -14,7 +13,6 @@
 # MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 # See the Mulan PSL v2 for more details.
 # -------------------------------------------------------------------------
-
 import logging
 
 import numpy as np
