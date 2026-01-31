@@ -1,5 +1,5 @@
 文件名,公网IP地址/公网URL地址/域名/邮箱地址,用途说明
-msit/setup.py等文件,http://www.apache.org/licenses/LICENSE-2.0,文件头中的license信息说明
+msit/setup.py等文件,http://license.coscl.org.cn/MulanPSL2,文件头中的license信息说明
 msit/install.sh,http://mirrors.huaweicloud.com/repository/pypi/simple,若pip源为华为云，则优先安装skl2onnx(当前mirrors.huaweicloud.com中skl2onnx已停止更新，不包含1.14.1及以上版本)
 msit/install.sh,https://mirrors.huaweicloud.com/repository/pypi/simple,若pip源为华为云，则优先安装skl2onnx(当前mirrors.huaweicloud.com中skl2onnx已停止更新，不包含1.14.1及以上版本)
 msit/install.sh,https://mirrors.tools.huawei.com/pypi/simple,若pip源为华为云，则优先安装skl2onnx(当前mirrors.huaweicloud.com中skl2onnx已停止更新，不包含1.14.1及以上版本)
@@ -19,4 +19,4 @@ msit/components/config/config.ini,https://gitee.com/ascend/tools.git,aisbench工
 msit/components/config/config.ini,http://mirrors.huaweicloud.com/repository/pypi/simple,PyPI华为云镜像地址
 msit/components/config/config.ini,https://mirrors.huaweicloud.com/repository/pypi/simple,PyPI华为云镜像地址
 msit/components/config/config.ini,https://mirrors.tools.huawei.com/pypi/simple,PyPI镜像地址
-msit/components/config/config.ini,http://www.apache.org/licenses/LICENSE-2.0,license信息说明
+msit/components/config/config.ini,http://license.coscl.org.cn/MulanPSL2,license信息说明
