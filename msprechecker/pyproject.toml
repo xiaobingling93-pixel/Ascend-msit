@@ -19,7 +19,7 @@ authors = [
     {name = "AvadaKedavrua", email = "anonymousdev@163.com"},
 ]
 readme = "README.md"
-license = {text = "Apache-2.0"}
+license = {text = "Mulan PSL v2"}
 keywords = ["MindStudio", "precheck"]
 classifiers = [
     "Programming Language :: Python :: 3.7",
