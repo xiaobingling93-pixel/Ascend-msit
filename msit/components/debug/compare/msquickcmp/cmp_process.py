@@ -670,7 +670,11 @@ def find_accuracy_interval(args, endnode_name, input_shape):
         for node in og.nodes:
             if al.check_input_node(og, node):
                 input_node_interval = [node, endnode]
-                l_node, r_node = bin_divide(og, input_node_interval, args, onnx_data_path, input_shape)
+                try:
+                    l_node, r_node = bin_divide(og, input_node_interval, args, onnx_data_path, input_shape)
+                except Exception:
+                    utils.logger.warning(f"Failed to find error interval for node {node.name}")
+                    continue
                 utils.logger.info("Accumulated Error interval has been found.")
                 error_node_list.append([l_node, r_node])
         return error_node_list
