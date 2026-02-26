@@ -21,6 +21,9 @@ import json
 import argparse
 from typing import List
 
+from datetime import datetime
+
+from .data_source import NAType
 from msguard import validate_args, Rule
 from msguard.security import open_s
 
@@ -347,14 +350,32 @@ def _collect_only(ruleset):
     return 0
 
 
-def _actual_run(ruleset, data_source, failfast, verbosity):
+class NAEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, NAType):
+            return {'NAType': True}  # 使用特殊标记
+        return super().default(obj)
+
+
+def _actual_run(ruleset, data_source, failfast, verbosity, output_path):
     test_runner = RuleTestRunner(
         failfast=failfast,
         verbosity=verbosity
     )
 
-    test_suite = make_test_suite(data_source, ruleset)
+    msprechecker_output = {}
+
+    test_suite = make_test_suite(data_source, ruleset, msprechecker_output)
     result = test_runner.run(test_suite)
+
+    if output_path:
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        msprechecker_output_name = f'msprechecker_{timestamp}_output.json'
+        os.makedirs(output_path, exist_ok=True)
+        saved_json = os.path.join(output_path, msprechecker_output_name)
+        with open_s(saved_json, 'w', encoding='utf-8') as f:
+            json.dump(msprechecker_output, f, cls=NAEncoder, ensure_ascii=False, indent=4)
+
     return result.wasSuccessful()
 
 
@@ -384,7 +405,7 @@ def inspect(rule_path: str, output_format: str):
 
 def run(
     rule_path: str, configs=None, contexts=None,
-    failfast=False, verbosity=False, collect_only=False, severity='info'
+    failfast=False, verbosity=False, collect_only=False, output_path='', severity='info'
 ):
     node = parse(rule_path)
     info = InfoCollector().collect(node)
@@ -412,7 +433,7 @@ def run(
     if collect_only:
         return _collect_only(ruleset)
     
-    return _actual_run(ruleset, data_source, failfast, verbosity)
+    return _actual_run(ruleset, data_source, failfast, verbosity, output_path)
 
 
 def main():
@@ -464,6 +485,11 @@ def main():
         '-co', '--collect-only',
         action='store_true',
         help="Display the list of rules that would be executed without actually running them"
+    )
+
+    run_parser.add_argument(
+        '--output-path',
+        help='Path to the save msprechecker output.'
     )
 
     run_parser.add_argument(
@@ -538,6 +564,6 @@ def main():
         if not ret:
             return 1
 
-        return run(args.rule, configs, contexts, args.failfast, args.verbose, args.collect_only, args.severity)
+        return run(args.rule, configs, contexts, args.failfast, args.verbose, args.collect_only, args.output_path, args.severity)
 
     return 0

@@ -363,7 +363,8 @@ class RunStrategy(CommandStrategy):
         if not ret:
             return 1
 
-        return run(args.rule, configs, contexts, args.failfast, args.verbose, args.collect_only, args.severity)
+        return run(args.rule, configs, contexts, args.failfast, args.verbose, args.collect_only, args.output_path,
+                   args.severity)
 
 
 class InspectStrategy(CommandStrategy):

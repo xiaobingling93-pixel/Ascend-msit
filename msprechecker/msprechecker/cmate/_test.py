@@ -19,6 +19,8 @@ import sys
 import time
 import shutil
 import unittest
+from .util import Severity
+
 from typing import Set
 
 from colorama import Fore, Style
@@ -283,15 +285,16 @@ class RuleTestRunner:
         return res
 
 
-def make_test_suite(data_source, ruleset):
+def make_test_suite(data_source, ruleset, msprechecker_output):
     test_suite = unittest.TestSuite()
     test_loader = unittest.TestLoader()
 
     extra_attrs = dict(evaluator=_ExpressionEvaluator(data_source), data_source=data_source)
+
     for namespace in ruleset:
         test_case_cls_name = f'Test-{namespace}'
         rule_nodes = ruleset[namespace]
-        test_case_cls = _make_test_case(test_case_cls_name, rule_nodes)
+        test_case_cls = _make_test_case(test_case_cls_name, rule_nodes, namespace, msprechecker_output)
 
         # add extra attrs to test cls
         extra_attrs['namespace'] = namespace
@@ -304,9 +307,9 @@ def make_test_suite(data_source, ruleset):
     return test_suite
 
 
-def _make_test_case(cls_name, rule_nodes: Set[_ast.Rule]):
+def _make_test_case(cls_name, rule_nodes: Set[_ast.Rule], namespace, msprechecker_output):
     cls_dict = {
-        f"test_{rule_node.lineno}": _make_test_method(rule_node)
+        f"test_{rule_node.lineno}": _make_test_method(rule_node, namespace, msprechecker_output)
         for rule_node in rule_nodes
     }
     test_case_cls = type(cls_name, (unittest.TestCase,), cls_dict)
@@ -314,10 +317,25 @@ def _make_test_case(cls_name, rule_nodes: Set[_ast.Rule]):
     return test_case_cls
 
 
-def _make_test_method(rule_node: _ast.Rule):
+def _make_test_method(rule_node: _ast.Rule, namespace, msprechecker_output):
+    severity_dict = {Severity.INFO: 'info', Severity.WARNING: 'warning', Severity.ERROR: 'error'}
+    result_dict = {True: 'passed', False: 'failed'}
+
     def test(inst):
-        if not inst.evaluator.evaluate(rule_node.test):
-            history = inst.evaluator.history
-            raise RuleAssertionError(rule_node, history)
+        par = namespace
+        pretty_formatter = ASTFormatter()
+        test_rule = pretty_formatter.visit(rule_node.test)
+        test_result = inst.evaluator.evaluate(rule_node.test)
+        test_history = inst.evaluator.history
+        result_entry = {
+            'test': test_rule,
+            'msg': rule_node.msg,
+            'severity': severity_dict.get(rule_node.severity),
+            'status': result_dict.get(test_result),
+            'metadata': dict(test_history)
+        }
+        msprechecker_output.setdefault(par, []).append(result_entry)
+        if not test_result:
+            raise RuleAssertionError(rule_node, test_history)
 
     return test
