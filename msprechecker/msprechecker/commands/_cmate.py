@@ -62,6 +62,11 @@ def setup_cmate_parser(subparsers):
     )
 
     run_parser.add_argument(
+        '--output-path',
+        help='Path to the save msprechecker output.'
+    )
+
+    run_parser.add_argument(
         '-x', '--fail-fast',
         action='store_true',
         dest='failfast',
