@@ -8,9 +8,11 @@
 
 说明：仅Atlas 800I A2推理产品支持FA3量化功能。当前 FA3 量化功能已完成对大语言模型 Llama3.1-70B、Qwen2.5-72B 和多模态模型 Flux.1-dev、HunyuanVideo 的验证。
 
-## 大语言模型FA3量化关键步骤说明如下：
+## 大语言模型FA3量化关键步骤说明如下
+
 ### 功能实现流程
-#### 1.修改modeling文件：
+
+#### 1.修改modeling文件
 
 （1）找到对应版本的modeling文件：
 
@@ -21,6 +23,7 @@
 
 - 注意：Llama3.1-70B模型需使用4.43.0及以上的modeling文件。
 - `model_type`可从config文件中查询，下附Qwen2.5-72B权重config。
+
 ```python
 {
   "architectures": [
@@ -78,6 +81,7 @@ query_states = self.fa_quantizer.quant(query_states, qkv="q")
 key_states = self.fa_quantizer.quant(key_states, qkv="k")
 value_states = self.fa_quantizer.quant(value_states, qkv="v")
 ```
+
 注意：新增的query_states、key_states和value_states的量化代码需放置在`if past_key_value is not None:`代码块之后，`key_states = repeat_kv(key_states, self.num_key_value_groups)`代码块之前。如果某些attention结构（如mha）没有`key_states = repeat_kv(key_states, self.num_key_value_groups)`代码块，则将量化代码放置在`if past_key_value is not None:`代码块之后即可。
 
 - 整体修改如下：
@@ -101,9 +105,9 @@ class Qwen2Attention(nn.Module):
         # 其他未修改的代码部分
         ...
         
-    	# 新增的代码部分
+     # 新增的代码部分
         # --------------------------------------------------
-    	self.fa_quantizer = FAQuantizer(self.config, logger)
+     self.fa_quantizer = FAQuantizer(self.config, logger)
         # --------------------------------------------------
 
     def forward(
@@ -126,7 +130,7 @@ class Qwen2Attention(nn.Module):
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
             
-		    # 新增的代码部分
+      # 新增的代码部分
         # --------------------------------------------------
         query_states = self.fa_quantizer.quant(query_states, qkv="q")
         key_states = self.fa_quantizer.quant(key_states, qkv="k")
@@ -143,6 +147,7 @@ class Qwen2Attention(nn.Module):
 ```
 
 **注意**：部分模型在transformers的库中对其组件的依赖是采用的相对路径，在改写了modeling文件之后需要将这部分相对路径的导入依赖改成绝对路径，例如：
+
 ```python
 """
 # 修改前的导入方式
@@ -197,10 +202,12 @@ from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
 ```
 
 （4）对config文件进行修改来指定模型加载时所使用的modeling文件。其一般形式为：
+
 ```json
 "auto_map": {
 "AutoModelForCausalLM": "{文件名}.{architectures[0]}"}
 ```
+
 假设修改后的modeling文件名为`modeling_qwen2_fa3.py`，`architectures[0]`从config中可知为`Qwen2ForCausalLM`，则对config文件做如下修改：
 
 ```json
@@ -219,9 +226,10 @@ from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
     ...
 }
 ```
+
 **注意**：在量化脚本里面通过transformers库对模型进行加载时，调用`from_pretrained`函数时一定要指定`trust_remote_code=True`让修改后的modeling文件能够正确的被加载。(请确保加载的modeling文件的安全性)
 
-#### 2.配置config:
+#### 2.配置config
 
 `config = QuantConfig().fa_quant()`
 
@@ -237,31 +245,26 @@ from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
 
 1. 用户自行准备模型、权重文件和校准数据，将修改好的modeling文件和config放入权重目录下，本样例以Qwen2.5-7B为例，目录示例如下：
 
-```bash
-
-├── config.json
-├── modeling_qwen2.py
-├── generation_config.json
-├── merges.txt
-├── model-00001-of-00004.safetensors
-├── model-00002-of-00004.safetensors
-├── model-00003-of-00004.safetensors
-├── model-00004-of-00004.safetensors
-├── model.safetensors.index.json
-├── README.md
-├── tokenizer_config.json
-├── tokenizer.json
-├── vocab.json
-
-```
+    ├── config.json
+    ├── modeling_qwen2.py
+    ├── generation_config.json
+    ├── merges.txt
+    ├── model-00001-of-00004.safetensors
+    ├── model-00002-of-00004.safetensors
+    ├── model-00003-of-00004.safetensors
+    ├── model-00004-of-00004.safetensors
+    ├── model.safetensors.index.json
+    ├── README.md
+    ├── tokenizer_config.json
+    ├── tokenizer.json
+    ├── vocab.json
 
 2. 新建模型的量化脚本quant.py，
 此处可以参考：[量化脚本（NPU）](#量化脚本npu)
 
-
 3. 启动模型量化任务，并在指定的输出目录获取模型量化参数，量化后权重文件的介绍请参见[量化后权重文件](#量化后权重文件)，若使用MindIE进行后续的推理部署任务，请保存为safetensors格式，具体请参见[大语言模型列表](https://www.hiascend.com/software/mindie/modellist)章节中已适配量化的模型。
 
-###  量化后权重文件
+### 量化后权重文件
 
 - **npy格式**
 
@@ -281,8 +284,6 @@ from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
 ```
 
 推理部署时读取上述文件的示例代码：quant_param_dict = np.load("xxx.npy", allow_pickle=True).item()。
-
-
 
 - **safetensors格式**
 
@@ -311,13 +312,12 @@ from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
 }
 ```
 
-
 - json描述文件中储存的量化权重的总体类型model_quant_type，是否启用FA3量化fa_quant_type，和其中各个权重的类型，来自原始浮点权重则为FLOAT，来自W8A8量化则为W8A8。
 
 ```python
 {
   "model_quant_type": "W8A8",                                # 整体量化类型为W8A8量化
-  "fa_quant_type": "FAQuant",								                 # 量化过程开启了FA3量化
+  "fa_quant_type": "FAQuant",                         # 量化过程开启了FA3量化
   "model.embed_tokens.weight": "FLOAT",                      # 来自原始浮点模型的embed_tokens权重
   "model.layers.0.self_attn.q_proj.weight": "W8A8",          # 量化新增的第0层self_attn.q_proj的quant_weight
   "model.layers.0.self_attn.q_proj.input_scale": "W8A8",     # 量化新增的第0层self_attn.q_proj的input_scale
@@ -336,9 +336,10 @@ from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
 }
 ```
 
-###  FA3精度调优
+### FA3精度调优
 
 #### 量化脚本（NPU）
+
 当前 FA 量化脚本和命令可以参考 example 的相关内容。跳转链接见下表：
 
 | 脚本文件                                          | 参考资料                                                     |
@@ -346,11 +347,12 @@ from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
 | [quant_qwen.py](../../../../../example/Qwen/quant_qwen.py)    | [Qwen2.5-72B 支持Attention量化](../../../../../example/Qwen/README.md#qwen25-72b-支持attention量化) |
 | [quant_llama.py](../../../../../example/Llama/quant_llama.py) | [Llama3.1-70B W8A8量化搭配Attention量化](../../../../../example/Llama/README.md#llama31-70b-w8a8量化搭配attention量化) |
 
-#### 本文仅给出FA3场景下Llama3.1-70B和Qwen2.5-72B的量化推荐配置，可按实际情况进行参数调整，详见[精度调优策略](../../../../案例集/w8a8精度调优策略.md) 。
+#### 本文仅给出FA3场景下Llama3.1-70B和Qwen2.5-72B的量化推荐配置，可按实际情况进行参数调整，详见[精度调优策略](../../../../案例集/w8a8精度调优策略.md)
 
 #### Llama3.1-70B 量化参数设置
 
 - 离群值抑制(AntiOutlier) ：anti_method = "m3"
+
 ```python
 anti_config = AntiOutlierConfig(anti_method="m3", dev_type="npu", dev_id=model.device.index)
 ```
@@ -358,6 +360,7 @@ anti_config = AntiOutlierConfig(anti_method="m3", dev_type="npu", dev_id=model.d
 - 量化参数(QuantConfig)
 
 激活值量化方法：act_method = 3
+
 ```python
 quant_config = QuantConfig(
     a_bit=8,
@@ -387,6 +390,7 @@ calibrator = Calibrator(
 <br>
 
 （2）回退所有down层：
+
 ```python
 disable_names = []
 num_layers = 80
@@ -395,7 +399,9 @@ for layer_index in disable_idx_lst:
     down_proj_name = "model.layers.{}.mlp.down_proj".format(layer_index)
     disable_names.append(down_proj_name)
 ```
+
 （3）（可选）调用fa_quant时设置回退层数。本模型无需设置该参数精度即可达标。
+
 ```python
 fa_quant(fa_amp=5)
 ```
@@ -407,6 +413,7 @@ fa_quant(fa_amp=5)
 - 量化参数(QuantConfig)
 
 激活值量化方法：act_method = 1
+
 ```python
 quant_config = QuantConfig(
     a_bit=8,
@@ -434,6 +441,7 @@ calibrator = Calibrator(
 - 量化回退(disable_names)
 （1）（可选）disable_level='L0': 本模型设置L0精度即可达标。
 <br>（2）回退所有down层：
+
 ```python
 disable_names = []
 num_layers = 80
@@ -442,11 +450,13 @@ for layer_index in disable_idx_lst:
     down_proj_name = "model.layers.{}.mlp.down_proj".format(layer_index)
     disable_names.append(down_proj_name)
 ```
+
 （3）（可选）调用fa_quant时设置回退层数。本模型无需设置该参数精度即可达标。
+
 ```python
 fa_quant(fa_amp=5)
 ```
 
-## 多模态模FA3量化关键步骤说明如下：
+## 多模态模FA3量化关键步骤说明如下
 
 请参考[Flux FA3量化](../../../../../example/multimodal_sd/Flux/README.md#flux-fa3-量化)与[HunyuanVideo FA3](../../../../../example/multimodal_sd/HunYuanVideo/README.md#hunyuanvideo-fa3-量化)的详细使用说明。

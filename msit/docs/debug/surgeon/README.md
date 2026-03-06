@@ -1,11 +1,13 @@
 # msit debug surgeon功能使用指南
 
 ## 简介
+
 surgeon（自动调优）工具使能ONNX模型在昇腾芯片的优化，并提供基于ONNX的改图功能。该工具在原[auto-optimizer](./auto_optimizer/README.md)工具的基础上进行了优化、扩展，建议优先使用。
 
 将surgeon工具优化、修改后的ONNX模型转换为可部署在NPU上的OM模型的操作方法可参见《CANN商用版快速入门》中的“[将ONNX模型转换为OM模型](https://www.hiascend.com/document/detail/zh/canncommercial/81RC1/quickstart/quickstart/quickstart_18_0010.html)”章节或[《msit convert功能使用指南》](https://gitcode.com/Ascend/msit/blob/master/msit/docs/convert/README.md)。
 
 ## 工具安装
+
 - 工具安装请见 [msit一体化工具使用指南](../../../README.md)
 
 ## 功能介绍
@@ -22,12 +24,14 @@ surgeon的图优化功能可以直接通过msit命令行形式启动。启动方
 ```bash
 msit debug surgeon COMMAND [OPTIONS] [REQUIRED]
 ```
+
 **COMMAND**为surgeon工具提供的五个功能选项：**list**、**evaluate**、**optimize**、**extract**和**concatenate**。
 ```[OPTIONS]```和```[REQUIRED]```为可选项和必选项参数，每个子任务下面的可选项和必选项不同。
 
 **安全注意事项**： 在onnx模型传给图优化工具加载前，用户需要确保onnx模型是安全可信的，若onnx模型来源官方有提供SHA256等校验值，用户必须要进行校验，以确保onnx模型没有被篡改。
 
 建议使用流程：
+
   1. 执行**list**命令列举当前支持自动调优的所有知识库。
   2. 执行**evaluate**命令搜索可以被指定知识库优化的ONNX模型。
   3. 执行**optimize**命令使用指定的知识库来优化指定的ONNX模型。
@@ -122,6 +126,7 @@ optimize可简写为opt。
 | -h/--help                  | 工具使用帮助信息。                                           | 否       |
 
 ### extract命令
+
 命令格式如下：
 
 ```bash
@@ -146,11 +151,13 @@ extract 可简写为ext
 **使用特别说明**：为保证子图切分功能正常使用且不影响推理性能，请勿指定存在**父子关系**的输入或输出节点作为切分参数。
 
 ### concatenate命令
+
 命令格式如下：
 
 ```bash
 msit debug surgeon concatenate [OPTIONS]
 ```
+
 concatenate 可简写为 concat
 
 参数说明：
@@ -171,6 +178,7 @@ concatenate 可简写为 concat
 graph_refactor 是 surgeon 工具的一个基础组件，提供简易的改图接口，解决用户改图难度大、学习成本高的问题。目前支持 onnx 模型的以下改图功能：
 
 **安全注意事项**： 改图工具使用时传入的onnx文件路径请务必确保文件内容未被篡改，工具会在改图过程中加载直接执行该文件，用户需自行保证该文件内容安全性。
+
 - [x] 加载和保存模型
 - [x] 查询和修改单个节点信息
 - [x] 新增节点，根据条件插入节点
@@ -322,15 +330,13 @@ g.save('layernorm_concat.onnx', save_as_external_data=False, all_tensors_to_one_
 
 ### 详细使用方法
 
-
 - 接口详见 [API 说明和示例](../../../components/debug/surgeon/docs/graph_refactor/graph_refactor_API.md)
 - BaseNode 使用方法参见 [BaseNode 说明](../../../components/debug/surgeon/docs/graph_refactor/graph_refactor_BaseNode.md)
 - BaseGraph 使用方法参见 [BaseGraph 说明](../../../components/debug/surgeon/docs/graph_refactor/graph_refactor_BaseGraph.md)
 
-
 ## 使用示例
 
-请移步[surgeon使用示例](../../../examples/cli/debug/surgeon/)
+请移步[surgeon使用示例](../../../examples/cli/debug/surgeon)
 
   | 使用示例                                                                                 | 使用场景                    |
   |--------------------------------------------------------------------------------------|-------------------------|

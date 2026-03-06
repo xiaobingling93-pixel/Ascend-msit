@@ -1,10 +1,10 @@
-- [FAQ](#faq)
-  - [1. 非root用户使用analyze工具时若使用root目录下/usr/local/Ascend/ascend-toolkit的文件，产生调用fast\_query shell失败的错误](#1-非root用户使用analyze工具时若使用root目录下usrlocalascendascend-toolkit的文件产生调用fast_query-shell失败的错误)
+
 # FAQ
 
 ## 1. 非root用户使用analyze工具时若使用root目录下/usr/local/Ascend/ascend-toolkit的文件，产生调用fast_query shell失败的错误
 
 - 错误信息：
+
 ```bash
 2023-06-16 09:23:47,490 INFO : convert model to json, please wait...
 2023-06-16 09:24:01,852 INFO : convert model to json finished.
@@ -18,7 +18,6 @@
 
 ```
  
-
 - 错误原因分析：
 
     当前analyze工具在检查模型支持度分析过程中会调用CANN包下算子速查工具进行检验，由于工具文件安全性检查要求调用算子速查工具脚本的使用者与该脚本的拥有者为同一人，故当非root用户使用root目录下/usr/local/Ascend/ascend-toolkit下文件时，将无法通过analyze工具的文件安全校验，所以无法调用。

@@ -1,19 +1,25 @@
 # msit profile analyze功能使用指南
 
 ## 简介
+
 - 面向推荐场景的性能调优分析工具, 当前仅支持对GE自动融合算子进行分析。
 
 ## 使用方法
+
 ### 前置条件
+
 - 工具在运行过程中，会调用ATC工具对GE的dump图进行转换，使用前请先确保source了CANN的环境变量。例如: source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 ### 使用入口
+
 在安装好msit-profile工具后，可以直接通过命令行使用。
+
 ```bash
 msit profile analyze --origin /tmp/op_summary_origin.csv --fused /tmp/op_summary.csv --ops-graph /tmp/ge_proto_00000001_graph_1_Build.txt
 ```
 
 ### 参数说明
+
   | 参数名                    | 描述                                       | 必选 |
   | ------------------------ | ---------------------------------------- | ---- |
   | --mode            | 配置模式推理的场景，例如单算子或是图模式，当前仅支持图模式。 | 否  |
@@ -24,11 +30,12 @@ msit profile analyze --origin /tmp/op_summary_origin.csv --fused /tmp/op_summary
   | -o, --output       | 性能分析结果保存路径, 默认为当前路径。 | 否  |
   | -h, --help               | 工具使用帮助信息。               | 否  |
 
-
 ## 输出件介绍
+>
 > 性能分析结果
 
 运行结束后，指定的output路径下生成一个profile_analysis.csv文件，里面记录了融合算子的性能分析结果，当前仅支持自动融合相关的两类融合算子（算子类型为AscBackend和FusedAscBackend）。
+
 - HBM（High Bandwidth Memory）指的是传输数据量，单位为KB。
 分析结果有很多列，下面对每一列的含义进行介绍：
 

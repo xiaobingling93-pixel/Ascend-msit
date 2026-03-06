@@ -1,15 +1,17 @@
 # Multi thread
 
-
 ## 介绍
+
 benchmark推理工具目前提供多线程推理功能
 
 ## 运行示例
+
 1. 纯推理场景。默认情况下，输出信息仅打屏显示。
 
     ```bash
     msit benchmark -om ./pth_resnet50_bs1.om --pipeline 1
     ```
+
     其中，-om为OM离线模型文件路径。
 
 2. 带数据推理场景。默认情况下，输出信息仅打屏显示。
@@ -17,6 +19,7 @@ benchmark推理工具目前提供多线程推理功能
     ```bash
     msit benchmark -om ./pth_resnet50_bs1.om --input=./data --pipeline 1
     ```
+
     其中，--input为输入路径,以","分割。
 
 3. 调试模式。开启debug调试模式。
@@ -42,6 +45,7 @@ benchmark推理工具目前提供多线程推理功能
      ```bash
      [DEBUG] model aclExec cost : 2.336000
      ```
+
    - 模型输入输出等具体操作信息
 
 4. 保存结果场景。

@@ -8,7 +8,7 @@
 
 ## 2. msit安装
 
-- msit安装请参考[一体化安装指导](/msit/docs/install/README.md)
+- msit安装请参考[msit 工具安装](../../../../../../msit/docs/install/README.md)
 
 ## 3. Dump 数据 
 

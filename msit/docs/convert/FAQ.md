@@ -1,11 +1,8 @@
-- [FAQ](#faq)
-  - [1. 使用msit convert atc 转换时报错（ONNX格式）](#1-使用msit-convert-atc-转换时报错onnx格式)
 
 # FAQ
 
-----------------------------------------
-
 ## 1. 使用msit convert atc 转换时报错（ONNX格式）
+
 **报错提示** E16005：The model has [2] [--domain version] fields, but only one is allowed
 
 **报错原因** 由第三方库开发等原因引入的包含自定义算子的模型，可能使ONNX模型中出现多个domain version，从而导致ATC模型转换报错

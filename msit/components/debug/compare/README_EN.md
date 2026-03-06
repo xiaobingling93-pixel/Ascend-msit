@@ -1,50 +1,64 @@
 # One-Click Accuracy Analyzer (Inference)
 
-### Overview
+## Overview
+
 - This readme describes the **main.py** tool, or One-Click Accuracy Analyzer, for inference scenarios. This tool enables one-click network-wide accuracy analysis of TensorFlow and ONNX models. You only need to prepare the original model, offline model equivalent, and model input file. Beware that the offline model must be an .om model converted using the Ascend Tensor Compiler (ATC) tool, and the .bin input file must meet the input requirements of the model (multi-input models are supported).  
 - For details about the usage restrictions of the tool, please visit: [CANN Community Edition/Restrictions (Only for Inference Scenarios)](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/60RC1alphaX/developmenttools/devtool/atlasaccuracy_16_0035.html).
 
-### Environment Setup
+## Environment Setup
+
 - Set up an operating and development environment powered by Ascend AI Processors including driver / firmware / CANN, referring [Ascend Documentation](https://www.hiascend.com/en/document)
 - Install Python 3.7.5.
 - Install benchmark tool, referring [ais_bench](https://gitcode.com/Ascend/msit/tree/master/msit/components/benchmark/README.md)
 - **ONNX related python packages** `pip3 install onnxruntime onnx numpy`, If the installation of dependent modules fails using the pip command, it is recommended to execute the command **pip3 install --upgrade pip** to avoid installation failure due to low pip version.
 - **TensorFlow related python packages**, referring [Centos7.6 installing tensorflow1.15.0](https://bbs.huaweicloud.com/blogs/181055).
 
-### Usage
+## Usage
+
 - Getting this package by downloading zip package or `git clone`:
+
   ```sh
   git clone https://gitcode.com/Ascend/msit.git
   ```
+
 - Change directory to `compare`
+
   ```sh
   cd msit/msit/components/debug/compare
   ```
+
 - Set CANN related environ variables. Change `/usr/local/Ascend/ascend-toolkit` to your own installed CANN path.
+
   ```sh
   source /usr/local/Ascend/ascend-toolkit/set_env.sh
   ```
+
 - **Data prepare**
   - Path of the offline model (.om) adapted to Ascend AI Processor
   - Path of the original model (.pb or .onnx)
   - (Optional) Path of model input data (.bin)
 - **Without model input specified**. **The pathes used here need to be absolute pathes**.
+
   ```sh
   python3 main.py -m /home/HwHiAiUser/onnx_prouce_data/resnet_offical.onnx -om /home/HwHiAiUser/onnx_prouce_data/model/resnet50.om \
   -c /usr/local/Ascend/ascend-toolkit/latest -o /home/HwHiAiUser/result/test
   ```
+
   - `-om, --offline-model-path` Path of the offline model (.om) adapted to the Ascend AI Processor.
   - `-m, --model-path` Path of the original model (.pb or .onnx). Currently, only .pb and .onnx models are supported.
   - `-c, --cann-path` (Optional) CANN installation path, defaulted to `/usr/local/Ascend/ascend-toolkit/latest`
   - `-o, --output-path` (Optional) Output path, defaulted to the current directory.
 - **With model input specified**. **The pathes used here need to be absolute pathes**.
+
   ```sh
   python3 main.py -m /home/HwHiAiUser/onnx_prouce_data/resnet_offical.onnx -om /home/HwHiAiUser/onnx_prouce_data/model/resnet50.om \
   -i /home/HwHiAiUser/result/test/input_0.bin -c /usr/local/Ascend/ascend-toolkit/latest -o /home/HwHiAiUser/result/test
   ```
+
   - `-i, --input-path` Path of model input data, which is generated based on model inputs by default. Separate model inputs with commas (,), for example, `/home/input_0.bin, /home/input_1.bin`. This scenario will automatically perform group batch based on the file size and the actual input size of the model, but it is necessary to ensure that the shape of the data, except for the batch size, is consistent with the model input.
 
-### Analysis Result Description
+## Analysis Result Description
+
 ```sh
 Used to distinguish between different actual inputs of models in dynamic shapes, but not in static shapes
 
@@ -81,7 +95,8 @@ Used to distinguish between different actual inputs of models in dynamic shapes,
 └-- tmp                                      # tfdbg temp directory if -m {Tensorflow pb model}
 ```
 
-### Comparison Result Analysis
+## Comparison Result Analysis
+
 - **The comparison result** is stored in `result_{timestamp}.csv`, The meaning of each field in the comparison result file is the same as that of the basic Model Accuracy Analyzer. For details, click the following link [Comparison Procedure (Inference Scenarios)](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/60RC1alphaX/developmenttools/devtool/atlasaccuracy_16_0039.html)
 - **analyser result** is printed at the end of execution, by analysing csv output line by line, and excluding NaN data. Then output the first monitor which value is not within the preset threshold.
 
@@ -94,6 +109,7 @@ Used to distinguish between different actual inputs of models in dynamic shapes,
   | MeanRelativeError         | >1.0     |
 
   Printed output is in markdown table format.
+
   ```sh
   2023-04-19 13:54:10(1005)-[INFO]Operators may lead to inaccuracy:
 
@@ -102,7 +118,9 @@ Used to distinguish between different actual inputs of models in dynamic shapes,
   |          CosineSimilarity | 0.6722 |   214 |    Mul |   Mul_6 |       Mul_6 |
   | RelativeEuclideanDistance |      1 |   214 |    Mul |   Mul_6 |       Mul_6 |
   ```
+
   **Python API usage**
+
   ```py
   from msquickcmp.net_compare import analyser
   _ = analyser.Analyser('result_2021211214657.csv')()
@@ -111,9 +129,11 @@ Used to distinguish between different actual inputs of models in dynamic shapes,
   # |          CosineSimilarity | 0.6722 |   214 |    Mul |   Mul_6 |       Mul_6 |
   # | RelativeEuclideanDistance |      1 |   214 |    Mul |   Mul_6 |       Mul_6 |
   ```
+
   Two kind of strategy is defined.
   - `FIRST_INVALID_OVERALL` output only the first monitor which value is not within the preset threshold. Default value.
   - `FIRST_INVALID_EACH` output the first value not in the preset threhold for each monitor.
+
   ```py
   from msquickcmp.net_compare import analyser
   _ = analyser.Analyser('result_2021211214657.csv')(strategy=analyser.STRATEGIES.FIRST_INVALID_EACH)
@@ -126,7 +146,7 @@ Used to distinguish between different actual inputs of models in dynamic shapes,
   # | KullbackLeiblerDivergence | 0.01125 |   316 | BatchMatMulV2 |                    MatMul_179 |  MatMul_179 |
   ```
 
-### Command-line Options
+## Command-line Options
 
 | Option&emsp                              | Description                              | Required |
 | ---------------------------------------- | ---------------------------------------- | -------- |
@@ -144,7 +164,8 @@ Used to distinguish between different actual inputs of models in dynamic shapes,
 | --dump                   | Whether compare the accuracy of all the operation nodes output. Default True.(only support onnx model)<br/> For example: --dump False           | No  |
 | --convert                 | Support om comparison result file data format from bin file to npy file, the generated npy file directory is ./dump_data/npu/{timestamp_bin2npy} folder. For example: --convert True | No    |
 
-### Sample Execution
+## Sample Execution
+
 - Obtain the original model from [AIPainting_v2.pb](https://obs-9be7.obs.cn-east-2.myhuaweicloud.com/003_Atc_Models/AE/ATC%20Model/painting/AIPainting_v2.pb).
 - Obtain the .om model from [AIPainting_v2.om](https://obs-9be7.obs.cn-east-2.myhuaweicloud.com/003_Atc_Models/AE/ATC%20Model/painting/AIPainting_v2.om).
 - **Run the commands by referring to the above guide to execute the sample. If you want to try with model input data specified, run the command for the scenario where input data is not specified to generate input data files (.bin) as the input.**

@@ -95,7 +95,7 @@ evaluate可简写为eva。
 python3 -m auto_optimizer evaluate aasist_bs1_ori.onnx
 ```
 
-```
+```ColdFusion
 2023-04-27 14:37:10,364 - auto-optimizer-logger - INFO - aasist_bs1_ori.onnx    KnowledgeConv1d2Conv2d,KnowledgeMergeConsecutiveSlice,KnowledgeTransposeLargeInputConv,KnowledgeTypeCast,KnowledgeMergeCasts
 ```
 
@@ -135,6 +135,7 @@ python3 -m auto_optimizer optimize aasist_bs1_ori.onnx aasist_bs1_ori_out.onnx
 ```
 
 ### extract命令
+
 命令格式如下：
 
 ```bash
@@ -164,6 +165,7 @@ python3 -m auto_optimizer extract origin_model.onnx sub_model.onnx "s_node1,s_no
 ```bash
 2023-04-27 14:32:33,378 - 984068 - msit_debug_logger - INFO - Extract the model completed, model was saved in sub_model.onnx
 ```
+
 ## 许可证
 
 [Mulan PSL v2](../../../../../LICENSE)

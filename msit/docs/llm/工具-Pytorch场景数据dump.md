@@ -1,18 +1,22 @@
 # PyTorch 场景的精度数据采集
 
+## 简介
+
 msit llm dump 工具主要通过在推理脚本内添加 dump 接口启动推理的方式采集精度数据。
 
-#### 工具安装
+## 使用前准备
+
+**工具安装**
 
 需要安装msit工具，软件安装见 [msit工具安装](../install/README.md)。
 
 安装好msit后需要安装msit中的 llm 组件，执行 msit install llm。
 
-#### 版本要求
+**版本要求**
 
 若使用transformers 的 AutoModelForCausalLM 类加载预训练模型，请确保 transformers>=4.43.2（或官方给出的依赖版本）。
 
-####   磁盘空间要求
+**磁盘空间要求**
 
 落盘数据时要预留足够的磁盘空间大小，以下为给出的不同大模型所需空间大小示例。
 
@@ -21,13 +25,11 @@ msit llm dump 工具主要通过在推理脚本内添加 dump 接口启动推理
 | Llama3-8B  |    20M   | 
 | qwen1.5-14B |   660MB |
 
+## 接口介绍
 
-## 1 接口介绍
-
- ### 1.1 DumpConfig
+### DumpConfig
 
  **功能说明**：配置Dump参数实现自定义模型数据采集。
-
 
 **原型**：
 
@@ -53,7 +55,7 @@ DumpConfig(dump_path=None, token_range=None, seed=None)
 | seed | 设定启动确定性计算的种子。 | 数据类型：int，可以通过该参数确定是否要启动确定性计算，输入的值表示固定随机性的种子值。 | 否 | 7.0.0rc730 |
 | dump_statistics_mode | 设置统计量Dump模式。 | 数据类型： int，默认为0，不进行统计量dump。当dump_statistics_mode=1时，只dump统计量；当dump_statistics_mode=2时，同时dump统计量和tensor。| 否 | 7.0.0rc1230 |
 
-### 1.2 register_hook
+### register_hook
 
 **原型**：
 
@@ -67,9 +69,9 @@ register_hook(model, config, hook_type="dump_data")
 | config    | Hook配置       | 数据类型：DumpConfig                                    | 是       |
 | hook_type | hook类型       | 数据类型：str，默认值为dump_data，当前仅支持dump_data。 | 否       |
 
-## 2 示例代码
+## 示例代码
 
-### 2.1 快速上手
+### 快速上手
 
 这个示例调用了transformers库的Llama-2-7b模型，在进行数据采集时使用原型函数 DumpConfig 传入 dump_path 参数、 token_range 参数和 seed 参数。是需要在模型推理前配置好工具数据采集接口并开启数据dump即可，实际使用场景可根据自己的模型进行调整。
 
@@ -112,7 +114,7 @@ if __name__ == "__main__":
 
 ```
 
-## 3 dump 结果文件介绍
+## dump 结果文件介绍
 
 推理结束后，工具将 dump 的数据保存在 dump_path 参数指定的目录下。目录结构示例如下：
 
@@ -130,7 +132,7 @@ if __name__ == "__main__":
 |   |   |   |   |   ├── root.model.layers0.mlp.act_fn   
 |   |   |   |   |   ...
 |   |   |   |   └── model_tree.json    
-```
+
+
 * `npu`：设备卡号，每张卡的数据保存在对应的 `npu{ID}` 目录下。
 * `{token id}`：每一个 token 采集到的数据会保存在对应的 token id 下。
-* `model_tree.json`： 保存模型的整网结构、每个节点的optype和输入输出信息。

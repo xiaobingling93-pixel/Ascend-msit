@@ -251,6 +251,7 @@ graph TD
 
     end
 ```
+
 ---
 
 ## Resize算子mode使用最近邻(KnowledgeResizeModeToNearest)
@@ -258,8 +259,11 @@ graph TD
 ### 原理
 
 部分推理模型中使用了双线性插值法做resize，经分析导致精度回归异常，使得个别图片存在误差。此类优化可扩展至linear->nearest、cubic->nearest、area->nearest等自定义转换场景。
+
 ### 可支持场景
+
 Resize算子mode类型为linear、cubic、area的场景。 
+
 ### 示意图
 
 ```mermaid
@@ -274,6 +278,7 @@ graph TD
         A --> B(Node1)
     end
 ```
+
 ---
 
 ## Split算子替换Gather算子(KnowledgeGatherToSplit)
@@ -281,8 +286,11 @@ graph TD
 ### 原理
 
 部分推理模型中使用了多个Gather算子对同一个数据进行切分，经分析Gather算子indices连续的情况下，例如该场景：y1=x[:3]，y2=x[3:6]，y3=x[6:9]，可使用一个Split算子进行替换。
+
 ### 可支持场景
+
 各Gather算子axis相同，indices为0开始的连续一维向量且切分数据不相交的场景。例如：三个Gather算子indices分别为[0]、[1]、[2]；三个Gather算子indices分别为[0, 1]、[2, 3]、[4, 5]。
+
 ### 示意图
 
 ```mermaid
@@ -558,47 +566,46 @@ Cast 算子合并可以归纳为以下三种方法：
 
 1. 同属性的兄弟 Cast 算子合并
 
-```mermaid
-graph TD
-    subgraph After
-        A2(Add) --> C3("Cast{to: T}") --> M2(Mul)
-        C3 --> S2(Sub)
-    end
+    ```mermaid
+    graph TD
+        subgraph After
+            A2(Add) --> C3("Cast{to: T}") --> M2(Mul)
+            C3 --> S2(Sub)
+        end
 
-    subgraph Before
-        A1(Add) --> C1("Cast{to: T}") --> M1(Mul)
-        A1 --> C2("Cast{to: T}") --> S1(Sub)
-    end
-```
+        subgraph Before
+            A1(Add) --> C1("Cast{to: T}") --> M1(Mul)
+            A1 --> C2("Cast{to: T}") --> S1(Sub)
+        end
+    ```
 
 2. 单分支路径上的父子 Cast 算子合并
 
-```mermaid
-graph TD
-    subgraph After
-        A2(Add) --> C3("Cast{to: S}")
-    end
+    ```mermaid
+    graph TD
+        subgraph After
+            A2(Add) --> C3("Cast{to: S}")
+        end
 
-    subgraph Before
-        A1(Add) --> C1("Cast{to: T}") --> C2("Cast{to: S}")
-    end
-```
+        subgraph Before
+            A1(Add) --> C1("Cast{to: T}") --> C2("Cast{to: S}")
+        end
+    ```
 
 3. 根节点后的 Cast 算子如果与输出类型相同可以消除
 
-```mermaid
-graph TD
-    subgraph After
-        A2(Add) -->|T| M2(Mul)
-    end
+    ```mermaid
+    graph TD
+        subgraph After
+            A2(Add) -->|T| M2(Mul)
+        end
 
-    subgraph Before
-        A1(Add) -->|T| C1("Cast{to: T}") --> M1(Mul)
-    end
-```
+        subgraph Before
+            A1(Add) -->|T| C1("Cast{to: T}") --> M1(Mul)
+        end
+    ```
 
 结合以上三种方法，对 Cast 节点树进行递归处理就可以合并多余的 Cast 节点
-
 
 ## BatchNormalization折叠 (KnowledgeBNFolding)
 
@@ -659,8 +666,6 @@ graph TD
 
 当没有Transpose时，FusionPass会进行一些类似Conv+BatchNormalization的融合，原理上是一样的，尝试了一些模型，部分性能有劣化，故不考虑。
 
-
-
 ## reflect模式的pad算子替换
 
 ### 原理
@@ -668,6 +673,7 @@ graph TD
 当pad算子的模式为reflect模式时，算子性能较差，因此将pad算子做一些等价变换，以提升模型的性能。
 
 ### 示意图
+
 ```mermaid
 graph TD
     subgraph After
@@ -687,8 +693,6 @@ graph TD
 
 如上图所示，Pad算子转换为一个等价子图。
 
-
-
 ## transform模型大kernel优化
 
 ### 原理
@@ -699,101 +703,101 @@ ATC工具对transform模型的标准attention结构进行了优化，在转换om
 
 ```mermaid
 graph TD
-	subgraph after
-		sadd(Add)
-		qmm(MatMul)
-		qadd(Add)
-		qres(Reshape)
-		qtrans(Transpose)
-		kmm(MatMul)
-		kadd(Add)
-		kres(Reshape)
-		ktrans1(Transpose)
-		ktrans2(Transpose)
-		vmm(MatMul)
-		vadd(Add)
-		vres(Reshape)
-		vtrans(Transpose)
-		qkmm(MatMul)
-		mul(Mul)
-		maskadd(Add)
-		softmax(Softmax)
-		scorevmm(MatMul)
-		transe(Transpose)
-		mme(MatMul)
-		adde(Add)
-		endadd(Add)
-		
-		sadd-->qmm
-		sadd-->kmm
-		sadd-->vmm
-		qmm-->qadd
-		kmm-->kadd
-		vmm-->vadd
-		qadd-->qres
-		kadd-->kres
-		vadd-->vres
-		qres-->qtrans
-		kres-->ktrans1
-		ktrans1-->ktrans2
-		vres-->vtrans
-		qtrans-->qkmm
-		ktrans2-->qkmm
-		qkmm-->mul
-		mul-->maskadd
-		maskadd-->softmax
-		softmax-->scorevmm
-		vtrans-->scorevmm
-		scorevmm-->transe
-		transe-->mme
-		mme-->adde
-		adde-->endadd
-	end
-	
+ subgraph after
+  sadd(Add)
+  qmm(MatMul)
+  qadd(Add)
+  qres(Reshape)
+  qtrans(Transpose)
+  kmm(MatMul)
+  kadd(Add)
+  kres(Reshape)
+  ktrans1(Transpose)
+  ktrans2(Transpose)
+  vmm(MatMul)
+  vadd(Add)
+  vres(Reshape)
+  vtrans(Transpose)
+  qkmm(MatMul)
+  mul(Mul)
+  maskadd(Add)
+  softmax(Softmax)
+  scorevmm(MatMul)
+  transe(Transpose)
+  mme(MatMul)
+  adde(Add)
+  endadd(Add)
+  
+  sadd-->qmm
+  sadd-->kmm
+  sadd-->vmm
+  qmm-->qadd
+  kmm-->kadd
+  vmm-->vadd
+  qadd-->qres
+  kadd-->kres
+  vadd-->vres
+  qres-->qtrans
+  kres-->ktrans1
+  ktrans1-->ktrans2
+  vres-->vtrans
+  qtrans-->qkmm
+  ktrans2-->qkmm
+  qkmm-->mul
+  mul-->maskadd
+  maskadd-->softmax
+  softmax-->scorevmm
+  vtrans-->scorevmm
+  scorevmm-->transe
+  transe-->mme
+  mme-->adde
+  adde-->endadd
+ end
+ 
     subgraph before
-    	add1(Add)
-    	res1(Reshape)
-    	gemm1(Gemm)
-    	res2(Reshape)
-    	split(Split)
-    	q_res(Reshape)
-    	k_res(Reshape)
-    	v_res(Reshape)
-    	q_trans(Transpose)
-    	k_trans(Transpose)
-    	v_trans(Transpose)
-    	qk_mm(MatMul)
-    	div(Div)
-    	sub(Sub)
-    	soft(Softmax)
-    	vs_mm(MatMul)
-    	trans(Transpose)
-    	resh1(Reshape)
-    	gemm(Gemm)
-    	resh2(Reshape)
-    	add2(Add)
-    	
-		add1-->res1
-		res1-->gemm1
-		gemm1-->res2
-		res2-->split
-		split-->q_res
-		split-->k_res
-		split-->v_res
-		q_res-->q_trans
-		k_res-->k_trans
-		v_res-->v_trans
-		q_trans-->qk_mm
-		k_trans-->qk_mm
-		qk_mm-->div
-		div-->sub
-		sub-->soft
-		soft-->vs_mm
-		v_trans-->vs_mm
-		vs_mm-->trans
-		trans-->resh1
-		resh1-->gemm
-		gemm-->resh2
-		resh2-->add2
+     add1(Add)
+     res1(Reshape)
+     gemm1(Gemm)
+     res2(Reshape)
+     split(Split)
+     q_res(Reshape)
+     k_res(Reshape)
+     v_res(Reshape)
+     q_trans(Transpose)
+     k_trans(Transpose)
+     v_trans(Transpose)
+     qk_mm(MatMul)
+     div(Div)
+     sub(Sub)
+     soft(Softmax)
+     vs_mm(MatMul)
+     trans(Transpose)
+     resh1(Reshape)
+     gemm(Gemm)
+     resh2(Reshape)
+     add2(Add)
+     
+  add1-->res1
+  res1-->gemm1
+  gemm1-->res2
+  res2-->split
+  split-->q_res
+  split-->k_res
+  split-->v_res
+  q_res-->q_trans
+  k_res-->k_trans
+  v_res-->v_trans
+  q_trans-->qk_mm
+  k_trans-->qk_mm
+  qk_mm-->div
+  div-->sub
+  sub-->soft
+  soft-->vs_mm
+  v_trans-->vs_mm
+  vs_mm-->trans
+  trans-->resh1
+  resh1-->gemm
+  gemm-->resh2
+  resh2-->add2
     end
 ```

@@ -56,12 +56,12 @@ ini = g.get_node('ini_0', Initializer)
 # 获取 node 的所有前驱节点
 prev_nodes = []
 for i in node.inputs:
-	prev_nodes.append(g.get_prev_node(i))
+ prev_nodes.append(g.get_prev_node(i))
 
 # 获取 node 的所有后继节点
 next_nodes = []
 for o in node.outputs:
-	next_nodes.extend(g.get_next_nodes(o))
+ next_nodes.extend(g.get_next_nodes(o))
 next_nodes = list(set(next_nodes))
 
 # 获取 node 节点输出的维度
@@ -283,6 +283,7 @@ g.save('model_fix.onnx', save_as_external_data=False, all_tensors_to_one_file=Tr
 - `output_name_list(List[str])` - 指定模型截取的输出边。
 
 **concat_graph(graph1, graph2, io_map, graph_name=None) -> OnnxGraph**
+
 - `graph1`(OnnxGraph): 第一幅ONNX图
 - `graph2`(OnnxGraph): 第二幅ONNX图
 - `io_map`(List[Tuple[str, str]]): 第一幅ONNX图的输出与第二幅ONNX图的输入的映射关系

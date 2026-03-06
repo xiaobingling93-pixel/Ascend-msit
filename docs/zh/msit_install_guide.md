@@ -20,6 +20,7 @@ MindStudio Inference Tools（MindStudio 昇腾推理工具链，msIT），为用
 **安装 CANN（可选）**
 
 以下组件依赖CANN生态才能运行，如果您想使用如下工具，需要在安装msit之前先安装CANN：
+
 - [**msProf（MindStudio Profiler）**](https://gitcode.com/Ascend/msprof)<br>
     **数据采集工具**：构建昇腾全场景性能调优基础能力，支持采集CANN和NPU性能数据，提升昇腾设备性能调优效率。
 
@@ -61,12 +62,14 @@ pip3 config set global.trusted-host repo.huaweicloud.com
 > [!NOTE] 说明  
 > 对于 root 用户，msit默认安装到 /usr/local/Ascend 目录下；如果使用普通用户进行安装，msit会默认安装到 ${HOME}/Ascend 下。<br>
 > 如果要指定路径安装，则需添加 `--install-path`，例如下列代码会将msit安装到 `/path/to/install` 目录下：
-> ```
+>
+> ```shell
 > ./Ascend-mindstudio-inference-toolkit_linux-*.run --install --install-path=/path/to/install
 > ```
-
+>
 > [!WARNING] 注意
 > 如果要指定路径安装，则需添加 `--install-path`，但是需要注意：<br>
+>
 > 1. 使用 `--install-path=/path/to/install` 而非 `--install-path /path/to/install`，必须带上 `=`。
 > 2. 指定的安装路径必须为绝对路径，不支持相对路径，输入相对路径会出现安装报错。
 
@@ -75,7 +78,6 @@ pip3 config set global.trusted-host repo.huaweicloud.com
 软件包安装成功后，工具会安装成功提示，为了确保工具正常运行，需设置环境变量。如下图展示的成功安装示例，设置环境变量的方法为 `source /opt/msit/set_env.sh`。
 
 ![msit install summary](./figures/msit_install_summary.png)
-
 
 ## 升级
 

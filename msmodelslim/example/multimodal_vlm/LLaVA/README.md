@@ -8,7 +8,8 @@
 
 - 基础环境配置请参考[安装指南](../../../docs/安装指南.md)
 - transformers版本需要配置安装为4.37.2
-  ```
+
+  ```shell
   pip install transformers==4.37.2
   ```
 
@@ -19,31 +20,39 @@
 | LLaVA-v1.5-7B | [llava-1.5-7b-hf](https://huggingface.co/llava-hf/llava-1.5-7b-hf/tree/a272c74b2481d8aff3aa6fc2c4bf891fe57334fb) | W8A8静态量化 | MindIE当前不支持<br>vLLM Ascend当前不支持 | [W8A8静态量化](#llava-v1-5-7b-w8a8) |
 
 **说明：**
-- 点击量化命令列中的链接可跳转到对应的具体量化命令。
 
+- 点击量化命令列中的链接可跳转到对应的具体量化命令。
 
 ## 生成量化权重
 
 - 量化权重统一使用[quant_llava.py](./quant_llava.py)脚本生成，以下提供LLaVA模型量化权重生成快速启动命令。
 
 ### 使用案例
+
 - 如果需要使用NPU多卡量化，请先配置环境变量以支持多卡量化（Atlas 300I Duo 系列产品不支持多卡量化）：
+
   ```shell
   # 根据实际情况选择多卡，以下2卡量化为例：
   export ASCEND_RT_VISIBLE_DEVICES=0,1
   export PYTORCH_NPU_ALLOC_CONF=expandable_segments:False
   ```
+
 - 若加载自定义模型，调用`from_pretrained`函数时要指定`trust_remote_code=True`，让修改后的自定义代码文件能够正确地被加载。(请确保加载的自定义代码文件的安全性)
   
 #### 1. LLaVA-v1.5-7B
+
 <a id="llava-v1-5-7b-w8a8"></a>
+
 ##### LLaVA-v1.5-7B W8A8静态量化
+
 生成LLaVA-v1.5-7B模型W8A8量化权重，异常值抑制使用m2算法，在NPU上运行，请将{浮点权重路径}和{量化权重路径}替换为用户实际路径。{校准图片路径}默认为"../calibImages"，用户可根据实际场景替换为其他图片。
+
   ```shell
   python quant_llava.py  --model_path {浮点权重路径} --calib_images {校准图片路径}  --save_directory {量化权重保存路径} --w_bit 8 --a_bit 8 --device_type npu --trust_remote_code True --mindie_format
   ```
 
 ### 量化参数说明
+
 | 参数名 | 含义 | 默认值 | 使用方法 | 
 | ------ | ---- | --- | -------- | 
 | model_path | 浮点权重路径 | 无默认值 | 必选参数；<br>输入LLaVA原始浮点权重目录路径。|

@@ -47,12 +47,12 @@ spec:
   - **per-head**：对每个注意力头独立计算量化参数。
 
 算法流程：
-```
+
 1. 收集每个 head 的激活统计数据：
-   - 输入：激活张量 x，shape 为 (B, H, S, D)
+   - 输入：激活张量x，shape 为 (B, H, S, D)
      其中 B=batch_size, H=num_heads, S=seq_len, D=head_dim
-   - 将 x reshape 为 (H, N)，N = B * S * D
-   - 每个 head 独立收集 N 个数据点
+   - 将x reshape 为 (H, N)，N = B *S* D
+   - 每个head独立收集N个数据点
 
 2. 对每个 head 使用 Recall Window 算法找到最小量化范围：
    - 输入：head_data (N,), ratio (默认 0.9999)
@@ -76,7 +76,6 @@ spec:
      * abs_max[h] = max(abs(min_values[h]), abs(max_values[h]))
      * scale[h] = abs_max[h] / 127
    - 输出：量化参数 q_param
-```
 
 ### 实现
 
@@ -124,7 +123,6 @@ class ModelAdapter(FA3QuantAdapterInterface):
     2. 遍历模型，通过 `should_inject`在注意力层中选择性注入占位器 FA3QuantPlaceHolder 作为子模块。
     3. 定位Q、K、V 激活流向 Attention 计算的临界位置，该位置即为需要插入 FA3 量化的节点。
     4. 包裹注意力层的 forward 方法，在定位到的临界位置插入对 FA3 量化的调用。
-
 
 ## 已验证模型列表
 

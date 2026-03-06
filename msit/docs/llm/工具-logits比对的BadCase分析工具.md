@@ -1,11 +1,13 @@
 # msit bad case 分析工具
+
 # 背景 
+
 在大模型推理精度定位场景下，通常会出现两个模型在同一数据集下，表现不一致的情况。比如，昇腾模型在 `NPU` 上，经过数据集评测，发现有若干问题出现回答错误的情况，但是这些同样的问题，其原生模型在 `GPU` 上的结果却是正确的，这时我们就称这两个问题为 `bad case`。
 
 `msit` 工具针对这种场景，提供"bad case分析工具"进行自动分析，使能用户快速定位。后续衔接"logits dump工具"落盘bad case在模型推理时的logits数据，使用"logits 比对工具"进行对比logits，实现进一步的推理精度测评以及精度问题定位。
 
-
 # 介绍
+
 bad case分析工具的主要功能是对输入的两个场景下的数据集精度测评结果进行分析，并输出对应 `bad case` 。比对同一条query的 `NPU` 和 `GPU` 环境下的回答结果，当在 `NPU` 上的回答结果与 `GPU` 上的回答结果不一致时，那么这个问题本身将会被当作为 `bad case` 进行输出。
 
   **说明** ：精度测评结果是对数据集每条query运行结果的统计。
@@ -43,8 +45,8 @@ msit llm bcanalyze -gp {golden_path} -mp {my_path}  [可选参数]
 | --help          | -h     | 命令行帮助信息                      | 否      |
 | --log-level     | -l     | 日志等级（默认值为info，可选值：debug, info, warning, error, fatal, critical）  | 否     |
 
-
 # 示例
+
 下列示例展示了如何通过命令行进行 `bad case` 分析
 
 通过BoolQ数据集进行精度测评，获得数据集精度测评结果，例如：
@@ -55,6 +57,7 @@ BoolQ_pa_batch16_tp2_full_2025_01_17_15_25_20_debug_info.csv # NPU环境下对Bo
 ```
 
 在命令行中使用：
+
 ```sh
 msit llm bcanalyze -gp "BoolQ_fa_batch16_tp2_full_2025_01_17_15_34_22_debug_info.csv" -mp "BoolQ_pa_batch16_tp2_full_2025_01_17_15_25_20_debug_info.csv"
 ```

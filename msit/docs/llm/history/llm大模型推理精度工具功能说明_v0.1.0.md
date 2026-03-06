@@ -1,9 +1,15 @@
+# llm大模型推理精度工具功能说明_v0.1.0
+
 ## Dump 特性
+
 提供基本的加速库侧算子数据 dump 功能。
+
 ### 使用方式
-```
+
+```shell
 msit llm dump --exec "bash run.sh patches/models/modeling_xxx.py"
 ```
+
 ### 参数说明
 
 | 参数名                      | 描述                                       | 必选   |
@@ -21,16 +27,22 @@ msit llm dump --exec "bash run.sh patches/models/modeling_xxx.py"
 | -h, --help            | 命令行参数帮助信息 | 否    |
 
 ### Dump 落盘位置
+
 - Dump默认落盘路径在当前目录下的atb_temp目录下，具体路径是`./atb_temp/tensors/{PID}_{TID}`目录下。
 - 如果指定 output 目录，则会生成在`{OUTPUT_DIR}/atb_temp/tensors/{PID}_{TID}`目录下。
+
 ***
 
 ## Compare 特性
+
 提供有精度问题的数据与标杆数据之间的比对能力。
+
 ### 使用方式
-```
+
+```shell
 msit llm compare --golden-path golden_data.bin --my-path my-path.bin
 ```
+
 #### 参数说明
 
 | 参数名             | 描述                                                         | 是否必选 |
@@ -38,4 +50,5 @@ msit llm compare --golden-path golden_data.bin --my-path my-path.bin
 | --golden-path, -gp | 标杆数据路径，当前仅支持单个数据文件路径，后续将支持文件夹   | 是       |
 | --my-path, -mp     | 待比较的数据路径，当前仅支持单个数据文件路径，后续将支持文件夹 | 是       |
 | --log-level, -l    | 日志级别，默认为info                                         | 否       |
+
 ***

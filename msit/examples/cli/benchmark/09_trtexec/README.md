@@ -2,7 +2,9 @@
 # trtexec场景
 
 benchmark支持onnx模型推理（集成trtexec）,trtexec为NVIDIA TensorRT自带工具。用户使用benchmark拉起trtexec工具进行推理性能测试，测试过程中实时输出trtexec日志，打印在控制台，推理性能测试完成后，将性能数据输出在控制台。
+
 ## 前置条件
+
 推理性能测试环境需要配置有GPU，安装CANN、CUDA及TensorRT，并且trtexec可以通过命令行调用到，安装方式可参考[TensorRT](https://github.com/NVIDIA/TensorRT)。
 
 示例命令如下：
@@ -44,4 +46,5 @@ msit benchmark -om pth_resnet50.onnx --backend trtexec --perf 1
 | Total GPU Compute Time| 所有执行的 GPU 计算时间的总和。 |
 
 ## FAQ
+
 使用出现问题时，可参考[FAQ](https://gitcode.com/Ascend/msit/wiki/benchmark_FAQ%2Fait%20benchmark%20%E4%BD%BF%E7%94%A8%E8%BF%87%E7%A8%8B%20FAQ.md)

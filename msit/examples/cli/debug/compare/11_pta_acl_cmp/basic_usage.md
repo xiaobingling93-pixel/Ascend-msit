@@ -1,11 +1,14 @@
 
-
 # set_label代码插入使用说明
 
 大模型加速库精度比对是以PyTorch Ascend(pta)侧的数据作为基准数据，比对加速库(acl)推理的数据与pta数据之间的差异，辅助开发者找出加速库侧的问题Operation。
+
 ## 1. 比对level
+
 加速库的Operation分为3个粒度：Op、Layer、Model，在加速库开发过程中pta侧代码的替换也会分为这3个粒度。
+
 ## 1.1 Op的替换
+
 若是Op粒度的替换，pta侧可以获取Operation的输入/输出数据，一个Operation内部会有多个kernel，pta侧无法获取到Op内部kernel的数据，因此需要加速库侧提供数据。<br>
 
 如果比较Operation的输入/输出数据的精度，则称为***high-level***。如果比较Operation内部kernel的输入/输出数据的精度，则称为***low-level***。
@@ -72,13 +75,14 @@ msit debug compare aclcmp xx_args
 | --exec | 执行命令，用于拉起大模型推理脚本。建议使用bash xx.sh args或者python3 xx.py的方式拉起。 |
 
 # 3. 使用示例
-使用前请安装msit工具，安装指导参考：https://gitcode.com/Ascend/msit/blob/master/msit/docs/install/README.md 以 chatglm-6b为例，介绍下如何使用加速库精度比对工具。
 
-1.  设置task_id
+使用前请安装msit工具，安装指导参考：<https://gitcode.com/Ascend/msit/blob/master/msit/docs/install/README.md> 以 chatglm-6b为例，介绍下如何使用加速库精度比对工具。
+
+1. 设置task_id
 
    在每轮对话开始前设置task_id，修改main_performance.py
 
-   ```
+   ```python
       from msquickcmp.pta_acl_cmp.compare import set_task_id
        while True:
            set_task_id()
@@ -95,7 +99,7 @@ msit debug compare aclcmp xx_args
 
    high-level比对，比对model的输出与pta对应的model的输出的精度，找到相应的代码段，添加以下代码
 
-   ```
+   ```python
    from msquickcmp.pta_acl_cmp.compare import set_label, gen_id
    data_id = gen_id()
    set_label("pta", data_id, hidden_states)
@@ -119,9 +123,10 @@ msit debug compare aclcmp xx_args
    ```shell
    msit debug compare aclcmp --exec "bash run_performance.sh patches/models/modeling_chatglm_model.py"
    ```
-- **注意事项**：
-- [ ] 在进行low-level比对时，需要先执行PTA model的推理，再执行加速库的推理，即`set_label("acl", data_id, tensor_path)`需要在加速库侧推理前执行。
-- [ ] low-level比对的同时，需要设置high-level比对。
+
+   - **注意事项**：
+   - [ ] 在进行low-level比对时，需要先执行PTA model的推理，再执行加速库的推理，即`set_label("acl", data_id, tensor_path)`需要在加速库侧推理前执行。
+   - [ ] low-level比对的同时，需要设置high-level比对。
 
 4. 结果分析
 
@@ -153,6 +158,7 @@ msit debug compare aclcmp xx_args
    | cmp_fail_reason             | 比对失败的原因             |
    
    比对算法解释如下：
+
    | 比对算法名称                | 说明                                                         |
    | :-------------------------- | :----------------------------------------------------------- |
    | cosine_similarity           | 进行余弦相似度算法比对出来的结果。取值范围为[-1,1]，比对的结果如果越接近1，表示两者的值越相近，越接近-1意味着两者的值越相反。 |

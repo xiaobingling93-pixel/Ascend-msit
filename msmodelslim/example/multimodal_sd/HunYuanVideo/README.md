@@ -7,6 +7,7 @@
 | **HunyuanVideo** | HunyuanVideo-T2V-720P | [HunyuanVideo](https://huggingface.co/tencent/HunyuanVideo) | ✅ | | | | | | | ✅ | ✅ | ✅ | [时间步量化](#hunyuanvideo-时间步量化) / [FA3量化](#hunyuanvideo-fa3-量化) / [异常值抑制量化](#hunyuanvideo-异常值抑制量化) |
 
 **说明：**
+
 - ✅ 表示该量化策略已通过msModelSlim官方验证，功能完整、性能稳定，建议优先采用。
 - 空格表示该量化策略暂未通过msModelSlim官方验证，用户可根据实际需求进行配置尝试，但量化效果和功能稳定性无法得到官方保证。
 - 点击量化命令列中的链接可跳转到对应的具体量化命令
@@ -27,7 +28,9 @@ for step_id, t in enumerate(timesteps):
     model_output = pipeline(...)
     ...
 ```
+
 例如在hunyuan_video/hyvideo/diffusion/pipelines/pipeline_hunyuan_video.py的HunyuanVideoPipeline类的__call__函数中，添加如下代码：
+
 ```python
 with self.progress_bar(total=num_inference_steps) as progress_bar:
     for i,t in enumerate(timesteps):
@@ -174,6 +177,7 @@ with torch.autocast(device_type='cuda', dtype=torch.bfloat16, enabled=True):
 ### 量化命令和示例代码
 
 #### 量化启动命令
+
 **注意：** 
 Atlas 800I A2(8*64G)推理设备：支持4卡量化、6卡量化、8卡量化。
 
@@ -422,6 +426,7 @@ quant_model(model, session_cfg)
 ```
 
 ## 运行参数说明
+
 以下是使用[HunYuanVideo/sample_video.py](./sample_video.py)进行HunyuanVideo模型推理量化时的参数说明。量化启动命令未涉及参数对应的说明请见HunyuanVideo推理工程仓[MindIE/hunyuan_video](https://modelers.cn/models/MindIE/hunyuan_video)
 
 | 参数名 | 含义 | 使用限制 |

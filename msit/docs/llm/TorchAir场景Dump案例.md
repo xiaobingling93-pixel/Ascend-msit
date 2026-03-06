@@ -1,5 +1,8 @@
 
-### 1. GE开启融合（默认） Dump 案例
+# TorchAir场景Dump案例
+
+## GE开启融合（默认） Dump 案例
+
   ```py
   import os, numpy as np
   import torch, torch_npu, torchair as tng, torchvision
@@ -20,7 +23,8 @@
           pass
   ```
 
-### 2. FX Dump 案例
+## FX Dump 案例
+
   ```py
   import os, numpy as np
   import torch, torch_npu, torchair as tng, torchvision
@@ -41,7 +45,8 @@
           pass
   ```
 
-### 3. GE关闭融合 Dump 案例
+## GE关闭融合 Dump 案例
+
   ```py
   import os, numpy as np
   import torch, torch_npu, torchair as tng, torchvision
@@ -61,7 +66,9 @@
       except:
           pass
   ```
+
   新建fusion_switch.json文件，内容如下：
+
   ```json
   {
     "Switch": {

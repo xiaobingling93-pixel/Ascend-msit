@@ -18,7 +18,7 @@
 
 ## 使用方式
 
-### 作为Processor使用：
+### 作为Processor使用
 
 ```yaml
 # AutoRound支持混合量化，即对不同的层使用不同的量化配置，这里以 W8A8 和 W4A4 混合量化为例

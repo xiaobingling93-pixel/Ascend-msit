@@ -1,11 +1,13 @@
 # 加速库在线推理精度比对工具介绍
 
 ## 1. 精度问题定位流程
+
 精度定位一般整体流程如下：
 ![精度定位流程图](./LocationProgress.png)
 
 总体主要是三个步骤：数据集评测->回答差异分析->tensor差异分析
 其中：
+
 - 数据集评测是从performance这个维度评判模型精度，后续benchmark会支持自动数据集评测功能。
 
 - 回答差异分析是从token这个维度评判模型精度，其中找到回答的差异句子后，分析差异句子的第几个词有差异，同时通过模型的token输出indices矩阵进行比较，可以判断出是哪个token轮次的推理结果有问题。
@@ -15,6 +17,7 @@
 ## 2. 场景及使用方式
 
 ### 2.1 比对场景
+
 加速库精度比对工具目前主要分为以下几个场景：
 
 | 场景名称 | 场景介绍                                                     |
@@ -30,13 +33,13 @@
 
 ![1696728244401](./工具比对流程.png)
 
-
-
 工具提供dump_data接口，在模型脚本中插入代码dump数据，然后使用msit debug compare aclcmp命令进行数据比对。
 具体使用指导请参考：[dump_data代码插入使用说明](../13_dump_and_compare/README.md)
 
 ### 2.3 特别说明
+
 #### 2.3.1 基于权重的算子自动映射比对
+
 针对场景二和场景三，所有含有权重的算子，工具提供[自动映射比对特性](../12_pta_acl_cmp_weight_map/README.md)，不需要用户手动设置算子映射关系。对于部分没有权重的算子，可以使用[dump_data代码插入比对](../13_dump_and_compare/README.md)方式，定义映射关系，进行精度比对。工具使用流程图如下：
 
 ![场景2和场景3流程图](./场景2和场景3流程图.png)
@@ -57,7 +60,7 @@
 
 根据`pytorch/examples/llama_parallel/readme.md`进行环境配置，并且对allreduce算子前后数据进行dump
 
-```
+```shell
 export ATB_SAVE_TENSOR=1
 export ATB_SAVE_TENSOR_START=0
 export ATB_SAVE_TENSOR_END=10
@@ -67,7 +70,7 @@ bash cut_model_and_run_llama.sh
 
 获取allreduce前后数据后，在`/llama_parallel/atb_temp/tensors/`目录下获得双卡上的两个进程名称，按照如下命令进行调用
 
-```
+```shell
 export MSQUICKCMP_PATH=`python -c 'import os, msquickcmp; print(os.path.dirname(msquickcmp.__file__))'`
 python $MSQUICKCMP_PATH/pta_acl_cmp/allreduce.py --process_0_path '/xxx/进程1/' --process_1_path '/xxx/进程2/' --output_path '生成csv路径'
 ```

@@ -1,8 +1,8 @@
 # msit logits compare 工具
+
 # 背景
 
 通过logits dump工具获得bad case的部分token的Logits数据后，可以通过logits compare工具，对两个环境下dump的Logits数据进行比对。可以获得Logits之间的余弦相似度、KL散度、L1_Norm以及ULP，通过对上述参数进行分析，判断当前Logits比对是否通过，进而判断两种环境下bad case是否获得了非常接近的Logits结果，从而消除当前bad case在精度测评结果的影响。
-
 
 # 介绍
 
@@ -63,7 +63,6 @@ msit llm logitscmp -gp {golden_logits_path} -mp {my_logits_path}  -cs {cosine_si
 
 针对无法比较的文件，所有指标列都会以`NA`结果输出，并在`cmp_fail_reason`列中说明无法比对的原因
 
-
 # 示例
 
 下列示例展示了如何通过命令行进行logits compare工作。
@@ -73,11 +72,13 @@ msit llm logitscmp -gp {golden_logits_path} -mp {my_logits_path}  -cs {cosine_si
 ```shell
 msit llm logitscmp -gp ./GPU/boolq/fp16/llama3_8b/logits -mp ./NPU/boolq/fp16/llama3_8b/logits
 ```
+
 上述指令仅输入必须的Logits文件夹路径，比对阈值将按照默认值进行判断，将结果输入到默认`./output`文件夹下。
 
 ```shell
 msit llm logitscmp -gp ./GPU/boolq/fp16/llama3_8b/logits -mp ./NPU/boolq/fp16/llama3_8b/logits -cs 0.9999 -kl 0.0001 -l1 0.001 -d fp32 -o result
 ```
+
 上述指令输入了必须的Logits文件夹路径，以及各项指标的阈值，比对时将按照输入的阈值进行比对，且将结果输出到`./result/`文件夹下。
 
 工具执行命令后获得存放在对应输出文件夹中，其中存放的文件名类似于：`logits_cmp_res_20250301151505.csv`，文件名以`logits_cmp_res`为前缀，拼接时间戳。

@@ -1,21 +1,28 @@
 # msit debug dump功能使用指南
+
 ## 简介
+
 - 提供了传统小模型场景下tensor数据dump功能，辅助进行模型定位debug。适用于 TensorFlow、TensorFlow2.0、ONNX、Caffe、MindIE-Torch模型，用户只需要通过参数指定原始模型对应的离线模型和模型输入文件。模型输入的 bin 文件需要符合模型的输入要求（支持模型多输入）。并且额外提供了dump TensorFlow1.x框架下.pb模型数据的工具TFDebugRunner，使用方法参见[TFDebugRunner使用说明](tf_debug_runner.md)。
 
-
 ## 工具安装
+
 - 安装命令：
 - **注:** 目前debug dump 的安装集成到了 debug compare 命令里，用户只需要安装debug compare即可实现debug dump功能，命令如下：
+
 ```shell
 msit install compare
 ```
 
 ## 使用方法
+
 ### 功能介绍
+
 #### 使用入口
+
 dump功能可以直接通过msit命令行形式启动精度对比。启动方式如下：
 
 **不指定模型输入** 命令示例，**其中路径需使用绝对路径**
+
   ```sh
   msit debug dump -m /home/HwHiAiUser/onnx_prouce_data/resnet_offical.onnx -dp cpu
   -c /usr/local/Ascend/ascend-toolkit/latest -o /home/HwHiAiUser/result/test

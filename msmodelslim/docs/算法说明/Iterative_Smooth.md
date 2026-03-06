@@ -62,11 +62,10 @@ spec:
 
 算法使用以下公式计算平滑缩放因子：
 
-```
 scales = (A_scale**α / W_scale**(1-α)).clamp(min=scale_min)
-```
 
 其中：
+
 - `A_scale`：激活值的缩放因子
 - `W_scale`：权重的缩放因子（取每列的最大值）
 - `α`：平衡参数，控制激活和权重的相对重要性（默认值：0.9）
@@ -84,6 +83,7 @@ y = torch.cat([linear(x) for linear in linears], dim=-1)
 ```
 
 **处理方式：**
+
 - 计算所有线性层权重的列最大值作为权重缩放因子
 - 对每个线性层应用正向缩放
 - 对归一化层应用反向缩放（1/scales）
@@ -97,6 +97,7 @@ y = linear2(linear1(x))
 ```
 
 **处理方式：**
+
 - 基于linear2的权重计算缩放因子
 - 对linear2应用正向缩放
 - 对linear1应用反向缩放（1/scales）
@@ -104,11 +105,13 @@ y = linear2(linear1(x))
 #### 3. OVSubgraph（注意力输出-值子图）
 
 适用于注意力机制中的输出投影和值投影：
+
 - 支持MHA（多头注意力）
 - 支持MQA（多查询注意力）
 - 支持GQA（分组查询注意力）
 
 **处理方式：**
+
 - 基于o_proj权重计算缩放因子
 - 对o_proj应用正向缩放
 - 对v_proj应用反向缩放（1/scales）
@@ -122,6 +125,7 @@ y = down_proj(ReLU(gate_proj(x)) * up_proj(x))
 ```
 
 **处理方式：**
+
 - 基于down_proj权重计算缩放因子
 - 对down_proj应用正向缩放
 - 对up_proj应用反向缩放（1/scales）
@@ -133,10 +137,12 @@ y = down_proj(ReLU(gate_proj(x)) * up_proj(x))
 #### 1) 预处理阶段（preprocess）
 
 **子图发现与构建：**
+
 - 通过 `SubgraphProcessor` 获取全局子图信息，识别四种类型的子图：`norm-linear`、`linear-linear`、`ov`、`up-down`。
 - 根据配置的 `include/exclude` 模式过滤子图。
 
 **统计信息收集：**
+
 - 为所有子图中的线性模块安装前向钩子（forward hook）。
 - 钩子在 `[batch, seq, hidden_dim]` 维度上收集激活值统计信息：
   - 每通道的最大值、最小值
@@ -147,21 +153,25 @@ y = down_proj(ReLU(gate_proj(x)) * up_proj(x))
 #### 2) 后处理阶段（postprocess）
 
 **按优先级处理子图：**
+
 - 按默认配置的优先级顺序处理：`up-down`（最高）→ `ov`（高）→ `norm-linear`（中）→ `linear-linear`（低）。
 - 每种子图类型调用相应的平滑处理方法。
 
 **子图平滑处理：**
+
 - **Norm-Linear子图**：对归一化层和后续线性层应用平滑，支持RMSNorm偏置调整。
 - **Linear-Linear子图**：对两个线性层应用平滑，调整权重和偏置。
 - **OV子图**：处理注意力机制中的输出投影（Output projection）和值投影（Value projection）之间的连接关系，支持QKV融合模式。
 - **Up-Down子图**：处理MLP门控机制，对上下投影层应用平滑。
 
 **平滑算法核心：**
+
 - 基于收集的激活统计信息计算每通道的缩放因子。
 - 使用 `iter_smooth` 算法对子图进行迭代平滑优化。
 - 支持可配置的平滑参数：`alpha`（平滑强度）、`scale_min`（最小缩放）、`symmetric`（对称量化）。
 
 **资源清理：**
+
 - 清理所有安装的统计钩子
 - 释放统计信息内存
 - 恢复模型原始状态
@@ -215,6 +225,7 @@ class IterSmoothInterface(ABC):
 ### 适配步骤
 
 **前置要求：**
+
 - 模型需要继承 `IterSmoothInterface` 接口。
 - 模块名称必须与 `named_modules()` 返回的完整路径一致。
 - 支持的子图类型：`norm-linear`、`linear-linear`、`ov`、`up-down`。
@@ -222,6 +233,7 @@ class IterSmoothInterface(ABC):
 - 当配置`FusionConfig`且`fusion_type`为qkv时，必须给出num_attention_heads和num_key_value_heads。
 
 **步骤：**
+
 1. **继承接口**：模型适配器继承 `IterSmoothInterface` 接口，实现 `get_adapter_config_for_subgraph()` 方法。
 2. **配置子图映射**：为每层配置四种类型的子图映射关系：
    - **Norm-Linear子图**：归一化层到后续线性层的映射
@@ -297,22 +309,28 @@ def get_adapter_config_for_subgraph(self) -> List[AdapterConfig]:
 - **模型结构假设**：算法基于标准的Transformer架构设计，对于非标准结构需要谨慎评估适用性。
 
 ## 常见问题排查
+
 ### 1. 模块名不匹配
+
 **现象**: `include/exclude` 未命中时，日志提示未匹配模式。
 **解决方案**: 核对完整模块名是否与 `named_modules()` 返回的路径一致。
 
 ### 2. 子图配置错误
+
 **现象**: `get_adapter_config_for_subgraph()` 返回的配置不正确。
 **解决方案**: 检查配置中的 `source` 和 `targets` 字段是否正确。
 
 ### 3. 模块不存在
+
 **现象**: 配置中指定的模块名称在模型中不存在。
 **解决方案**: 通过 `model.named_modules()` 验证模块是否确实存在。
 
 ### 4. 子图类型不支持
+
 **现象**: 配置的子图类型不被支持。
 **解决方案**: 确保配置的子图类型在 `ENABLE_SUBGRAPH_TYPES` 列表中。
 
 ### 5. 映射关系错误
+
 **现象**: `MappingConfig` 中的 `source` 和 `targets` 指向错误的模块。
 **解决方案**: 检查 `MappingConfig` 中的 `source` 和 `targets` 是否指向正确的模块。

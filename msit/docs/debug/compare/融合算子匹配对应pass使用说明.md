@@ -7,6 +7,7 @@
 ## 2 使用方式
 
 ### 前置准备
+
 1. 请使用[安装](../../install/README.md)中的源码安装msit及其compare组件。
 
 2. 使用msit debug dump功能
@@ -22,9 +23,11 @@
 
 1. 假设源码被克隆到`/home/HwUser/fusion_pass`。
 2. 调用以下脚本查看help信息
+
     ``` bash
     python /home/HwUser/fusion_pass/msit/msit/components/debug/compare/fusion_pass_cmp/get_fusion_pass.py -h
     ```
+
     | 参数 | 是否必选 | 介绍 |
     | --- | --- | --- |
     |-m, --fusion-after-dir | 是 | str，开启融合的精度数据目录 |
@@ -34,10 +37,10 @@
     |-o, --output-path | 否 | str，输出目录，默认是当前目录 |
     |-fn, --fusion-node-switch | 否 | 开关参数，是否只输出融合算子的比对结果，默认为True |
 
-
 ## 3 输出结果说明
 
 - **比对结果**：在指定的输出文件 `fusion_pass_info.csv` 中，输出正常推理情况下算子的output数据与关闭融合output数据的比对情况，并给出融合算子对应的PassName。
+
 * 比对结果示例及说明如下：
 
 | 关注项 / 结果项 | OpType | NPUDump                             | DataType | Address | GroundTruth  | TensorIndex     | Shape          | CosineSimilarity                              | ... | MeanRelativeError                             | PassName                                         | MatchError  |

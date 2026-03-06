@@ -1,10 +1,13 @@
 # Saved model compare
 
 ## 介绍
+
 支持save_model格式的标杆模型和om模型进行精度比对。
 
 ## 使用示例
+
 - 1、saved_model compare  命令示例，**其中路径需使用绝对路径**
+
   ```sh
   msit debug compare -gm /home/HwHiAiUser/prouce_data/resnet_offical_saved_model -om /home/HwHiAiUser/prouce_data/model/resnet50.om
   -saved_model_signature serving -saved_model_tag_set serve -c /usr/local/Ascend/ascend-toolkit/latest -o /home/HwHiAiUser/result/test -is "模型的输入shape"
