@@ -1,6 +1,7 @@
 # MindIE Torch场景-整网算子数据dump
 
 ## 介绍
+
 支持对经过MindIE Torch编译优化后的模型进行tensor数据dump。
 
 ## 1. 相关依赖
@@ -12,6 +13,7 @@
 
 - msit安装请参考[一体化安装指导](../../../../../docs/install/README.md)
 - 确保安装msit下面的compare和llm组件
+
   ```sh
   msit install compare llm
   ```
@@ -24,6 +26,7 @@
 
 - 准备 `resnet_inference.py`，为模型的前向推理脚本, 目前MindIE Torch支持TS和export路线的数据dump。
 - 由于MindIE Torch的推理接口是异步接口，为了保证推理完成从而实现推理过程数据落盘，需要进行同步操作。目前MindIE Torch和torch_npu提供了两套不同的接口，同步操作方法如下：
+
   ```python
   # torch_npu 接口   推荐使用！！
   import torch_npu
@@ -38,6 +41,7 @@
   ```
 
 #### 3.1.1 TorchScript路线 (jit.ScriptModule)
+
   ```python
   # 请务必先导入torch，再导入mindietorch
   import torch
@@ -61,7 +65,9 @@
   
   mindietorch.finalize()
   ```
+
 #### 3.1.2 Torch.export路线 (export.ExportedProgram 或 nn.Module)
+
   ```python
   import torch
   from torch._export import export
@@ -82,7 +88,9 @@
   torch_npu.npu.synchronize()
   mindietorch.finalize()
   ```
+
 #### 3.1.3 Torch.export路线 （fx.GraphModule）
+
   ```python
   import torch
   from torch._export import export
@@ -110,7 +118,6 @@
   torch_npu.npu.synchronize()
   mindietorch.finalize()
   ```
-
 
 - 根据自己的场景编辑完resnet_inference.py后，通过msit命令Dump NPU数据
 

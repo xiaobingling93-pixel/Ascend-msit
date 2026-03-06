@@ -117,12 +117,14 @@ class FakeQuantDynamicCache(AutoFakeQuantDynamicCache):
 - **自定义Cache**：需要实现 `update(key_states, value_states, layer_idx)` 接口。
 
 ## 已验证模型列表
+
 - Qwen2.5系列
 - Qwen3系列
 
 ## 新缓存类接入步骤
 
 1. **接口要求**：
+
    ```python
    class CustomCache:
        def update(self, key_states: torch.Tensor, value_states: torch.Tensor, 
@@ -158,12 +160,12 @@ class FakeQuantDynamicCache(AutoFakeQuantDynamicCache):
 
 1. 缓存未被量化
 
-问题现象：缓存未被量化。
+    问题现象：缓存未被量化。
 
-解决方案：确认注意力前向接受了一个 `cache` 参数并正确调用 `cache.update()`。
+    解决方案：确认注意力前向接受了一个 `cache` 参数并正确调用 `cache.update()`。
 
 2. 新缓存类型不支持
 
-问题现象：新缓存类型不支持。
+    问题现象：新缓存类型不支持。
 
-解决方案：确认自定义缓存实现了标准的 `update` 接口，并正确处理返回值。 
+    解决方案：确认自定义缓存实现了标准的 `update` 接口，并正确处理返回值。 

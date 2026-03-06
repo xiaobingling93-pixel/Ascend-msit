@@ -4,12 +4,10 @@
 
 模型支持度分析工具提供算子支持情况分析、算子定义是否符合约束条件和算子输入是否为空。
 
-
 ## 工具安装
 
 - msit 工具安装请见 [msit一体化工具使用指南](../../docs/install/README.md)
 - 安装好 msit 之后执行 msit install analyze 安装 analyze 组件
-
 
 ## 工具使用
 
@@ -29,7 +27,6 @@ OPTIONS参数说明如下：
 | -w, --weight   | 权重文件，输入模型是caffe时，需要传入该文件                  | 否       |
 | -soc, --soc-version | 芯片类型，不指定则会通过acl接口获取 | 否       |
 | -h, --help | 命令行参数帮助信息 | 否       |
-
 
 **特别说明**：当在Atlas200/500 A2推理产品上使用analyze工具进行模型支持度分析时，请手动指定-soc参数为具体的芯片类型。     
 
@@ -68,4 +65,5 @@ msit analyze -gm /tmp/test.onnx -o /tmp/out
 | details      | 算子支持情况问题描述，包括算子是否支持，算子定义是否符合约束条件、输入是否为空 |
 
 ## FAQ
+
 - 使用过程中出现问题可先行查阅[FAQ](FAQ.md)

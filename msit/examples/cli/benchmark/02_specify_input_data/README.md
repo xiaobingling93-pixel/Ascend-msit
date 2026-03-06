@@ -5,6 +5,7 @@
 默认情况下，构造全为0的数据送入模型推理。可指定文件输入或者文件夹输入。
 
 ## 运行示例
+
 1. 文件输入场景。
 
     使用--input参数指定模型输入文件，多个文件之间通过“,”进行分隔。
@@ -14,12 +15,15 @@
     ```bash
     msit benchmark --om-model ./resnet50_v1_bs1_fp32.om --input ./1.bin,./2.bin,./3.bin,./4.bin,./5.bin
     ```
+
    - 说明：
     .bin文件存储用户输入的tensor数据，可通过以下方式生成，例子中的size和astype可以通过debug调试模式工具获取。--input参数是为了用户指定输入数据而设计。
+
     ```python
     import numpy as np
     np.random.uniform(size=[32,32]).astype('float32').tofile('foo.bin')
     ```
+
 2. 文件夹输入场景。
 
     使用--input参数指定模型输入文件所在目录，多个目录之间通过“,”进行分隔。
@@ -29,6 +33,7 @@
     ```bash
     msit benchmark --om-model ./resnet50_v1_bs1_fp32.om --input ./
     ```
+
    - 说明：
      1.如果输入的./文件夹内无.bin文件，会报错，传入--input参数时要确保./内存在.bin数据；
      2.模型输入需要与传入文件夹的个数一致。
@@ -44,4 +49,5 @@
     ```
 
 ## FAQ
+
 使用出现问题时，可参考[FAQ](https://gitcode.com/Ascend/msit/wiki/benchmark_FAQ%2Fait%20benchmark%20%E4%BD%BF%E7%94%A8%E8%BF%87%E7%A8%8B%20FAQ.md)

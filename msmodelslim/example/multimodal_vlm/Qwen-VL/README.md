@@ -8,6 +8,7 @@
 
 - 基础环境配置请参考[安装指南](../../../docs/安装指南.md)
 - 为避免出现类似[读取不到模型目录下的 SimSun.ttf 文件](https://github.com/QwenLM/Qwen-VL/issues/319)的问题，建议手动下载[SimSun.ttf](https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/SimSun.ttf)并移动到原始浮点权重路径中，并修改tokenization_qwen.py中FONT_PATH，例如：
+
   ```python
   # 代码30行
   # FONT_PATH = try_to_load_from_cache("Qwen/Qwen-VL-Chat", "SimSun.ttf")
@@ -18,48 +19,58 @@
   #     FONT_PATH = "SimSun.ttf"
   FONT_PATH = "SimSun.ttf"
   ```
+
 - 提前修改modeling_qwen.py中SUPPORT_CUDA字段
+
   ```python
   # 代码35行
   SUPPORT_CUDA = False
   ```
+
 - 另需安装依赖：
-  ```
+
+  ```shell
   pip install transformers-stream-generator
   ```
 
-
 ## Qwen-VL模型当前已验证的量化方法
+
 | 模型       | 原始浮点权重 | 量化方式 | 推理框架支持情况| 量化命令 |
 |------------|-------------|---------|----------------|---------|
 | Qwen-VL | [Qwen-VL](https://huggingface.co/Qwen/Qwen-VL/tree/main) | W8A8静态量化 | MindIE当前不支持<br>vLLM Ascend当前不支持 | [W8A8静态量化](#1-qwen-vl系列) |
 
-
 **说明：**
-- 点击量化命令列中的链接可跳转到对应的具体量化命令。
 
+- 点击量化命令列中的链接可跳转到对应的具体量化命令。
 
 ## 生成量化权重
 
 - 量化权重统一使用[quant_qwenvl.py](./quant_qwenvl.py)脚本生成，以下提供Qwen-VL模型量化权重生成快速启动命令。
 
 ### 使用案例
+
 - 如果需要使用NPU多卡量化，请先配置环境变量，仅支持1~3卡量化（Atlas 300I Duo 系列产品不支持多卡量化）：
+
   ```shell
   # 根据实际情况选择多卡，以下3卡量化为例：
   export ASCEND_RT_VISIBLE_DEVICES=0,1,2
   export PYTORCH_NPU_ALLOC_CONF=expandable_segments:False
   ```
+
 - 若加载自定义模型，调用`from_pretrained`函数时要指定`trust_remote_code=True`，让修改后的自定义代码文件能够正确地被加载。(请确保加载的自定义代码文件的安全性)
   
 #### 1. Qwen-VL系列
+
 ##### Qwen-VL W8A8静态量化
+
 生成Qwen-VL模型量化权重，异常值抑制使用m2算法，在NPU上运行，请将{浮点权重路径}和{量化权重路径}替换为用户实际路径。{校准图片路径}默认为"../calibImages"，用户可根据实际场景替换为其他图片。
+
   ```shell
   python quant_qwenvl.py  --model_path {浮点权重路径} --calib_images {校准图片路径}  --save_directory {量化权重保存路径} --w_bit 8 --a_bit 8 --device_type npu --trust_remote_code True --mindie_format
   ```
 
 ### 量化参数说明
+
 | 参数名 | 含义 | 默认值 | 使用方法 | 
 | ------ | ---- | --- | -------- | 
 | model_path | 浮点权重路径 | 无默认值 | 必选参数；<br>输入Qwen-VL原始浮点权重目录路径。|

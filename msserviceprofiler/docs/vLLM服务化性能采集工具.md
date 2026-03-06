@@ -5,6 +5,7 @@
 本部分将指导你如何采集 vllm-ascend 的服务化框架性能数据以及算子性能数据，覆盖从准备、采集、解析到结果展示的完整流程，帮助你快速上手性能采集工具。
 
 ## 环境准备
+
 根据不同版本需求，[vLLM Ascend installation](https://vllm-ascend.readthedocs.io/en/latest/installation.html) 成功启动推理服务。
 
 ## 安装 vllm_profiler 组件
@@ -27,10 +28,10 @@
   export PYTHONPATH=$PWD/msserviceprofiler_dev/msserviceprofiler/:$PYTHONPATH
   ```
 
-
 ## 快速开始
 
 ### 1. 准备采集
+
 在启动服务之前，请设置环境变量 `SERVICE_PROF_CONFIG_PATH` 指定需要加载的性能分析配置文件，并设置环境变量 `PROFILING_SYMBOLS_PATH` 来指定需要导入的符号的 YAML 配置文件。之后，根据您的部署方式启动 vLLM 服务。
 
 ```bash
@@ -48,6 +49,7 @@ vllm serve Qwen/Qwen2.5-0.5B-Instruct &
 `service_profiling_symbols.yaml` 为需要导入的埋点配置文件。你也可以选择不设置环境变量 `PROFILING_SYMBOLS_PATH` ，此时将使用默认的配置文件；若你指定的路径下不存在该文件，系统同样会在你指定的路径生成一份配置文件以便后续修改。可参考[点位配置文件说明](#3-点位配置文件说明)一节进行自定义。
 
 ### 2. 开启采集
+
 将配置文件`ms_service_profiler_config.json`中的 `enable` 字段由 `0` 修改为 `1`，即可开启性能数据采集的开关，可以通过执行下面sed指令完成采集服务的开启：
 
 ```bash
@@ -55,6 +57,7 @@ sed -i 's/"enable":\s*0/"enable": 1/' ./ms_service_profiler_config.json
 ```
 
 ### 3. 发送请求
+
 根据实际采集需求选择请求发送方式：
 
 ```bash
@@ -99,6 +102,7 @@ python -m ms_service_profiler.parse --input-path=./ --output-path output
 | `batch.csv` | 批次调度相关数据 | ✅ | ✅ |
 | `batch_summary.csv` | 批次调度总体统计指标 | ✅ | ❌ |
 | `service_summary.csv` | 服务化维度总体统计指标。 | ✅ | ❌ |
+
 ---
 
 ## 附录

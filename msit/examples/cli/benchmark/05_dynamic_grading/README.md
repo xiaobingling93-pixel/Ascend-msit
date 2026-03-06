@@ -1,6 +1,5 @@
 # Dynamic grading
 
-
 ## 介绍
 
 动态分档场景。主要包含动态Batch、动态HW（宽高）、动态Dims三种场景，需要分别传入--dym-batch、--dym-hw、--dym-dims指定实际档位信息。
@@ -38,6 +37,9 @@
     ```bash
     msit benchmark --om-model resnet50_v1_dynamicshape_fp32.om --input=./data/ --auto-set-dymdims-mode 1
     ```
+
 - 说明：示例中的./data/文件夹存放用户的输入数据，为.npy格式，若不指定输入数据，会自动生成随机的输入数据。
+
 ## FAQ
+
 使用出现问题时，可参考[FAQ](https://gitcode.com/Ascend/msit/wiki/benchmark_FAQ%2Fait%20benchmark%20%E4%BD%BF%E7%94%A8%E8%BF%87%E7%A8%8B%20FAQ.md)

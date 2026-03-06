@@ -1,3 +1,5 @@
+# llm大模型推理精度工具功能说明_v0.2.0
+
 ## 新增特性
 
 v0.2.0版本的新特性包括：
@@ -12,7 +14,7 @@ v0.2.0版本的新特性包括：
 
 ### 使用方式
 
-```
+```shell
 msit llm dump --exec "bash run.sh patches/models/modeling_xxx.py"
 ```
 
@@ -53,7 +55,7 @@ Dump默认落盘路径 `{DUMP_DIR}`在当前目录下，如果指定output目录
 
 ### 使用方式
 
-```
+```shell
 msit llm compare --golden-path golden_data.bin --my-path my-path.bin
 ```
 

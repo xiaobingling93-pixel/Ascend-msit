@@ -6,15 +6,20 @@
 - Tensorflow (1.15.0或是2.6.5)
 
 ## 2. 工具安装
+
 需要安装msit工具和compare子工具
-- 2.1 安装msit工具，请参考[一体化安装指导](/msit/docs/install/README.md)
+
+- 2.1 安装msit工具，请参考[msit 工具安装](../../../../../../msit/docs/install/README.md)
 - 2.2 安装compare子工具：执行命令： `msit install compare`
 
 ## 3. Dump数据 
+
 正式进行数据Dump比对之前，要把模型中涉及到的所有随机性配置全部关闭，包括但不限于对数据集的shuffle，参数的随机初始化等。
 
 ### 3.1 dump模型在NPU上推理数据
+
 自动融合特性当前由三个环境变量控制，同时精度比对的算子映射关系依赖于GE的dump图，同样需要三个环境变量进行使能，下面提供一个参考配置示例：
+
 ```shell
 # 自动融合开关
 export EXPERIMENTAL_ENABLE_AUTOFUSE=1
@@ -29,6 +34,7 @@ export DUMP_GRAPH_PATH=/home/dump_graph
 如果是一个save model格式保存的模型，可以使用msit debug dump工具进行NPU上推理数据的抓取，参考命令如下:
 `msit debug dump -m /home/mmoe_model -dp npu -i /home/input_float32.bin -is "input:1,128" -o /home/dump_data/npu`
 如果不是save model格式保存的模型，可以通过session配置的方式使能dump，下面提供一个参考示例：
+
 ```py
 import tensorflow.compat.v1 as tf
 config = tf.ConfigProto()
@@ -44,8 +50,10 @@ with tf.Session(config=config) as sess:
 ```
 
 ### 3.2 dump模型在CPU/GPU上推理数据
+
 可以借助tfdbg或者是session.run函数中fetches参数进行数据dump。需要注意的是，为了保证精度比对结果的有效，需要保证模型输入是相同的。
 下面提供一个使用fetches进行dump的示例：
+
 ```py
 import os
 import time
@@ -97,6 +105,7 @@ with tf.Graph().as_default() as graph:
 ```
 
 上面示例中加载的模型是FrozenGraph格式保存，和Save Model格式的主要区别在于将其中的模型权重变量进行冻结，转为常量，下面是一个模型转换的参考脚本。
+
 ```py
 import tensorflow as tf
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
@@ -114,6 +123,7 @@ with tf.io.gfile.GFile('frozen_graph.pb', 'wb') as f:
 ```
 
 ## 4. 执行精度对比
+
  - 使用ATC工具将dump的GE图转换为json文件，`atc --mode=5 --om={ge_proto_0001_graph_1_build.txt所在路径} --json={转换后文件保存路径}`
  - 执行 `msit debug compare -gp [3.2中数据所在文件] --mp [3.1中数据所在文件] --ops-json [atc转换后json文件路径]`
 

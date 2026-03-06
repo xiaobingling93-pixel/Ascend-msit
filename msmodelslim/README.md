@@ -1,6 +1,6 @@
-<div align="center">
-
 # msModelSlim
+
+<div align="center">
 
 [![说明文档](https://img.shields.io/badge/Documentation-latest-brightgreen.svg?style=flat)](./docs/README.md)
 [![license](https://img.shields.io/badge/License-Apache%202.0-blue)](../LICENSE)
@@ -18,9 +18,11 @@
 ## 🔥🔥🔥Latest News
 
 ### 2026年1月
+
 - 📦 msModelSlim 已完成迁仓，新仓库地址：[https://gitcode.com/Ascend/msmodelslim](https://gitcode.com/Ascend/msmodelslim)，欢迎大家使用
 
 ### 2025年12月
+
 - 🎯 msModelSlim 支持[量化精度反馈自动调优](./docs/功能指南/自动调优/使用说明.md)，可根据精度需求自动搜索最优量化配置
 - 🎨 msModelSlim 支持[自主量化多模态理解模型](./docs/自主量化/多模态理解模型接入.md)，支持多模态理解模型的量化接入
 - ⚡ msModelSlim [一键量化支持多卡量化](./docs/功能指南/一键量化/features/dp_layer_wise_quantization.md)，支持分布式逐层量化，提升大模型量化效率
@@ -29,18 +31,22 @@
 - 🚀 msModelSlim 支持 [Qwen3-VL-235B-A22B W8A8](./example/multimodal_vlm/Qwen3-VL-MoE/README.md) 量化
 
 ### 2025年11月
+
 - 🚀 msModelSlim 模型适配支持插件化和配置注册，支持依赖预检
 
 ### 2025年10月
+
 - 🚀 msModelSlim 支持 [Qwen3-235B-A22B W4A8](./example/Qwen3-MOE/README.md#qwen3-235b-a22b-w4a8-混合量化)、[Qwen3-30B-A3B W4A8](./example/Qwen3-MOE/README.md#qwen3-30b-a3b-w4a8-混合量化) 量化。vLLM Ascend已支持量化模型推理部署 [部署指导](https://vllm-ascend.readthedocs.io/en/latest/user_guide/feature_guide/quantization.html#)
 
 ### 2025年9月
+
 - 🚀 msModelSlim 支持 [DeepSeek-V3.2-Exp W8A8](./example/DeepSeek/README.md#deepseek-v32-w8a8) 量化，单卡64G显存，100G内存即可执行
 - 🚀 msModelSlim 现已解决Qwen3-235B-A22B在W8A8量化下频繁出现"游戏副本"等异常token的问题 [Qwen3-MoE 量化推荐实践](./example/Qwen3-MOE/README.md)
 - 🚀 msModelSlim 支持DeepSeek R1 W4A8 per-channel 量化【Prototype】
 - 🤝 msModelSlim 支持大模型量化敏感层分析
 
 ### 2025年8月
+
 - 🎨 msModelSlim 支持 [Wan2.1 模型一键量化](./example/multimodal_sd/Wan2_1/README.md)
 - 📊 msModelSlim 支持[大模型逐层量化](./docs/功能指南/一键量化/features/layer_wise_quantization.md)，显著降低大模型量化内存占用
 - ⚙️ msModelSlim 支持[大模型 SSZ 权重量化算法](./docs/算法说明/ssz.md)，通过迭代搜索最优缩放因子和偏移量提升量化精度
@@ -78,6 +84,7 @@ msModelSlim，全称MindStudio ModelSlim，昇腾模型压缩工具。
 具体功能指南请查看[功能指南](./docs/README.md#功能指南)。
 
 ## 自主量化
+
 面向需要将自有模型接入 msModelSlim 的开发者，提供自主将模型接入msModelSlim一键量化的指导。
 
 具体模型接入指南请查看[自主量化模型接入指南](./docs/自主量化/模型接入.md)。
@@ -93,6 +100,7 @@ msModelSlim，全称MindStudio ModelSlim，昇腾模型压缩工具。
 相关FAQ请参考链接：[FAQ](./docs/FAQ.md)
 
 ## 其他资源
+
 - [提issue](https://gitcode.com/Ascend/msit/issues/create?type=template&title=Bug-Report|%E7%BC%BA%E9%99%B7%E5%8F%8D%E9%A6%88&template=.gitcode%252FISSUE_TEMPLATE%252Fbug-report.yml&default_branch=master&project_path_with_namespace=Ascend%252F.gitcode)
 - [提新功能诉求](https://gitcode.com/Ascend/msit/issues/create?type=template&title=%E6%96%B0%E9%9C%80%E6%B1%82&template=.gitcode%252FISSUE_TEMPLATE%252Ffeature.yml&default_branch=master&project_path_with_namespace=Ascend%252F.gitcode)
 
@@ -110,12 +118,15 @@ msModelSlim，全称MindStudio ModelSlim，昇腾模型压缩工具。
    - 请确保原始模型数据存放和量化模型数据保存在不含软链接的当前用户目录下，否则可能会引起安全问题。 
 
 ### 致数据集所有者
+
 如果您不希望您的数据集在msModelSlim中的模型被提及，或希望更新msModelSlim中的模型关于您的数据集的描述，请在Gitcode[提issue](https://gitcode.com/Ascend/msit/issues/create?type=template&title=Bug-Report|%E7%BC%BA%E9%99%B7%E5%8F%8D%E9%A6%88&template=.gitcode%252FISSUE_TEMPLATE%252Fbug-report.yml&default_branch=master&project_path_with_namespace=Ascend%252F.gitcode)，msModelSlim将根据您的issue要求删除或更新您的数据集描述。衷心感谢您对msModelSlim的理解和贡献。
 
 ## License声明
+
 msModelSlim提供的模型，若其模型目录中包含License文件，则遵循该文件中的许可协议。若未包含License文件，则默认适用Apache 2.0许可证。
 
 ## 致谢
+
 msModelSlim 由华为公司的下列部门及昇腾生态合作伙伴联合贡献：
 
 华为公司：

@@ -1,20 +1,26 @@
 # Saved model dump
 
 ## 介绍
+
 支持对使用Tensorflow框架保存下来的save_model格式模型进行tensor数据dump。
 
 ## 使用示例
+
 - 1、saved_model npu dump  命令示例，**其中路径需使用绝对路径**
+
   ```sh
   msit debug dump -m /home/HwHiAiUser/prouce_data/resnet_offical_saved_model -dp npu
   -is "模型的输入shape" -c /usr/local/Ascend/ascend-toolkit/latest -o /home/HwHiAiUser/result/test
   ```
+
   2、saved_model cpu dump  命令示例，**其中路径需使用绝对路径，cpu须在npu dump之后传入model文件夹下的ge_xxx.json文件作为--tf-json参数**
+
   ```sh
   msit debug dump -m /home/HwHiAiUser/prouce_data/resnet_offical_saved_model -dp cpu
   -is "模型的输入shape" -c /usr/local/Ascend/ascend-toolkit/latest -o /home/HwHiAiUser/result/test 
   --tf-json  /home/HwHiAiUser/result/test/{date}/model/ge_xxx.json
   ```
+
   - `-m, –-model` 指定原始saved_model模型路径
   - `-dp, --device-pattern` 指定dump的设备类型，支持cpu和npu，目前npu模式下只支持saved_model模型
   - `-is, --input-shape` (可选) 模型的输入shape

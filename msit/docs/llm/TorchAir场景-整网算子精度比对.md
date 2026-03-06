@@ -80,7 +80,7 @@ get_ge_dump_config(
   ...
   ```
 
-完整 dump 案例可见《TorchAir场景 Dump 案例》中的“[1. GE开启融合（默认） Dump 案例](./TorchAir场景Dump案例.md#1-GE开启融合默认-Dump-案例)”章节。
+完整 dump 案例可见《TorchAir场景 Dump 案例》中的“[1. GE开启融合（默认） Dump 案例](TorchAir场景Dump案例.md#GE开启融合（默认） Dump 案例)”章节。
 
 #### 1.1.3 dump 结果文件介绍
 
@@ -88,7 +88,6 @@ dump 数据保存路径为 `{dump_path}/msit_ge_dump`。其中 `{dump_path}` 为
 
 使用 7.1.0 以上版本 PTA 时，结果件目录结构为
 
-```
 ├── ${dump_path}
 │   ├── msit_ge_dump
 │   |   ├── dynamo_optimized_${graph_name}_rank_${rank_id}_pid_${pid}_ts_${time}.txt
@@ -100,11 +99,9 @@ dump 数据保存路径为 `{dump_path}/msit_ge_dump`。其中 `{dump_path}` 为
 |   |   |   |   |   |   ├── ${model_id}
 |   |   |   |   |   |   |   ├── ${token_id}
 └── └── └── └── └── └── └── └── └── # bin 格式数据
-```
 
 使用 7.1.0 及以下版本 PTA 时，结果件目录结构为
 
-```
 ├── ${dump_path}
 │   ├── msit_ge_dump
 │   |   ├── dynamo_optimized_${graph_name}_rank_${rank_id}_pid_${pid}_ts_${time}.txt
@@ -115,11 +112,10 @@ dump 数据保存路径为 `{dump_path}/msit_ge_dump`。其中 `{dump_path}` 为
 |   |   |   |   |   ├── ${model_id}
 |   |   |   |   |   |   ├── ${token_id}
 └── └── └── └── └── └── └── └── # bin 格式数据
-```
 
 读取、转换和保存 dump 保存的 bin 数据的接口可参考[API-读取和保存接口](./API-读取和保存接口.md)
 
- ### 1.2 FX 模式 dump 数据
+### 1.2 FX 模式 dump 数据
 
 调用 `get_fx_dump_config` 接口，获取配置后的 `config` 实例，或在已有 `config` 实例上增加 dump 配置，配置模型 compile，并执行推理。
 
@@ -171,7 +167,7 @@ get_fx_dump_config(dump_path='', compiler_config=None)
   ...
   ```
 
-完整 dump 案例可见《TorchAir场景 Dump 案例》中的“[2. FX Dump 案例](./TorchAir场景Dump案例.md#2-fx-dump-案例)”章节。
+完整 dump 案例可见《TorchAir场景 Dump 案例》中的“[2. FX Dump 案例](./TorchAir场景Dump案例.md#FX Dump 案例)”章节。
 
 #### 1.2.3 dump 结果文件介绍
 
@@ -179,35 +175,29 @@ dump 数据保存路径为 `{dump_path}/msit_fx_dump`。其中 `{dump_path}` 为
 
 使用 7.1.0 以上版本 PTA 时，结果件目录结构为
 
-```
 ├── ${dump_path}
 │   ├── msit_fx_dump
 │   |   ├── worldsize${rank_size}_global_rank${rank_id}
 │   |   │   ├── ${model_name}
 |   |   |   |   ├── ${token_id}
 └── └── └── └── └── └── # npy 格式数据
-```
 
 使用 7.1.0 版本 PTA 时，结果件目录结构为
 
-```
 ├── ${dump_path}
 │   ├── msit_fx_dump
 │   |   ├── data_dump
 |   |   |   ├── ${token_id+1}
 |   |   |   |   ├── gm_${time}_dump
 └── └── └── └── └── └── # npy 格式数据
-```
 
 使用 7.1.0 以下版本 PTA 时，结果件目录结构为
 
-```
 ├── . # 当前工作目录
 │   ├── data_dump
 |   |   ├── ${token_id+1}
 |   |   |   ├── gm_${time}_dump
 └── └── └── └── └── # npy 格式数据
-```
 
 ### 1.3 compare 精度比对
 
@@ -291,7 +281,7 @@ msit llm compare --my-path ${dump_path}/msit_ge_dump --golden-path data_dump
 
 - dump 结果文件的目录结构与含义可见“[1.1.3 dump 结果文件介绍](#113-dump-结果文件介绍)”小节。
 
-完整 dump 案例可见《TorchAir场景 Dump 案例》中的“[3. GE关闭融合 Dump 案例](./TorchAir场景Dump案例.md#3-ge关闭融合-dump-案例)”章节。
+完整 dump 案例可见《TorchAir场景 Dump 案例》中的“[3. GE关闭融合 Dump 案例](./TorchAir场景Dump案例.md#GE开启融合（默认） Dump 案例)”章节。
 
 ### 2.3 compare 精度比对
 
@@ -303,12 +293,14 @@ msit llm compare --my-path ${dump_path in GE dump}/msit_ge_dump --golden-path ${
 
 ## 3. 结果查看
 
-参考[精度比对结果参数说明](/msit/docs/llm/精度比对结果参数说明.md)
+参考[精度比对结果参数说明](TorchAir场景-整网算子精度比对.md)
 
 ## 4. 附录
 
 ### (定向客户提供) 将 dump 数据转化为指定信息以压缩数据量
+
 - dump 过程中生成的数据量可能占用大量磁盘空间，可以在 dump 过程中启用后台进程，将完整的数据提取为指定的信息。以下参考脚本将数据转化为最大最小值，并删除原数据
+
   ```py
   #!/bin/env python3
   import os

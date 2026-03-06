@@ -4,7 +4,6 @@
 
 - [GLM-4.1V-9B-Thinking](https://github.com/zai-org/GLM-V) 是由智谱 AI 联合清华大学团队推出的多模态大模型，该模型引入思考范式，并通过课程采样强化学习 RLCS（Reinforcement Learning with Curriculum Sampling）全面提升模型能力。
 
-
 ## 环境配置
 
 - 基础环境配置请参考[安装指南](../../../docs/安装指南.md)
@@ -22,22 +21,28 @@
 - 量化权重统一使用[quant_glm41v.py](./quant_glm41v.py)脚本生成，以下提供GLM-4.1V-9B-Thinking模型量化权重生成快速启动命令。
 
 ### 使用案例
+
 - 如果需要使用NPU多卡量化，请先配置多卡环境变量（Atlas 300I Duo 系列产品不支持多卡量化）：
+
   ```shell
   export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
   export PYTORCH_NPU_ALLOC_CONF=expandable_segments:False
   ```
+
 - 若加载自定义模型，调用`from_pretrained`函数时要指定`trust_remote_code=True`，让修改后的自定义代码文件能够正确地被加载。（请确保加载的自定义代码文件的安全性）
   
-
 #### 1. GLM-4.1V系列
+
 ##### <span id="glm-4.1v-w8a8sc">1.1 GLM-4.1V-9B-Thinking W8A8SC量化 异常值抑制算法使用m2</span>
+
 该示例在NPU上生成GLM-4.1V-9B-Thinking模型的量化权重。使用m2算法进行异常值抑制。
 
 请将{浮点权重路径}和{W8A8S量化权重路径}替换为用户实际路径。{校准集图片路径}默认为"../calibImages"，以当前"../calibImages"目录中2张图片为例，实际量化时为保证精度需要从COCO数据集中扩充到30张图片。此外，用户可根据实际场景替换为其他图片。
 
 Atlas 300I DUO 使用以下方法稀疏量化
+
 - 稀疏量化
+
   ```shell
   python quant_glm41v.py \
     --model_path {浮点权重路径} \
@@ -53,9 +58,11 @@ Atlas 300I DUO 使用以下方法稀疏量化
     --torch_dtype fp16 \
     --trust_remote_code True
   ```
+
 - 权重压缩
 
   **注意**：权重压缩需要先安装MindIE
+
   ```shell
   # TP数为tensor parallel并行个数
   export IGNORE_INFER_ERROR=1
@@ -63,6 +70,7 @@ Atlas 300I DUO 使用以下方法稀疏量化
   ```
 
 ### 量化参数说明
+
 | 参数名 | 含义 | 默认值 | 使用方法 | 
 | ------ | ---- | --- | -------- | 
 | model_path | 浮点权重路径 | 无默认值 | 必选参数；<br>输入原始浮点权重目录路径。 |
@@ -78,7 +86,7 @@ Atlas 300I DUO 使用以下方法稀疏量化
 | open_outlier | 是否开启权重异常值划分 | True | 可以配置为True或者False。 <br>设置为True时开启权重异常值划分，反之则关闭。|
 | is_dynamic | 是否使用动态量化，即W8A8中的激活量化参数动态生成 | False | 可以配置为True或者False。 <br>设置为True时使用动态量化，反之则不使用。|
 | is_lowbit | 是否使用稀疏量化的lowbit算法 | False | 可以配置为True或者False。 <br>设置为True时，表示使用稀疏量化的lowbit算法，反之则不使用。 <br>在`w4a8_dynamic per-group`量化场景下需要设置为True。|
-| co_sparse	| 是否开启稀疏量化功能 | False | True: 使用稀疏量化功能；<br>False: 不使用稀疏量化功能。 |
+| co_sparse | 是否开启稀疏量化功能 | False | True: 使用稀疏量化功能；<br>False: 不使用稀疏量化功能。 |
 | fraction | 模型权重稀疏量化过程中被保护的异常值占比  | 0.01 | 取值范围[0.01,0.1]。|
 | do_smooth | 是否启动smooth量化功能 | False | True: 开启smooth量化功能；<br>False: 不开启smooth量化功能。 |
 | use_sigma | 是否启动sigma功能 | False | True: 开启sigma功能；<br>False: 不开启sigma功能。 |

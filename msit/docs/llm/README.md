@@ -85,6 +85,7 @@
   | ----- | ---------- | ---- | --------- |--------------------------------------------------------------------------------------------------------------------------------------------------| -------------------------------- |
   | 0.0.1 | 2023/12/13 | arm  | 7.0.0.RC1 | [ait-0.0.1-py3-none-linux_aarch64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20231213/ait-0.0.1-py3-none-linux_aarch64.whl) | 271051e901bb3513c7a0edbd1e096cb2 |
   | 0.0.1 | 2023/12/13 | x86  | 7.0.0.RC1 | [ait-0.0.1-py3-none-linux_x86_64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20231213/ait-0.0.1-py3-none-linux_x86_64.whl)   | 9903fa06b9ff76cba667abf0cbc4da50 |
+
 - msit_llm/ait_llm 工具 whl：
 
   | 版本  | 发布日期   | 平台       | CANN 版本    | whl链接                                                                                                                                                           | MD5 校验码                       | 使用指导                                                     |
@@ -104,9 +105,10 @@
   | 0.1.0 | 2023/12/13 | arm, abi=1 | 7.0.0.RC1    | [ait_llm-0.1.0-py3-none-linux_aarch64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20231226/ABI1/ait_llm-0.1.0-py3-none-linux_aarch64.whl) | b96e8e7e4786f1abcbec1458ca3ede5d | [llm大模型推理精度工具功能说明_v0.1.0](./history/llm大模型推理精度工具功能说明_v0.1.0.md) |
   | 0.1.0 | 2023/12/13 | x86, abi=0 | 7.0.0.RC1    | [ait_llm-0.1.0-py3-none-linux_x86_64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20231226/ABI0/ait_llm-0.1.0-py3-none-linux_x86_64.whl)   | c605e9d50891632a09b21e90403b5b96 | [llm大模型推理精度工具功能说明_v0.1.0](./history/llm大模型推理精度工具功能说明_v0.1.0.md) |
   | 0.1.0 | 2023/12/13 | x86, abi=1 | 7.0.0.RC1    | [ait_llm-0.1.0-py3-none-linux_x86_64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20231226/ABI1/ait_llm-0.1.0-py3-none-linux_x86_64.whl)   | ea88611dc4358f51a47f7659a36d5a48 | [llm大模型推理精度工具功能说明_v0.1.0](./history/llm大模型推理精度工具功能说明_v0.1.0.md) |
+
 - 校验whl包是否正确
 
-  ```
+  ```shell
   # 校验whl包是否正确
   md5sum xxxx.whl
   ```
@@ -114,9 +116,10 @@
   比对 md5 值与所提供的校验值一致
 - 安装方式：
 
-  ```
   # 安装所需版本的框架 whl
+
   pip3 install ait-0.0.1-py3-none-linux_aarch64.whl
+  
   # 安装所需版本的工具 whl
+
   pip3 install ait_llm-0.2.0-py3-none-linux_aarch64.whl
-  ```

@@ -198,6 +198,7 @@ exclude: [ "model.layers.*.self_attn.down_proj" ]
 #### 常见匹配失败原因
 
 1. **层名不匹配**
+
    ```yaml
    # ❌ 可能匹配失败：层名中不包含"self_attn"
    include: ["*self_attn*"]
@@ -205,6 +206,7 @@ exclude: [ "model.layers.*.self_attn.down_proj" ]
    ```
 
 2. **路径层级错误**
+
    ```yaml
    # ❌ 可能匹配失败：路径层级不匹配
    include: ["model.layers.*.attention"]
@@ -212,6 +214,7 @@ exclude: [ "model.layers.*.self_attn.down_proj" ]
    ```
 
 3. **大小写敏感**
+
    ```yaml
    # ❌ 可能匹配失败：大小写不匹配
    include: ["*SelfAttn*"]
@@ -219,6 +222,7 @@ exclude: [ "model.layers.*.self_attn.down_proj" ]
    ```
 
 4. **拼写错误**
+
    ```yaml
    # ❌ 可能匹配失败：拼写错误
    include: ["*self_atttn*"]  # 拼写错误：多了一个t
@@ -229,6 +233,7 @@ exclude: [ "model.layers.*.self_attn.down_proj" ]
    ```
 
 5. **不是nn.Linear的路径**
+
    ```yaml
    # ❌ 可能匹配失败：匹配到非Linear层
    include: ["*gate.weight"]

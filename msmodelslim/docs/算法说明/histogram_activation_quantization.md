@@ -97,6 +97,7 @@ class HistogramObserver(TorchHistogramObserver):
 #### 核心方法实现
 
 1. **forward方法**：
+
    ```python
    # 继承自TorchHistogramObserver的forward方法
    # 用于更新直方图统计信息
@@ -104,6 +105,7 @@ class HistogramObserver(TorchHistogramObserver):
    ```
 
 2. **update方法**：
+
    ```python
    def update(self, x: torch.Tensor, sync: bool = False, group: Optional[dist.ProcessGroup] = None):
        """
@@ -127,6 +129,7 @@ class HistogramObserver(TorchHistogramObserver):
 3. **内部搜索方法实现**：
 
    **L2范数搜索**：
+
    ```python
    def _compute_l2_error(self, start_bin: int, end_bin: int):
        """
@@ -141,6 +144,7 @@ class HistogramObserver(TorchHistogramObserver):
    ```
 
    **KL散度搜索**：
+
    ```python
    def _compute_kl_error(self, start_bin: int, end_bin: int):
        """
@@ -154,6 +158,7 @@ class HistogramObserver(TorchHistogramObserver):
    ```
 
 4. **非线性参数搜索**：
+
    ```python
    def _non_linear_param_search(self) -> tuple[torch.Tensor, torch.Tensor]:
        """
@@ -183,6 +188,7 @@ class ActPerTensorHistogram(AutoActQuantizer):
 #### 核心方法
 
 1. **forward方法**：
+
    ```python
    def forward(self, x: torch.Tensor) -> torch.Tensor:
        """
@@ -206,6 +212,7 @@ class ActPerTensorHistogram(AutoActQuantizer):
    ```
 
 2. **量化参数管理**：
+
    ```python
    def get_q_param(self) -> QParam:
        """
@@ -222,7 +229,9 @@ class ActPerTensorHistogram(AutoActQuantizer):
 ## 配置参数
 
 ### HistogramObserverConfig
+
 目前由量化器自行配置，用户不需要调整。
+
 ```python
 class HistogramObserverConfig(BaseModel):
     symmetric: bool = False                    # 是否对称量化
@@ -246,12 +255,15 @@ class SearchMethod(str, Enum):
 **问题描述**：日志提示中，出现ValidationError。
 
 **可能原因**：
+
 - 在支持激活值量化的场景中将histogram方法错误配置到了weight处。
 - 在支持激活值量化的场景中选择了histogram不支持的配置，如int4量化。
 - 在不支持激活值量化的场景中配置了histogram方法。
 
 **解决方案**：
+
 - 排查yaml是否配置错误。
+
 ```yaml
 - type: "linear_quant" 
   qconfig:
@@ -266,7 +278,9 @@ class SearchMethod(str, Enum):
      symmetric: True
      method: "minmax" # 不支持直方图权重量化，此处不应配置为"histogram"
 ```
+
 - 排查对应的quantizer在初始化时是否存在AutoActQuantizer。可以根据配置yaml中qconfig对应的-type查看名字，在`msmodelslim/core/quantizer`查看对应的代码。
+
 ```python
 class LinearQuantizer(nn.Module):
 

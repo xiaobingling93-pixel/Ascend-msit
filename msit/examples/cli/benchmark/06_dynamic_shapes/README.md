@@ -1,6 +1,5 @@
 # Dynamic shapes
 
-
 ## 介绍
 
 动态shape场景。主要包含动态Shape、自动设置Shape模式（动态Shape模型）、动态Shape模型range测试模式三种场景，需要分别传入--dym-shape、--auto-set-dymshape-mode、--dym-shape-range指定动态shape信息。
@@ -65,6 +64,9 @@
     ```bash
     msit benchmark --om-model ./pth_resnet50_dymshape_dual_input.om  --output-size 100000 --dym-shape-range dual_input.info
     ```
+
     >注：actual_input为模型实际的输入名称
+ >
 ## FAQ
+
 使用出现问题时，可参考[FAQ](https://gitcode.com/Ascend/msit/wiki/benchmark_FAQ%2Fait%20benchmark%20%E4%BD%BF%E7%94%A8%E8%BF%87%E7%A8%8B%20FAQ.md)

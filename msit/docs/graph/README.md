@@ -27,6 +27,7 @@ python setup.py bdist_wheel
 cd ./dist
 pip install msit*.whl
 ```
+
 2.1 和 2.2 任选一种即可。
 
 ## 统计节点信息
@@ -104,6 +105,7 @@ msit graph extract --input=ge_onnx_00449_graph_101_Build.pbtxt --center-node "Ma
 
 在进行图数据抽取的过程中，有时会遇到特定类型的节点，这些节点的存在可能会显著影响抽取结果的规模和复杂性。为了确保抽取过程的有效性和可控性，当检测到以下情况时，通常希望停止进一步的抽取操作：
 **高连通性节点：**
+
 * 这类节点的特点是具有极高的入度和出度。在某些网络结构中，单个节点的入度或出度可能超过数千。若在抽取过程中经过了此类节点，即便限制了抽取的层数，也可能会导致最终抽取出的子图异常庞大。
 **特定类型节点：**
 * 在某些应用场景下，用户可能希望在遇到某一类特定类型的节点或某个明确指定的节点后，中止图的抽取过程。这种需求可能是出于对特定业务逻辑的关注，或者是为了解决性能优化的问题。无论动机如何，一旦识别到预定义的节点类型或具体节点，抽取操作应当即刻停止，从而确保生成的子图符合预期的边界条件和分析要求。
@@ -117,6 +119,7 @@ msit graph extract --input=ge_onnx_00449_graph_101_Build.pbtxt --center-node "Ma
 ![forward_backward](image/fw_bw.PNG)
 
 ### 区间抽取的方法
+
 该方法需指定一组起始节点和终止节点，dump出起始到终止节点中间的所有节点。
 
 命令示例：
@@ -128,6 +131,7 @@ msit graph extract --input=ge_onnx_00449_graph_101_Build.pbtxt --start-node "Mat
 此外，需要说明的是，扩散抽取和区间抽取每次仅支持生成一份子图，即只支持输入一个中心节点或者一组起始终止节点，不支持两种抽取方式同时使用。
 
 ## 压缩图
+
 当pbtxt非常大时，使用可视化工具将其打开会十分耗时，甚至无法打开，此时如果想要快速的查看图结构，可以使用strip命令，命令示例如下：
 
 ```bash
@@ -137,6 +141,7 @@ msit graph strip --input ge_onnx_00449_graph_101_Build.pbtxt --level 3
 其中，不同level对应着不同的压缩等级，1压缩等级最小，保留的图上信息最多，3压缩等级最大，仅保留基本的图结构信息，默认值为3，各等级详细介绍请参考参数详解。
 
 ## 识别重复结构
+
 部分传统模型图上节点非常多，人工识别图上融合机会困难且耗时较长，该功能提供了自动计算了图中所有可能的结构出现的次数，并基于profiling数据给出了每个重复结构总的耗时，命令示例如下：
 
 ```bash
@@ -160,12 +165,12 @@ msit graph fuse --source ge_onnx_00449_graph_101_Build.pbtxt --profile op_summar
 ```sh
 msit graph inspect <options>
 ```
+
 命令示例：
 
 ```sh
 msit graph inspect -i ./test_pbgraph.pbtxt -t dshape -o ./output
 ```
-
 
 ## 参数详解
 

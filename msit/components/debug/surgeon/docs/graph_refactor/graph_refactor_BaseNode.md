@@ -47,4 +47,3 @@
 |                                                       | 修改、添加和删除节点属性 | op['attr_x'] = attr_x<br />op['attr_new'] = attr_new<br />op.pop('attr_x') |
 |                                                       | 获取节点domain           | op.domain                                                    |
 |                                                       | 修改节点domain           | op.domain = ‘custom_domain’                                  |
-

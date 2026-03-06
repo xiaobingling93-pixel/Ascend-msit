@@ -1,9 +1,11 @@
 # 服务化拆解工具
 
 ## 简介
+
 服务化拆解工具（Service Performance Split Tool）基于msServiceProfiler工具采集的性能数据拆解服务化Batch执行中各阶段耗时，如组Batch、数据下发、模型执行、数据接收等。通过拆解识别性能瓶颈，方便开发人员优化框架。
 
 **基本概念**
+
 - `prefill batch`: Prefill阶段是处理用户输入prompt的初始阶段，在这个阶段，模型需要处理整个输入序列，计算并生成第一个输出token。该阶段执行的batch叫做prefill batch。
 - `decode batch`: Decode阶段模型逐个生成后续的输出token，每次生成一个token。相比Prefill阶段，Decode阶段的每次迭代计算量较小，但由于需要逐个生成token，可能会有很多次迭代。该阶段执行的batch叫做decode batch。
 
@@ -12,6 +14,7 @@
 **环境准备**
 
 安装服务化拆解工具，命令如下：
+
   ```sh
   git clone https://gitcode.com/Ascend/msit.git
   cd msit/msserviceprofiler
@@ -28,6 +31,7 @@
 ## 功能介绍
 
 ### 功能说明
+
 细粒度拆解服务化性能数据。
 
 **注意事项**
@@ -36,7 +40,7 @@
 
 ### 昇腾AI处理器支持情况<a name="ZH-CN_TOPIC_0000002479925980"></a>
 
->![](public_sys-resources/icon-note.gif) **说明：** 
+**说明：** 
 >AI处理器与昇腾产品的对应关系，请参见《[昇腾产品形态说明](https://www.hiascend.com/document/detail/zh/AscendFAQ/ProduTech/productform/hardwaredesc_0001.html)》
 
 |AI处理器类型|是否支持|
@@ -47,12 +51,12 @@
 |Ascend 310P|√|
 |Ascend 910|x|
 
-
->![](public_sys-resources/icon-notice.gif) **须知：** 
+**须知：** 
 >针对Ascend 910B，当前仅支持该系列产品中的Atlas 800I A2 推理产品。
 >针对Ascend 310P，当前仅支持该系列产品中的Atlas 300I Duo 推理卡+Atlas 800 推理服务器（型号：3000）。
 
 ### 命令格式
+
 ```bash
 msserviceprofiler split 
 --input-path /path/to/input 
@@ -67,9 +71,11 @@ msserviceprofiler split
   --decode-rid decode_rid
 }
 ```
+
 可选字段用 [] 表示，{} 代表必须从其中选择一个参数。
 
 ### 参数说明
+
 | 参数                 | 说明                                                            |是否必选|
 | -------------------- | --------------------------------------------------------------- |-----|
 | --input-path | 指定性能数据所在路径  |是|
@@ -86,29 +92,39 @@ msserviceprofiler split
 
 - **使用场景 1，指定`batch_size`大小拆解**
   - 如拆解100个`batch_size`为1的`prefill batch`数据，可执行：
+
     ```sh
     msserviceprofiler split --input-path=/path/to/input --output-path=/path/to/output/ --prefill-batch-size=1 --prefill-number=100
     ```
+
     执行完毕在结果路径下生成输出文件`prefill.csv`。
   - 拆解50个`batch_size`为10的`decode batch`数据，可执行：
+
     ```sh
     msserviceprofiler split --input-path=/path/to/input --output-path=/path/to/output/ --decode-batch-size=10 --decode-number=50
     ```
+
     执行完毕在结果路径下生成输出文件`decode.csv`。
 - **使用场景 2，指定`rid`拆解**
   - 拆解prefill数据:
+
     ```sh
     msserviceprofiler split --input-path=/path/to/input --output-path=/path/to/output/ --prefill-rid=efcas2d
     ```
+
     执行完毕在结果路径下生成输出文件`prefill.csv`。
   - 拆解decode数据:
+
     ```sh
     msserviceprofiler split --input-path=/path/to/input --output-path=/path/to/output/ --decode-rid=efcas2d
     ```
+
     执行完毕在结果路径下生成输出文件`decode.csv`。
 
 ### **输出说明**
+
 - `prefill.csv`
+
    | 字段                 | 说明                                            |
   | -------------------- | ----------------------------------------------- |
   | name | 标注batch内事件名称  |
@@ -122,9 +138,11 @@ msserviceprofiler split
   | start_time(ms)  | 当前batch事件的开始时间，显示为时间戳，单位ms  |
   | end_time(ms)  | 当前batch事件的结束时间，显示为时间戳，单位ms  |
   | rid  | 请求ID  |
+
 - `decode.csv`
 与 `prefill.csv` 格式相同， `decode.csv` 不含 `rid` 列。
 - 采集domain域与解析结果对照表
+
   | 解析结果                 | 采集domain域                                 |
   | -------------------- | ----------------------------------------------- |
   | prefill.csv | "Request; BatchSchedule; ModelExecute"  |

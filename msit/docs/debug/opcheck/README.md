@@ -1,25 +1,34 @@
 # msit debug opcheck功能使用指南
+
 ## 简介
+
 opcheck（精度预检）提供了传统小模型场景下kernel级别的精度预检功能，支持对经过GE推理后dump落盘数据进行算子精度预检，检测kernel级别的算子精度是否达标。
 
 **注:** 目前只支持TensorFlow2.6.5，未来会支持更多框架
 
 ## 环境准备
+
 ### 1. TensorFlow2.6.5
-```
+
+```shell
 pip3 install tensorflow==2.6.5 --no-index --find-links  https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/MindX/OpenSource/python/index.html --trusted-host ascend-repo.obs.cn-east-2.myhuaweicloud.com
 ```
+
 ### 2.PyTorch
-```
+
+```shell
 pip install torch==1.11.0
 ```
+
 ### 3.工具安装
+
 - 首先安装msit，安装教程请见 [msit一体化工具使用指南](../../install/README.md)
 - 然后安装opcheck组件，执行命令：`msit install opcheck`
 
 ## 使用方法
 
 ### 参数说明
+
 | 参数名                      | 描述                                                         | 是否必选 |
 | --------------------------- | ------------------------------------------------------------ | -------- |
 | --input, -i                 | tensor数据路径，为文件夹，由msit debug dump 落盘，示例：{output_path}/{timestamp} | 是       |

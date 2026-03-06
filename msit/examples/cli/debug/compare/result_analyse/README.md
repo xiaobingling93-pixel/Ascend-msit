@@ -1,9 +1,8 @@
 # 对比结果分析步骤
 
-
 ## 介绍
-本节以非量化昇腾AI处理器运行生成的dump数据与非量化onnx模型npy数据比对为例进行介绍对比结果分析步骤，下文中参数说明均以该示例介绍，请根据您的实际情况进行替换。
 
+本节以非量化昇腾AI处理器运行生成的dump数据与非量化onnx模型npy数据比对为例进行介绍对比结果分析步骤，下文中参数说明均以该示例介绍，请根据您的实际情况进行替换。
 
 ## 对比输出结果说明
 
@@ -42,13 +41,17 @@
 ```
 
 ## 比对结果文件各字段含义说明
+
 - **比对结果** 在文件 `result_{timestamp}.csv` 中，比对结果的含义与基础精度比对工具完全相同，其中每个字段的含义可参考 《CANN商用版 精度调试工具用户指南》中的“附录 > [完整比对结果参数说明](https://www.hiascend.com/document/detail/zh/canncommercial/81RC1/devaids/devtools/modelaccuracy/atlasaccuracy_16_0064.html)”章节。
 
 * 下面简要介绍说明结果信息：
+
   |                  OpType |  NPUDump | DataType | Address | GroundTruth | DataType | TensorIndex|Shape|Overflow|CosineSimilarity|...|MeanRelativeError|CompareFailReason|IsNpuOps|IsOutputNode|IsPrecisionError|
   |------------------------:|---------:|---------:|--------:|------------:|---------:|-----------:|----:|-------:|---------------:|--:|----------------:|----------------:|-------:|-------:|-------:|
   |                      Sub|Sub_26Mul_28| float16 |    NaN |Sub_26,Mul_28|   float32|Sub_26Mul_28:output:0|[1,1,1,108]|NO|      1|...|         0.000364|                 |NO      |NO      |NO      |
+
 如上所示的结果文件中主要关注以下几项:
+
  - [x] [NPUDump]:这个对应om模型中的算子,由于融合规则,可能会对应多个GPU/CPU算子。
  - [x] [DataType]:一共有两个,一个是NPU侧的数据类型,一个是CPU/GPU侧的数据类型,二者有所不同,可能会有精度损失问题。
  - [x] [GroundTruth]:om算子所对应的onnx模型算子。
@@ -72,10 +75,12 @@
   |MaxRelativeError|表示最大相对误差。取值范围为[0, +∞)，值越接近于0，表明越相近，值越大，表明差距越大。|
   |MeanRelativeError|表示平均相对误差。取值范围为[0, +∞)，值越接近于0，表明越相近，值越大，表明差距越大。|
 
-
 ## 比对结果分析
+
 ### 比对结果判定
+
 - 精度指标
+
   | 误差对比算法                | 精度正常的参考标准   |
   | ------------------------- | ------ |
   | CosineSimilarity          | > 0.99  |
@@ -88,12 +93,13 @@
 - 由于存在前置算子精度影响后续算子的问题，可以开启单算子比对(-single True)功能，一次排查所有问题单算子，屏蔽前置算子影响。 
 
 ### 比对结果具体分析
+
 工具自身提供结果分析：
+
 - **analyser 分析结果** 在调用结束后在屏幕上打印，在全部对比完成后，逐行分析数据，排除 nan 数据，输出需要重点关注的各误差对比算法中、首个差距不在阈值范围内的算子。
 
-
-
   输出结果使用 markdown 表格显示
+
   ```sh
   2023-04-19 13:54:10(1005)-[INFO]Operators may lead to inaccuracy:
 
@@ -102,11 +108,13 @@
   |          CosineSimilarity | 0.6722 |   214 |    Mul |   Mul_6 |       Mul_6 |
   | RelativeEuclideanDistance |      1 |   214 |    Mul |   Mul_6 |       Mul_6 |
   ```
+
   比如上面的结果中，表格第一行表示：第一次出现CosineSimilarity（余弦相识度）<0.99的算子，是Index为214、OpType为Mul、NPU侧算子名为**Mul_6**的算子，进行余弦相似度算法比对出来的结果，取值范围为[-1,1]，比对的结果如果越接近1，表示两者的值越相近，越接近-1意味着两者的值越相反。
 
 ## 比对结果专家建议
 
   使用方法，添加--advisor参数：
+
   ```sh
   msit debug compare -gm /home/HwHiAiUser/onnx_prouce_data/resnet_offical.onnx -om /home/HwHiAiUser/onnx_prouce_data/model/resnet50.om \
   -c /usr/local/Ascend/ascend-toolkit/latest -o /home/HwHiAiUser/result/test --advisor
@@ -119,7 +127,8 @@
     ![architecture](./overflow.png)
 
     算子ID为228的数据，存在FP16数据溢出，专家系统分析结果：
-    ```
+
+    ```ColdFusion
     Detection Type: FP16 overflow
 
     Operator Index: 228
@@ -142,7 +151,8 @@
     算子ID为1174的数据，余弦相似度小于0.99，且后续余弦相似度均小于0.99，判断问题节点存在精度问题。
 
     专家系统分析结果：
-    ```
+
+    ```ColdFusion
     Detection Type: global consistency
 
     Operator Index: 1174
@@ -166,7 +176,8 @@
     算子ID为195的数据，余弦相似度小于0.99，但最后一层数据符合精度要求，判断为单点误差。
 
     专家系统分析结果：
-    ```
+
+    ```ColdFusion
     Detection Type: global consistency
 
     Operator Index: 195
@@ -186,7 +197,8 @@
     所有数据均符合精度要求，判断模型符合精度要求。
 
     专家系统分析结果：
-    ```
+
+    ```ColdFusion
     Detection Type: global consistency
 
     Operator Index: NA
@@ -201,4 +213,5 @@
 
     专家建议：比对结果中的所有数据均符合精度要求。
     ```
+
     如果模型实际应用中，精度依旧不达标，请排查输出数据的后处理流程。

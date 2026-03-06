@@ -1,32 +1,39 @@
 # msit debug compare功能使用指南
 
 ## 简介
+
 - compare一键式全流程精度比对（推理）功能将推理场景的精度比对做了自动化，适用于TensorFlow、TensorFlow2.0、ONNX、Caffe、MindIE-Torch模型，用户输入原始模型，对应的离线模型和输入，输出整网比对的结果，还可以输入已dump的CPU和NPU侧的算子数据直接进行精度比对。离线模型为通过ATC工具转换的om模型，输入bin文件需要符合模型的输入要求（支持模型多输入）。在模型比对完成后，对首个精度问题节点进行误差定界定位，判断其是单层误差还是累计误差，并输出误差区间，相关信息存储在输出目录下。
 - 支持动态shape模型精度比对；支持单算子比对；支持AIPP(Artificial Intelligence Pre-Processing)数据预处理功能。
 - 该功能使用约束场景说明，参考链接：[Tensor比对/说明与约束](https://www.hiascend.com/document/detail/zh/canncommercial/81RC1/devaids/devtools/modelaccuracy/atlasaccuracy_16_0072.html)
 - 对于Caffe模型，目前不支持动态shape的模型比对。对于 `yolov2` / `yolov3` / `ssd` 等需要自定义实现层的模型，需要自行编译安装特定版本的caffe。
 - **注意**：请确保ATC工具转换的om与当前运行环境使用的芯片型号一致。
 
-
 ## 工具安装
+
 - 工具安装请见[msit 工具安装](../../install/README.md) 。
 - 其他说明：工具也支持在容器内安装使用。如果用户想使用容器的方式运行业务，可以到[昇腾社区](https://www.hiascend.com/zh/document)获取需要的容器镜像，容器启动后进入容器内部完成[msit 工具安装](../../install/README.md)即可。
 
-
 ## 使用方法
+
 ### 功能介绍
+
 #### 使用入口
+
 compare功能可以直接通过msit命令行形式启动精度对比。启动方式如下：
 
 **不指定模型输入** 命令示例，**其中路径需使用绝对路径**
+
   ```sh
   msit debug compare -gm /home/HwHiAiUser/onnx_prouce_data/resnet_offical.onnx -om /home/HwHiAiUser/onnx_prouce_data/model/resnet50.om \
   -c /usr/local/Ascend/ascend-toolkit/latest -o /home/HwHiAiUser/result/test
   ```
 
 ### 输出结果说明
+
 **注意**：
+
 - 单独compare功能：指定cpu侧以及npu侧的dump数据进行精度比对时，只生成result_{timestamp}.csv文件
+
 ```sh
 {output_path}/{timestamp}/{input_name-input_shape}  # {input_name-input_shape} 用来区分动态shape时不同的模型实际输入，静态shape时没有该层
 ├-- dump_data
@@ -103,10 +110,9 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 | --ops-json          | 用于单独进行精度比对时，cpu侧与npu侧算子的匹配规则json文件路径                                                                                                                                                                                                                                                                                                                                    | 否  | |  |
 | -h    --help        | 用于查看全部的参数具体信息                                                                                                                                                                                                                                                                                                                                                           | 否  | |  |
 
-
 ### 使用场景
 
-请移步[compare使用示例](../../../examples/cli/debug/compare/)
+请移步[compare使用示例](../../../examples/cli/debug/compare)
 
 | 使用示例                                                                                           | 使用场景                                 |
 |------------------------------------------------------------------------------------------------|--------------------------------------|

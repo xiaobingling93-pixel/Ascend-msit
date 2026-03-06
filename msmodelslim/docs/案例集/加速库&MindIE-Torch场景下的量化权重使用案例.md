@@ -1,4 +1,4 @@
-### 一、加速库场景下W8A8量化权重的使用案例
+# 一、加速库场景下W8A8量化权重的使用案例
 
 量化工具与MindIE工具关系：msmodelslim作为量化工具提供量化能力，MindIE加速库可以调用量化权重进行推理。
 
@@ -12,7 +12,7 @@
   此处以Llama2-13b-hf为例
 
   （1）准备一份模型权重数据。
-```
+
 ├── config.json
 ├── model-00001-of-00003.safetensors
 ├── model-00002-of-00003.safetensors
@@ -26,10 +26,10 @@
 ├── tokenizer_config.json
 ├── tokenizer.json
 ├── tokenizer.model
-```
 
   （2）使用指令生成W8A8量化权重。
-```
+
+```shell
 # 进入加速库路径下
 cd ${ATB_SPEED_HOME_PATH}
 # 运行脚本生成量化权重
@@ -41,14 +41,14 @@ bash examples/models/llama/generate_quant_weight.sh -src {浮点权重路径} -d
 ```
 
   （3）量化后权重目录结构：
-```
+
 ├─ config.json
 ├─ quant_model_weight_w8a8.safetensors
 ├─ quant_model_description_w8a8.json
 ├─ tokenizer_config.json
 ├─ tokenizer.json
 └─ tokenizer.model
-```
+
 量化输出包含：权重文件quant_model_weight_w8a8.safetensors和权重描述文件quant_model_description_w8a8.json。
 
 目录中的其余文件为推理时所需的配置文件，不同模型略有差异。
@@ -57,7 +57,7 @@ bash examples/models/llama/generate_quant_weight.sh -src {浮点权重路径} -d
 
 以下展示了量化后权重文件quant_model_weight_w8a8.safetensors中的部分内容：
 
-```
+```json
 {
   "model.embed_tokens.weight": tensor([...]),
   "model.layers.0.self_attn.q_proj.weight": tensor([...]),
@@ -69,9 +69,10 @@ bash examples/models/llama/generate_quant_weight.sh -src {浮点权重路径} -d
  ...
 }
 ```
+
 以下展示了量化后权重描述文件quant_model_description_w8a8.json中的部分内容：
 
-```
+```json
 {
   "model_quant_type": "W8A8",                               # 整体量化类型为W8A8量化
   "model.embed_tokens.weight": "FLOAT",                     # 来自原始浮点模型的embed_tokens权重
@@ -88,7 +89,7 @@ bash examples/models/llama/generate_quant_weight.sh -src {浮点权重路径} -d
 3.运行推理
 以Llama2-13b-hf为例，您可以使用以下指令执行对话测试，推理内容为"What's deep learning"。
 
-```
+```shell
 # 进入加速库路径下
 cd ${ATB_SPEED_HOME_PATH}
 # 运行推理脚本
@@ -98,9 +99,9 @@ bash examples/models/llama/run_pa.sh {W8A8量化权重路径} 20
 
 预期推理结果：
 
-```
+```ColdFusion
 Question: "What's deep learning"
 Answer: Deep learning is a subset of machine learning that uses artificial neural networks to learn from data.
 ```
 
-昇腾社区开发指南参考链接：https://www.hiascend.com/document/detail/zh/mindie/10RC3/mindiellm/llmdev/mindie_llm0281.html
+昇腾社区开发指南参考链接：<https://www.hiascend.com/document/detail/zh/mindie/10RC3/mindiellm/llmdev/mindie_llm0281.html>
