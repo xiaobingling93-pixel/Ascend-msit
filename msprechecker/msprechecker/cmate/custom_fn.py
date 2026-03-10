@@ -52,3 +52,6 @@ def is_port_in_use(port: int, host: str = 'localhost', protocol: str = 'tcp'):
                 return False
             except Exception:
                 return True
+
+def get_conf_pagesize():
+    return os.sysconf('SC_PAGESIZE')

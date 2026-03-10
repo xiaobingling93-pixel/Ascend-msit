@@ -72,6 +72,7 @@ class _ExpressionEvaluator(NodeVisitor):
             'in': lambda a, b: a in b,
             'and': lambda a, b: a and b,
             'not in': lambda a, b: a not in b,
+            'not': lambda a: not a,
             '*': operator.mul,
             '+': operator.add,
             '-': operator.sub,

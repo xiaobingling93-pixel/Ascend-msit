@@ -26,6 +26,9 @@ arch: '框架架构类型，可选值: mindie/vllm，决定解析 rank table 的
 ---
 
 [global]
+# System
+page_size = get_conf_pagesize()
+
 # PD Mix 场景变量
 if ${context::deploy_mode} == 'pd_mix':
     dp = ${mies_config::BackendConfig.ModelDeployConfig.ModelConfig[0].dp} or 1
@@ -34,7 +37,7 @@ if ${context::deploy_mode} == 'pd_mix':
     sp = ${mies_config::BackendConfig.ModelDeployConfig.ModelConfig[0].sp} or 1
     pp = ${mies_config::BackendConfig.ModelDeployConfig.ModelConfig[0].pp} or 1
     world_size = ${mies_config::BackendConfig.ModelDeployConfig.ModelConfig[0].worldSize}
-    
+
     if ${context::model_type} == 'deepseek':
         moe_ep = ${mies_config::BackendConfig.ModelDeployConfig.ModelConfig[0].moe_ep} or 1
         moe_tp = ${mies_config::BackendConfig.ModelDeployConfig.ModelConfig[0].moe_tp} or 1
@@ -50,7 +53,7 @@ elif ${context::deploy_mode} == 'pd_disaggregation_single_container':
     sp = ${ms_config::BackendConfig.ModelDeployConfig.ModelConfig[0].sp} or 1
     pp = ${ms_config::BackendConfig.ModelDeployConfig.ModelConfig[0].pp} or 1
     world_size = ${ms_config::BackendConfig.ModelDeployConfig.ModelConfig[0].worldSize}
-    
+
     if ${context::npu_type} == 'A2':
         # 使用 for 循环处理环境变量
         for item in ${mindie_service_single_container::[1].spec.template.spec.containers[0].env}:
@@ -68,14 +71,14 @@ elif ${context::deploy_mode} == 'pd_disaggregation_single_container':
                 MINDIE_MS_GEN_SERVER_PORT = ${item.value}
             fi
         done
-        
+
         # 处理 volumes
         for volume in ${mindie_service_single_container::[1].spec.template.spec.volumes}:
             if "${volume.name} == 'model-path'":
                 host_model_path = ${volume.hostPath.path}
             fi
         done
-        
+
         # 处理 volumeMounts
         for mount in ${mindie_service_single_container::[1].spec.template.spec.containers[0].volumeMounts}:
             if "${mount.name} == 'model-path'":
@@ -100,13 +103,13 @@ elif ${context::deploy_mode} == 'pd_disaggregation_single_container':
                 MINDIE_MS_GEN_SERVER_PORT = ${item.value}
             fi
         done
-        
+
         for volume in ${mindie_service_single_container_base_A3::[1].spec.template.spec.volumes}:
             if "${volume.name} == 'model-path'":
                 host_model_path = ${volume.hostPath.path}
             fi
         done
-        
+
         for mount in ${mindie_service_single_container_base_A3::[1].spec.template.spec.containers[0].volumeMounts}:
             if "${mount.name} == 'model-path'":
                 container_model_path = ${mount.mountPath}
@@ -122,7 +125,7 @@ elif ${context::deploy_mode} == 'pd_disaggregation' and ${context::npu_type} == 
     sp = ${ms_config::BackendConfig.ModelDeployConfig.ModelConfig[0].sp} or 1
     pp = ${ms_config::BackendConfig.ModelDeployConfig.ModelConfig[0].pp} or 1
     world_size = ${ms_config::BackendConfig.ModelDeployConfig.ModelConfig[0].worldSize}
-    
+
     # 处理 mindie_server 环境变量
     for item in ${mindie_server::[1].spec.template.spec.containers[0].env}:
         if ${item.name} == 'MINDIE_LOG_LEVEL':
@@ -133,7 +136,7 @@ elif ${context::deploy_mode} == 'pd_disaggregation' and ${context::npu_type} == 
             MINDIE_LOG_TO_STDOUT_server = ${item.value}
         fi
     done
-    
+
     # 处理 mindie_ms_coordinator 环境变量
     for item in ${mindie_ms_coordinator::[0].spec.template.spec.containers[0].env}:
         if ${item.name} == 'MINDIE_LOG_LEVEL':
@@ -144,7 +147,7 @@ elif ${context::deploy_mode} == 'pd_disaggregation' and ${context::npu_type} == 
             MINDIE_LOG_TO_STDOUT_coordinator = ${item.value}
         fi
     done
-    
+
     # 处理 mindie_ms_controller 环境变量
     for item in ${mindie_ms_controller::spec.template.spec.containers[0].env}:
         if ${item.name} == 'MINDIE_LOG_LEVEL':
@@ -186,14 +189,14 @@ elif ${context::deploy_mode} == 'lwd':
     sp = ${mies_config::BackendConfig.ModelDeployConfig.ModelConfig[0].sp} or 1
     pp = ${mies_config::BackendConfig.ModelDeployConfig.ModelConfig[0].pp} or 1
     world_size = ${mies_config::BackendConfig.ModelDeployConfig.ModelConfig[0].worldSize}
-    
+
     lwd = ${mies_config::ServerConfig.layerwiseDisaggregated}
     lwd_role_type = ${mies_config::ServerConfig.layerwiseDisaggregatedRoleType}
     lwd_master_ip = ${mies_config::ServerConfig.layerwiseDisaggregatedMasterIpAddress}
     lwd_slave_ip = ${mies_config::ServerConfig.layerwiseDisaggregatedSlaveIpAddress}
     lwd_master_data_port = ${mies_config::ServerConfig.layerwiseDisaggregatedDataPort}
     lwd_master_crtl_port = ${mies_config::ServerConfig.layerwiseDisaggregatedCrtlPort}
-    
+
     lwd_master_npu_num = ${mies_config::BackendConfig.ModelDeployConfig.ModelConfig[0].models.layerwiseDisaggregatedMasterDeviceNum}
     lwd_slave_npu_num = ${mies_config::BackendConfig.ModelDeployConfig.ModelConfig[0].models.layerwiseDisaggregatedSlaveDeviceNum}
 
@@ -204,13 +207,18 @@ elif ${context::deploy_mode} == 'lwd':
     fi
 fi
 
---- 
+---
 
 [par env]
 if ${context::deploy_mode} == 'pd_mix':
     assert ${MINDIE_LOG_TO_FILE} in ['1', 'true'], '建议将 MindIE 日志写入文件，便于排查问题', info
     assert ${MINDIE_LOG_TO_STDOUT} in ['1', 'true'], '建议开启 MindIE 日志打屏，便于查看程序运行状态', info
     assert ${MINDIE_LOG_LEVEL} in [NA, 'info', 'INFO'], '如果配置了 MINDIE_LOG_LEVEL，建议设置为 info 或 INFO，表示日志级别为 info', info
+
+    # ISSUE: https://gitcode.com/Ascend/msit/issues/394
+    assert not (${HCCL_RDMA_PCIE_DIRECT_POST_NOSTRICT} == 'TRUE' and ${page_size} == 4096), "此环境变量仅对Host侧小页内存页表大小非4KB的场景生效，若Host侧小页内存页表大小是4KB，无论此环境变量取值如何，都采用PCIe Direct的方式提交RDMA任务", info
+    assert not (${HCCL_RDMA_PCIE_DIRECT_POST_NOSTRICT} == 'TRUE' and ${page_size} == 65536), "该变量会导致内存逐渐碎片化，申请不到整块内存，服务拉起过程中很大概率会发生OOM", warning
+    assert not (${HCCL_RDMA_PCIE_DIRECT_POST_NOSTRICT} != 'TRUE' and ${page_size} == 65536), "不配置HCCL_RDMA_PCIE_DIRECT_POST_NOSTRICT变量会导致通过HDC的方式提交RDMA任务，存在大幅度的性能劣化。建议更换分页大小为4096的系统内核", info
 
     if ${context::model_type} == 'deepseek':
         assert ${PYTORCH_NPU_ALLOC_CONF} == 'expandable_segments:True', '需要开启 torch_npu 虚拟内存机制', warning
