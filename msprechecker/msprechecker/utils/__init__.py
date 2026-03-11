@@ -17,7 +17,7 @@
 
 __all__ = [
     'Version', 'get_pkg_version',
-    'get_npu_count', 'get_npu_type', 'RankTableParser', 'get_conn_mode', 'NpuType',
+    'get_npu_count', 'get_npu_type', 'get_conn_mode', 'NpuType', 'Framework',
     'get_current_ip_and_addr',
     "MacroExpander", "ExpandError",
     'Evaluator',
@@ -25,16 +25,18 @@ __all__ = [
     'is_in_container', 'singleton',
     'global_logger',
     'Traverser',
-    'get_handler', 
-    'ErrorSeverity', 'ErrorType', 
-    'CollectError', 'BaseError', 'CheckError', 
-    'ErrorHandler', 'CollectErrorHandler', 'CheckErrorHandler', 'ConfigErrorHandler', 'CompareErrorHandler'
+    'get_handler',
+    'ErrorSeverity', 'ErrorType',
+    'CollectError', 'BaseError', 'CheckError', 'RankTableParseError',
+    'ErrorHandler', 'CollectErrorHandler', 'CheckErrorHandler', 'ConfigErrorHandler', 'CompareErrorHandler',
+    'RankTable'
 ]
 
 from .version import Version, get_pkg_version
 from .ascend import (
-    get_npu_count, get_npu_type, get_conn_mode, NpuType, ParserRegistry, FrameworkType,
-    get_model_type, update_model_type
+    get_npu_count, get_npu_type, get_conn_mode, NpuType, Framework,
+    get_model_type, update_model_type, parse_rank_table, RankTable,
+    RankTableParseError
 )
 from .network import get_current_ip_and_addr
 from .macro_expander import MacroExpander, ExpandError

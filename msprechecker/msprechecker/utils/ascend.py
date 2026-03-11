@@ -20,14 +20,17 @@ import os
 import stat
 import json
 import shlex
+import ipaddress
 import itertools
 import subprocess
 from enum import Enum
-from abc import ABC, abstractmethod
+from pathlib import Path
 from dataclasses import dataclass
-from typing import Dict, List, Type
+from typing import Dict, List, Union, Callable
 
 from msguard.security import open_s
+from packaging.version import Version, InvalidVersion
+
 from .log import global_logger
 
 
@@ -125,221 +128,309 @@ def get_conn_mode():
     return None
 
 
-# --- rank table ---
-class FrameworkType(Enum):
-    TP_MINDIE = "mindie"
-    TP_VLLM = "vllm"
+class Framework(Enum):
+    MINDIE = "mindie"
+    VLLM = "vllm"
+    SGLANG = "sglang"
+    UNKNOWN = "unknown"
 
 
 @dataclass
 class DeviceInfo:
-    device_ip: str
+    device_ip: Union[ipaddress.IPv4Address, ipaddress.IPv6Address]
     device_id: int
     rank_id: int
 
 
 @dataclass
 class RankTable:
-    host_to_devices: Dict[str, List[DeviceInfo]]
+    host_to_devices: Dict[Union[ipaddress.IPv4Address, ipaddress.IPv6Address], List[DeviceInfo]]
     server_count: int
-    version: str
+    version: Version
 
 
-class ParserRegistry:
-    """Rank Table Parser Registry. Dynamically register and get rank table parser."""
-    _registry = {}
-
-    @classmethod
-    def register(cls, framework: FrameworkType):
-        """Register a parser using decorator. Example usage: @ParserRegistry.register(xx)"""
-        def wrapper(parser_cls):
-            cls._registry[framework] = parser_cls
-            return parser_cls
-        return wrapper
-    
-    @classmethod
-    def get(cls, framework: FrameworkType) -> Type['RankTableParser']:
-        """Get a RankTableParser"""
-        if framework not in cls._registry:
-            raise ValueError(f"Not registered framework: {framework}. Registered framework: {set(cls._registry)}")
-        
-        return cls._registry[framework]
+class RankTableParseError(ValueError):
+    """Raised when a rank table file exists but cannot be parsed correctly."""
 
 
-class RankTableParser(ABC):
-    def __init__(self):
-        single_address = "(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]|[0-9])"
-        self._ip_pattern = re.compile(
-            rf"\b{single_address}(?:\.{single_address}){{3}}\b"
-        )
-        self.host_limits = 1000 # max 1000 hosts in rank table
-        self.device_limits_per_host = 32 # max 32 devices per host
-
-    @abstractmethod
-    def parse(self, rank_table_path: str) -> RankTable:
-        pass
+class WeightDirNotFoundError(FileNotFoundError):
+    """Raised when the weight directory cannot be located from config/script."""
 
 
-class JsonParser(RankTableParser):
-    @staticmethod
-    def _load_json(path: str):
+_HOST_LIMIT = 1000
+_DEVICE_LIMIT_PER_HOST = 32
+
+
+def _load_json(path: Path) -> dict:
+    """Load and return JSON from *path*; raise RankTableParseError on failure."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as exc:
+        raise RankTableParseError(f"Failed to load JSON from {path!r}") from exc
+
+
+def _parse_server_count(server_count: Union[int, str]) -> int:
+    """Parse server_count from rank table."""
+    if isinstance(server_count, int):
+        return server_count
+    if isinstance(server_count, str) and server_count.isdigit():
+        return int(server_count)
+    global_logger.warning("Unexpected server_count %r; defaulting to 0", server_count)
+    return 0
+
+
+def _parse_mindie_host_to_devices(
+    server_list: List[Dict[str, Union[str, List[Dict[str, str]]]]],
+) -> Dict[Union[ipaddress.IPv4Address, ipaddress.IPv6Address], List[DeviceInfo]]:
+    """Parse host_to_devices from mindie rank table."""
+    host_to_devices: Dict[
+        Union[ipaddress.IPv4Address, ipaddress.IPv6Address], List[DeviceInfo]
+    ] = {}
+
+    if not server_list:
+        global_logger.warning("Expected server_list in rank table but not found")
+        return host_to_devices
+
+    for host_num, server_info in enumerate(server_list):
+        if host_num >= _HOST_LIMIT:
+            raise RankTableParseError(f"Host count exceeds limit {_HOST_LIMIT}")
+
+        host_ip_str = server_info.get("server_id", "")
+        device_list = server_info.get("device", [])
+
+        if not host_ip_str:
+            global_logger.warning(
+                "Expected server_id in server_list but not found, skipping"
+            )
+            continue
+
+        if not device_list:
+            global_logger.warning(
+                "Expected list of devices in server_list but not found, skipping"
+            )
+            continue
+
         try:
-            with open_s(path, 'r', encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            global_logger.warning("Error occured while loading json data: %s", e)
-            return {}
-    
-    @abstractmethod
-    def _parse_devices(self, data: dict) -> Dict[str, DeviceInfo]:
-        pass
+            host_ip = ipaddress.ip_address(host_ip_str)
+        except ValueError:
+            global_logger.warning(
+                "Invalid server_id %r found in server_list, skipping", host_ip_str
+            )
+            continue
 
-    def parse(self, rank_table_path: str):
-        data = self._load_json(rank_table_path)
-        if not data:
-            return RankTable([], 0, "'")
+        if host_ip not in host_to_devices:
+            host_to_devices[host_ip] = []
 
-        server_count = data.get('server_count')
-
-        if not server_count or not server_count.isdigit():
-            global_logger.warning("Expected 'server_count' to be a digit str. Got %r instead.", server_count)
-            server_count = "0"
-        else:
-            server_count = int(server_count)
-            
-        version = data.get('version', "1.0")
-        host_to_devices = self._parse_devices(data)
-
-        return RankTable(
-            host_to_devices=host_to_devices,
-            server_count=server_count,
-            version=version
-        )
-
-
-@ParserRegistry.register(FrameworkType.TP_MINDIE)
-class MindIEParser(JsonParser):
-    def _parse_devices(self, data: dict) -> Dict[str, DeviceInfo]:
-        host_to_devices = {}
-
-        for host_num, server_info in enumerate(data.get('server_list', {})):
-            if host_num > self.host_limits:
-                raise RuntimeError("Number of hosts found in rank table exceeds the limit")
-
-            host_ip = server_info.get('server_id', "")
-            if not self._ip_pattern.match(host_ip):
-                global_logger.warning(
-                    "Invalid 'server_id' from rank table: %r", host_ip
+        for dev_num, dev_info in enumerate(device_list):
+            if dev_num >= _DEVICE_LIMIT_PER_HOST:
+                raise RankTableParseError(
+                    f"Device count for host {host_ip_str!r} exceeds limit {_DEVICE_LIMIT_PER_HOST}"
                 )
+
+            device_ip_str = dev_info.get("device_ip", "")
+            device_id_str = dev_info.get("device_id", "")
+            rank_id_str = dev_info.get("rank_id", "")
+
+            try:
+                device_ip = ipaddress.ip_address(device_ip_str)
+            except ValueError:
+                global_logger.warning(
+                    "Invalid device_ip %r for %r; skipping", device_ip_str, host_ip_str
+                )
+                continue
+
+            try:
+                device_id = int(device_id_str)
+            except ValueError:
+                global_logger.warning(
+                    "Invalid device_id %r for %r; skipping", device_id_str, host_ip_str
+                )
+                continue
+
+            try:
+                rank_id = int(rank_id_str)
+            except ValueError:
+                global_logger.warning(
+                    "Invalid rank_id %r for %r; skipping", rank_id_str, host_ip_str
+                )
+                continue
+
+            host_to_devices[host_ip].append(
+                DeviceInfo(
+                    device_ip=device_ip,
+                    device_id=device_id,
+                    rank_id=rank_id,
+                )
+            )
+
+    return host_to_devices
+
+
+def _parse_vllm_host_to_devices(prefill_device_list, decode_device_list):
+    """Parse host_to_devices from vllm rank table."""
+    host_to_devices: Dict[
+        Union[ipaddress.IPv4Address, ipaddress.IPv6Address], List[DeviceInfo]
+    ] = {}
+
+    for list_name, device_list in (
+        ("prefill_device_list", prefill_device_list),
+        ("decode_device_list", decode_device_list),
+    ):
+        if device_list is None:
+            global_logger.warning("Expected %r in rank table but not found", list_name)
+            continue
+
+        if len(device_list) > _HOST_LIMIT * _DEVICE_LIMIT_PER_HOST:
+            raise RankTableParseError(
+                f"{list_name!r} length exceeds limit {_HOST_LIMIT * _DEVICE_LIMIT_PER_HOST}"
+            )
+
+        for dev in device_list:
+            host_ip_str = dev.get("server_id", "")
+            try:
+                host_ip = ipaddress.ip_address(host_ip_str)
+            except ValueError:
+                global_logger.warning("Invalid server_id %r; skipping", host_ip_str)
                 continue
 
             if host_ip not in host_to_devices:
+                if len(host_to_devices) >= _HOST_LIMIT:
+                    raise RankTableParseError(f"Host count exceeds limit {_HOST_LIMIT}")
                 host_to_devices[host_ip] = []
-            
-            for device_num, device_info in enumerate(server_info.get('device', {})):
-                if device_num > self.device_limits_per_host:
-                    raise RuntimeError(
-                        f"Number of devices for host {host_ip!r} found in rank table exceeds the limit"
-                    )
 
-                device_ip = device_info.get('device_ip')
-                if not device_ip or not self._ip_pattern.match(device_ip):
-                    global_logger.warning(
-                        "Invalid 'device_ip' for 'server_id' %r from rank table: %r",
-                        device_ip, host_ip
-                    )
-                    continue
-                
-                device_id = device_info.get('device_id')
-                if not device_id or not device_id.isdigit():
-                    global_logger.warning(
-                        "Expected 'device_id' for 'server_id' %r to be a digit str. Got %r instead.",
-                        device_id, host_ip
-                    )
-                    continue
-                device_id = int(device_id)
-
-                rank_id = device_info.get('rank_id')
-                if not rank_id or not rank_id.isdigit():
-                    global_logger.warning(
-                        "Expected 'rank_id' for host %r to be a digit str. Got %r instead.",
-                        rank_id, host_ip
-                    )
-                    continue
-                rank_id = int(rank_id)
-
-                host_to_devices[host_ip].append(
-                    DeviceInfo(device_ip=device_ip, device_id=device_id, rank_id=rank_id)
+            if len(host_to_devices[host_ip]) >= _DEVICE_LIMIT_PER_HOST:
+                raise RankTableParseError(
+                    f"Device count for host {host_ip_str!r} exceeds limit {_DEVICE_LIMIT_PER_HOST}"
                 )
 
-        return host_to_devices
+            device_ip_str = dev.get("device_ip", "")
+            device_id_str = dev.get("device_id", "")
+            cluster_id_str = dev.get("cluster_id", "")
 
-
-@ParserRegistry.register(FrameworkType.TP_VLLM)
-class VLLMParser(JsonParser):
-    def _parse_devices(self, data: dict) -> Dict[str, DeviceInfo]:
-        host_to_devices = {}
-
-        for device_list_name in ("prefill_device_list", "decode_device_list"):
-            if device_list_name not in data:
+            try:
+                device_ip = ipaddress.ip_address(device_ip_str)
+            except ValueError:
                 global_logger.warning(
-                    "Expected %r in rank table, but not found.", device_list_name
+                    "Invalid device_ip %r for %r; skipping", device_ip_str, host_ip_str
                 )
                 continue
 
-            if len(data[device_list_name]) > self.host_limits * self.device_limits_per_host:
-                raise RuntimeError("Number of items found in rank table exceeds the limit")
-
-            for device_info in data[device_list_name]:
-                host_ip = device_info.get('server_id')
-                if not host_ip or not self._ip_pattern.match(host_ip):
-                    global_logger.warning(
-                        "Invalid host_ip from rank table: %r", host_ip
-                    )
-                    continue
-                
-                if host_ip not in host_to_devices:
-                    host_to_devices[host_ip] = []
-                
-                if len(host_to_devices) > self.host_limits:
-                    raise RuntimeError("Number of hosts found in rank table exceeds the limit")
-
-                if len(host_to_devices[host_ip]) > self.device_limits_per_host:
-                    raise RuntimeError(
-                        f"Number of devices for host {host_ip!r} found in rank table exceeds the limit"
-                    )
-
-                device_ip = device_info.get('device_ip')
-                if not device_ip or not self._ip_pattern.match(device_ip):
-                    global_logger.warning(
-                        "Invalid 'device_ip' for 'server_id' %r from rank table: %r",
-                        device_ip, host_ip
-                    )
-                    continue
-        
-                device_id = device_info.get('device_id')
-                if not device_id or not device_id.isdigit():
-                    global_logger.warning(
-                        "Expected 'device_id' for 'server_id' %r to be a digit str. Got %r instead.",
-                        device_id, host_ip
-                    )
-                    continue
-
-                device_id = int(device_id)
-                rank_id = device_info.get('cluster_id')
-                if not rank_id or not rank_id.isdigit():
-                    global_logger.warning(
-                        "Expected 'cluster_id' for host %r to be a digit str. Got %r instead.",
-                        rank_id, host_ip
-                    )
-                    continue
-
-                rank_id = int(rank_id) - 1 # vllm cluster_id starts from 1
-                host_to_devices[host_ip].append(
-                    DeviceInfo(device_ip=device_ip, device_id=device_id, rank_id=rank_id)
+            try:
+                device_id = int(device_id_str)
+            except ValueError:
+                global_logger.warning(
+                    "Invalid device_id %r for %r; skipping", device_id_str, host_ip_str
                 )
+                continue
 
-        return host_to_devices
+            try:
+                cluster_id = int(cluster_id_str)
+            except ValueError:
+                global_logger.warning(
+                    "Invalid cluster_id %r for %r; skipping",
+                    cluster_id_str,
+                    host_ip_str,
+                )
+                continue
+
+            host_to_devices[host_ip].append(
+                DeviceInfo(
+                    device_ip=device_ip,
+                    device_id=device_id,
+                    rank_id=cluster_id - 1,  # vllm cluster_id is 1-based
+                )
+            )
+
+
+def _parse_mindie(path: Path) -> RankTable:
+    """Parse rank table in MindIE format."""
+    data = _load_json(path)
+
+    if "server_list" not in data:
+        raise RankTableParseError(f"'server_list' not found in rank table {path!r}")
+
+    if "server_count" not in data:
+        raise RankTableParseError(f"'server_count' not found in rank table {path!r}")
+
+    host_to_devices = _parse_mindie_host_to_devices(data["server_list"])
+    server_count = _parse_server_count(data["server_count"])
+
+    version_str = data.get("version", "1.0")  # version is optional
+    try:
+        version = Version(version_str)
+    except InvalidVersion as e:
+        raise RankTableParseError(
+            f"Invalid version {version_str!r} found in {path!r}"
+        ) from e
+
+    return RankTable(
+        host_to_devices=host_to_devices,
+        server_count=server_count,
+        version=version,
+    )
+
+
+def _parse_vllm(path: Path) -> RankTable:
+    """Parse rank table in VLLM format."""
+    data = _load_json(path)
+
+    if "prefill_device_list" not in data or "decode_device_list" not in data:
+        raise RankTableParseError(
+            f"Expected 'prefill_device_list' and 'decode_device_list' in rank table {path!r}"
+        )
+
+    host_to_devices = _parse_vllm_host_to_devices(
+        data["prefill_device_list"], data["decode_device_list"]
+    )
+    server_count = _parse_server_count(data.get("server_count"))
+
+    version_str = data.get("version", "1.0")  # version is optional
+    try:
+        version = Version(version_str)
+    except InvalidVersion as e:
+        raise RankTableParseError(
+            f"Invalid version {version_str!r} found in {path!r}"
+        ) from e
+
+    return RankTable(
+        host_to_devices=host_to_devices,
+        server_count=server_count,
+        version=version,
+    )
+
+
+
+_RANK_TABLE_PARSERS: Dict[Framework, Callable[[Path], RankTable]] = {
+    Framework.MINDIE: _parse_mindie,
+    Framework.VLLM: _parse_vllm,
+}
+
+
+def parse_rank_table(path: Path, framework: Framework) -> RankTable:
+    """
+    Parse a rank table file for the given framework.
+
+    Currently supported frameworks: MINDIE, VLLM.
+    SGLang does not define a rank table format and is intentionally unsupported.
+
+    Args:
+        path: Path to the rank table JSON file.
+        framework: Determines the parse strategy.
+
+    Returns:
+        Parsed RankTable.
+
+    Raises:
+        RankTableParseError: File exists but cannot be parsed.
+        ValueError: Framework is not supported.
+    """
+    parser = _RANK_TABLE_PARSERS.get(framework)
+    if parser is None:
+        raise ValueError(
+            f"No rank table parser for {framework!r}. Supported: {list(_RANK_TABLE_PARSERS)}"
+        )
+    return parser(path)
 
 
 model_type = None
