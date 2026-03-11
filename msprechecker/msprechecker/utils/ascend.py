@@ -24,7 +24,6 @@ import ipaddress
 import itertools
 import subprocess
 from enum import Enum
-from pathlib import Path
 from dataclasses import dataclass
 from typing import Dict, List, Union, Callable
 
@@ -161,7 +160,7 @@ _HOST_LIMIT = 1000
 _DEVICE_LIMIT_PER_HOST = 32
 
 
-def _load_json(path: Path) -> dict:
+def _load_json(path: str) -> dict:
     """Load and return JSON from *path*; raise RankTableParseError on failure."""
     try:
         with open(path, encoding="utf-8") as f:
@@ -267,7 +266,10 @@ def _parse_mindie_host_to_devices(
     return host_to_devices
 
 
-def _parse_vllm_host_to_devices(prefill_device_list, decode_device_list):
+def _parse_vllm_host_to_devices(
+    prefill_device_list,
+    decode_device_list
+) -> Dict[Union[ipaddress.IPv4Address, ipaddress.IPv6Address], List[DeviceInfo]]:
     """Parse host_to_devices from vllm rank table."""
     host_to_devices: Dict[
         Union[ipaddress.IPv4Address, ipaddress.IPv6Address], List[DeviceInfo]
@@ -341,21 +343,25 @@ def _parse_vllm_host_to_devices(prefill_device_list, decode_device_list):
                     rank_id=cluster_id - 1,  # vllm cluster_id is 1-based
                 )
             )
+    return host_to_devices
 
 
-def _parse_mindie(path: Path) -> RankTable:
+def _parse_mindie(path: str) -> RankTable:
     """Parse rank table in MindIE format."""
     data = _load_json(path)
 
     if "server_list" not in data:
-        raise RankTableParseError(f"'server_list' not found in rank table {path!r}")
+        raise RankTableParseError(f"'server_list' not found in rank table: {path!r}")
 
     if "server_count" not in data:
-        raise RankTableParseError(f"'server_count' not found in rank table {path!r}")
+        raise RankTableParseError(f"'server_count' not found in rank table: {path!r}")
 
     host_to_devices = _parse_mindie_host_to_devices(data["server_list"])
-    server_count = _parse_server_count(data["server_count"])
 
+    if not host_to_devices:
+        raise RankTableParseError(f"No devices found in rank table: {path!r}")
+
+    server_count = _parse_server_count(data["server_count"])
     version_str = data.get("version", "1.0")  # version is optional
     try:
         version = Version(version_str)
@@ -371,18 +377,22 @@ def _parse_mindie(path: Path) -> RankTable:
     )
 
 
-def _parse_vllm(path: Path) -> RankTable:
+def _parse_vllm(path: str) -> RankTable:
     """Parse rank table in VLLM format."""
     data = _load_json(path)
 
     if "prefill_device_list" not in data or "decode_device_list" not in data:
         raise RankTableParseError(
-            f"Expected 'prefill_device_list' and 'decode_device_list' in rank table {path!r}"
+            f"Expected 'prefill_device_list' and 'decode_device_list' in rank table: {path!r}"
         )
 
     host_to_devices = _parse_vllm_host_to_devices(
         data["prefill_device_list"], data["decode_device_list"]
     )
+
+    if not host_to_devices:
+        raise RankTableParseError(f"No devices found in rank table: {path!r}")
+
     server_count = _parse_server_count(data.get("server_count"))
 
     version_str = data.get("version", "1.0")  # version is optional
@@ -400,14 +410,13 @@ def _parse_vllm(path: Path) -> RankTable:
     )
 
 
-
-_RANK_TABLE_PARSERS: Dict[Framework, Callable[[Path], RankTable]] = {
+_RANK_TABLE_PARSERS: Dict[Framework, Callable[[str], RankTable]] = {
     Framework.MINDIE: _parse_mindie,
     Framework.VLLM: _parse_vllm,
 }
 
 
-def parse_rank_table(path: Path, framework: Framework) -> RankTable:
+def parse_rank_table(path: str, framework: Framework) -> RankTable:
     """
     Parse a rank table file for the given framework.
 
@@ -415,8 +424,8 @@ def parse_rank_table(path: Path, framework: Framework) -> RankTable:
     SGLang does not define a rank table format and is intentionally unsupported.
 
     Args:
-        path: Path to the rank table JSON file.
-        framework: Determines the parse strategy.
+        path (str): Path to the rank table JSON file.
+        framework (Framework): Determines the parse strategy.
 
     Returns:
         Parsed RankTable.
