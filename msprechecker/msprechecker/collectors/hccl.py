@@ -21,8 +21,11 @@ import shutil
 import subprocess
 from abc import abstractmethod
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import ipaddress
+from typing import Union
 
 from msguard import Rule
+from packaging.version import Version
 
 from .base import BaseCollector
 from ..utils import get_npu_count, is_in_container
@@ -104,10 +107,20 @@ class HCCLCollector(BaseCollector):
         super().__init__()
         self.rank_table = rank_table
         self.npu_count = npu_count if npu_count else get_npu_count()
-        self.option = "-hccs_ping" if getattr(rank_table, 'version', "1.0") == "1.2" else "-ping"
+        self.option = (
+            "-hccs_ping"
+            if getattr(rank_table, "version", Version("1.0")) >= Version("1.2")
+            else "-ping"
+        )
 
-    def _run_cmd(self, device_id: int, device_ip: str):
-        cmd = f"{HCCN_TOOL_CMD} -i {device_id} {self.option} -g address {device_ip}"
+    def _run_cmd(self, device_id: int, device_ip: Union[ipaddress.IPv4Address, ipaddress.IPv6Address]):
+        if device_ip.version == 4:
+            cmd = f"{HCCN_TOOL_CMD} -i {device_id} {self.option} -g address {device_ip}"
+        elif device_ip.version == 6:
+            cmd = f"{HCCN_TOOL_CMD} -i {device_id} {self.option} -inet6 -g ipv6_address {device_ip}"
+        else:
+            raise ValueError(f"Invalid IP version: {device_ip.version}")
+
         proc = subprocess.Popen(
             shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
         )

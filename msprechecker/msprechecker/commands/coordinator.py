@@ -68,8 +68,10 @@ from ..checkers import (
 from ..comparators import Comparator
 from ..reporters import Reporter
 from ..utils import (
-    FrameworkType, ParserRegistry, update_model_type,
-    CheckErrorHandler, ConfigErrorHandler, global_logger, singleton
+    Framework, update_model_type,
+    CheckErrorHandler, ConfigErrorHandler, global_logger, singleton,
+    parse_rank_table
+    
 )
 from ..cmate import inspect, run
 from ..cmate.cmate import _parse_configs, _parse_contexts
@@ -122,11 +124,10 @@ class CollectorFactory:
                     "msprechecker cannot determine the exact framework type of the rank table. "
                     "Will use 'mindie' as the default framework."
                 )
-                args.framework = FrameworkType.TP_MINDIE
+                args.framework = Framework.MINDIE.value
 
-            framework_type = FrameworkType(args.framework)
-            rank_table_parser = ParserRegistry.get(framework_type)()  # create parser instance
-            rank_table = rank_table_parser.parse(args.rank_table_path)
+            framework_type = Framework(args.framework)
+            rank_table = parse_rank_table(args.rank_table_path, framework_type)
 
             collectors.extend(
                 (
