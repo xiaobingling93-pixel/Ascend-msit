@@ -19,32 +19,57 @@ import pytest
 from unittest.mock import mock_open, patch
 from pathlib import Path
 
-from msprechecker.utils import parse_rank_table, Framework, RankTable, RankTableParseError
+from msprechecker.utils.ascend import parse_rank_table, Framework, RankTable, RankTableParseError
 
 # =============================================================================
 # Tests for parse_rank_table
 # =============================================================================
 
-@patch("builtins.open", new_callable=mock_open, read_data='{"server_list": [], "server_count": 0}')
+@patch("builtins.open", new_callable=mock_open)
 @patch("pathlib.Path.resolve")
 def test_parse_rank_table_given_mindie_framework_then_calls_mindie_parser(
     mock_resolve, mock_file
 ):
     """Test parse_rank_table with MINDIE framework."""
     mock_resolve.return_value = Path("/fake/path")
+    data = {
+        "server_list": [
+            {
+                "server_id": "192.168.1.1",
+                "device": [{"device_ip": "192.168.2.1", "device_id": 0, "rank_id": 0}],
+            }
+        ],
+        "server_count": 1,
+        "version": "1.0",
+    }
+    mock_file.return_value.read.return_value = json.dumps(data)
     with patch.object(Path, "is_file", return_value=True):
-        # Test the framework dispatch - should not raise for empty server_list
+        # Test the framework dispatch - should not raise for valid data
         result = parse_rank_table(Path("/fake/path"), Framework.MINDIE)
         assert isinstance(result, RankTable)
 
 
-@patch("builtins.open", new_callable=mock_open, read_data='{"prefill_device_list": [], "decode_device_list": []}')
+@patch("builtins.open", new_callable=mock_open)
 @patch("pathlib.Path.resolve")
 def test_parse_rank_table_given_vllm_framework_then_calls_vllm_parser(
     mock_resolve, mock_file
 ):
     """Test parse_rank_table with VLLM framework."""
     mock_resolve.return_value = Path("/fake/path")
+    data = {
+        "prefill_device_list": [
+            {
+                "server_id": "192.168.1.1",
+                "device_ip": "192.168.2.1",
+                "device_id": 0,
+                "cluster_id": 1,
+            }
+        ],
+        "decode_device_list": [],
+        "server_count": 1,
+        "version": "1.0",
+    }
+    mock_file.return_value.read.return_value = json.dumps(data)
     with patch.object(Path, "is_file", return_value=True):
         result = parse_rank_table(Path("/fake/path"), Framework.VLLM)
         assert isinstance(result, RankTable)
@@ -115,6 +140,7 @@ def test_parse_rank_table_vllm_with_valid_data(mock_resolve, mock_file):
 @patch("builtins.open", new_callable=mock_open)
 @patch("pathlib.Path.resolve")
 def test_parse_rank_table_mindie_with_invalid_server_id(mock_resolve, mock_file):
+    """Test parse_rank_table with invalid server_id - all invalid leads to no devices."""
     mock_resolve.return_value = Path("/fake/path")
     data = {
         "server_list": [
@@ -128,9 +154,10 @@ def test_parse_rank_table_mindie_with_invalid_server_id(mock_resolve, mock_file)
     }
     mock_file.return_value.read.return_value = json.dumps(data)
 
-    with patch.object(Path, "is_file", return_value=True):
-        result = parse_rank_table(Path("/fake/path"), Framework.MINDIE)
-        assert isinstance(result, RankTable)
+    with patch.object(Path, "is_file", return_value=True), pytest.raises(
+        RankTableParseError, match="No devices found in rank table"
+    ):
+        parse_rank_table(Path("/fake/path"), Framework.MINDIE)
 
 
 @patch("builtins.open", new_callable=mock_open)
@@ -203,6 +230,7 @@ def test_parse_rank_table_mindie_with_invalid_rank_id(mock_resolve, mock_file):
 @patch("builtins.open", new_callable=mock_open)
 @patch("pathlib.Path.resolve")
 def test_parse_rank_table_vllm_with_invalid_server_id(mock_resolve, mock_file):
+    """Test parse_rank_table with invalid server_id - all invalid leads to no devices."""
     mock_resolve.return_value = Path("/fake/path")
     data = {
         "prefill_device_list": [
@@ -219,9 +247,10 @@ def test_parse_rank_table_vllm_with_invalid_server_id(mock_resolve, mock_file):
     }
     mock_file.return_value.read.return_value = json.dumps(data)
 
-    with patch.object(Path, "is_file", return_value=True):
-        result = parse_rank_table(Path("/fake/path"), Framework.VLLM)
-        assert isinstance(result, RankTable)
+    with patch.object(Path, "is_file", return_value=True), pytest.raises(
+        RankTableParseError, match="No devices found in rank table"
+    ):
+        parse_rank_table(Path("/fake/path"), Framework.VLLM)
 
 
 @patch("builtins.open", new_callable=mock_open)
@@ -361,7 +390,7 @@ def test_parse_rank_table_vllm_exceeds_host_limit(mock_resolve, mock_file):
 @patch("builtins.open", new_callable=mock_open)
 @patch("pathlib.Path.resolve")
 def test_parse_rank_table_vllm_missing_device_list(mock_resolve, mock_file):
-    """Test parse_rank_table with missing device list."""
+    """Test parse_rank_table with missing device list keys."""
     mock_resolve.return_value = Path("/fake/path")
     data = {
         "server_count": 1,
@@ -384,3 +413,128 @@ def test_parse_rank_table_json_load_error(mock_resolve, mock_file):
         RankTableParseError
     ):
         parse_rank_table(Path("/fake/path"), Framework.MINDIE)
+
+
+@patch("builtins.open", new_callable=mock_open)
+@patch("pathlib.Path.resolve")
+def test_parse_rank_table_mindie_missing_server_list(mock_resolve, mock_file):
+    """Test parse_rank_table with missing server_list in mindie format."""
+    mock_resolve.return_value = Path("/fake/path")
+    data = {
+        "server_count": 1,
+        "version": "1.0",
+    }
+    mock_file.return_value.read.return_value = json.dumps(data)
+
+    with patch.object(Path, "is_file", return_value=True), pytest.raises(
+        RankTableParseError, match="'server_list' not found in rank table"
+    ):
+        parse_rank_table(Path("/fake/path"), Framework.MINDIE)
+
+
+@patch("builtins.open", new_callable=mock_open)
+@patch("pathlib.Path.resolve")
+def test_parse_rank_table_mindie_missing_server_count(mock_resolve, mock_file):
+    """Test parse_rank_table with missing server_count in mindie format."""
+    mock_resolve.return_value = Path("/fake/path")
+    data = {
+        "server_list": [
+            {
+                "server_id": "192.168.1.1",
+                "device": [{"device_ip": "192.168.2.1", "device_id": 0, "rank_id": 0}],
+            }
+        ],
+        "version": "1.0",
+    }
+    mock_file.return_value.read.return_value = json.dumps(data)
+
+    with patch.object(Path, "is_file", return_value=True), pytest.raises(
+        RankTableParseError, match="'server_count' not found in rank table"
+    ):
+        parse_rank_table(Path("/fake/path"), Framework.MINDIE)
+
+
+@patch("builtins.open", new_callable=mock_open)
+@patch("pathlib.Path.resolve")
+def test_parse_rank_table_mindie_invalid_version(mock_resolve, mock_file):
+    """Test parse_rank_table with invalid version in mindie format."""
+    mock_resolve.return_value = Path("/fake/path")
+    data = {
+        "server_list": [
+            {
+                "server_id": "192.168.1.1",
+                "device": [{"device_ip": "192.168.2.1", "device_id": 0, "rank_id": 0}],
+            }
+        ],
+        "server_count": 1,
+        "version": "invalid_version",
+    }
+    mock_file.return_value.read.return_value = json.dumps(data)
+
+    with patch.object(Path, "is_file", return_value=True), pytest.raises(
+        RankTableParseError, match="Invalid version"
+    ):
+        parse_rank_table(Path("/fake/path"), Framework.MINDIE)
+
+
+@patch("builtins.open", new_callable=mock_open)
+@patch("pathlib.Path.resolve")
+def test_parse_rank_table_vllm_invalid_version(mock_resolve, mock_file):
+    """Test parse_rank_table with invalid version in vllm format."""
+    mock_resolve.return_value = Path("/fake/path")
+    data = {
+        "prefill_device_list": [
+            {
+                "server_id": "192.168.1.1",
+                "device_ip": "192.168.2.1",
+                "device_id": 0,
+                "cluster_id": 1,
+            }
+        ],
+        "decode_device_list": [],
+        "server_count": 1,
+        "version": "invalid_version",
+    }
+    mock_file.return_value.read.return_value = json.dumps(data)
+
+    with patch.object(Path, "is_file", return_value=True), pytest.raises(
+        RankTableParseError, match="Invalid version"
+    ):
+        parse_rank_table(Path("/fake/path"), Framework.VLLM)
+
+
+@patch("builtins.open", new_callable=mock_open)
+@patch("pathlib.Path.resolve")
+def test_parse_rank_table_mindie_empty_server_list(mock_resolve, mock_file):
+    """Test parse_rank_table with empty server_list in mindie format."""
+    mock_resolve.return_value = Path("/fake/path")
+    data = {
+        "server_list": [],
+        "server_count": 0,
+        "version": "1.0",
+    }
+    mock_file.return_value.read.return_value = json.dumps(data)
+
+    with patch.object(Path, "is_file", return_value=True), pytest.raises(
+        RankTableParseError, match="No devices found in rank table"
+    ):
+        parse_rank_table(Path("/fake/path"), Framework.MINDIE)
+
+
+@patch("builtins.open", new_callable=mock_open)
+@patch("pathlib.Path.resolve")
+def test_parse_rank_table_vllm_empty_device_lists(mock_resolve, mock_file):
+    """Test parse_rank_table with empty device lists in vllm format."""
+    mock_resolve.return_value = Path("/fake/path")
+    data = {
+        "prefill_device_list": [],
+        "decode_device_list": [],
+        "server_count": 0,
+        "version": "1.0",
+    }
+    mock_file.return_value.read.return_value = json.dumps(data)
+
+    with patch.object(Path, "is_file", return_value=True), pytest.raises(
+        RankTableParseError, match="No devices found in rank table"
+    ):
+        parse_rank_table(Path("/fake/path"), Framework.VLLM)

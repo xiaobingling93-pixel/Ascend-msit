@@ -29,7 +29,7 @@ __all__ = [
     'ErrorSeverity', 'ErrorType',
     'CollectError', 'BaseError', 'CheckError', 'RankTableParseError',
     'ErrorHandler', 'CollectErrorHandler', 'CheckErrorHandler', 'ConfigErrorHandler', 'CompareErrorHandler',
-    'RankTable'
+    'RankTable', 'parse_rank_table'
 ]
 
 from .version import Version, get_pkg_version
