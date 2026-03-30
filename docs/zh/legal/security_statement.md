@@ -44,7 +44,7 @@
 
 ## 漏洞安全声明  
 
-请参见[MindStudio漏洞机制声明](./vulnerability_handling_procedure.md)。
+请参见[MindStudio漏洞机制声明](vulnerability_handling_procedure.md)。
 
 ## 数据安全
 
@@ -68,7 +68,7 @@
 
 ## 公网地址
 
-在msit仓工具的配置文件和脚本中存在的公网信息，请参见[公网地址](./public_ip_address.md)。
+在msit仓工具的配置文件和脚本中存在的公网信息，请参见[公网地址](public_ip_address.md)。
 
 ## 公开接口
 

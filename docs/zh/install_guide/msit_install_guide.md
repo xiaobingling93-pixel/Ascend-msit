@@ -98,7 +98,7 @@ pip3 config set global.trusted-host repo.huaweicloud.com
 
 软件包安装成功后，工具会安装成功提示，为了确保工具正常运行，需设置环境变量。如下图展示的成功安装示例，设置环境变量的方法为 `source /opt/msit/set_env.sh`。
 
-![msit install summary](./figures/msit_install_summary.png)
+![msit install summary](../figures/msit_install_summary.png)
 
 ## 升级
 
