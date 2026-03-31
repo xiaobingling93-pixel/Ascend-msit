@@ -12,7 +12,7 @@
 
 <span style="font-size:14px;">
   
-🔹**[2026.03.30]**：msit 仓库精度调试、推理服务调优、模型量化模块日落公告，详情请参见[公告](https://gitcode.com/Ascend/msit/discussions/2)
+🔹 **[2026.03.30]**：msit 仓库精度调试、推理服务调优、模型量化模块日落公告，详情请参见[公告](https://gitcode.com/Ascend/msit/discussions/2)  
 🔹 **[2026.01.12]**：本仓库许可证（License）变更，详情请参见 [公告](https://gitcode.com/Ascend/msit/discussions/1)    
 🔹 **[2025.12.31]**：MindStudio 推理开发工具链全面开源
 
