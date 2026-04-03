@@ -19,7 +19,7 @@ import os
 import platform
 import shutil
 from abc import ABC, abstractmethod
-from typing import List, Optional, Dict
+from typing import Dict, List, Optional
 
 from ..core.strategy import Ascend, Lscpu
 from ..util import get_npu_count, get_npu_memory, get_npu_type, get_pkg_version
@@ -99,10 +99,10 @@ class AscendInfoSection(InfoSection):
         commit_id = None
         for key in info:
             key_lower = key.lower()
-            if version is None and "version" in key_lower:
-                version = info[key]
             # mindie version key name is Ascend-mindie, lower to ascend-mindie
-            elif version is None and "ascend-mindie" in key_lower:
+            if version is None and any(
+                keyword in key_lower for keyword in ["version", "ascend-mindie"]
+            ):
                 version = info[key]
             elif commit_id is None and "commit" in key_lower:
                 commit_id = info[key]

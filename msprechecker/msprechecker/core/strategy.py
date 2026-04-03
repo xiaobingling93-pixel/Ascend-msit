@@ -14,19 +14,27 @@
 # See the Mulan PSL v2 for more details.
 # -------------------------------------------------------------------------
 
+import ipaddress
 import json
 import logging
+import operator
 import os
 import platform
 import re
 import shlex
 import shutil
 import subprocess
+import time
 from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import Any, Dict, List, Optional
 
-from msprechecker.util import get_pkg_version
+from concurrent.futures import as_completed, ThreadPoolExecutor
+
+from functools import reduce
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+from ..util import get_npu_count, get_pkg_version
+from ..utils.ascend import RankTable
 
 
 logger = logging.getLogger(__name__)
@@ -681,14 +689,16 @@ class TB(_Ascend):
         except (ImportError, AttributeError):
             abi = 0
         except RuntimeError:
-            logger.warning("Unexpected Error occured while importing torch, default to abi 0")
+            logger.warning(
+                "Unexpected Error occurred while importing torch, default to abi 0"
+            )
             abi = 0
-        return "/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_{}".format(abi)
+        return f"/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_{abi}"
 
 
 class MindIE(_Ascend):
     NAME = "mindie"
-    HOME_ENVIRON = "MIES_INSTALL_PATH" # use mindie-service to locate
+    HOME_ENVIRON = "MIES_INSTALL_PATH"  # use mindie-service to locate
     RELATIVE_VERSION_PATH = "../version.info"
     DEFAULT_HOME = "/usr/local/Ascend/mindie/latest/mindie-service"
 
@@ -710,5 +720,506 @@ class Ascend(CollectStrategyGroup):
             name,
             strategies or [Driver(), Toolkit(), Opp(), TB()],
         )
-        if get_pkg_version("mindie-motor") is None: # motor is packaged since 3.0.0
+        if get_pkg_version("mindie-motor") is None:  # motor is packaged since 3.0.0
             self._strategies.extend((MindIE(), TBSpeed()))
+
+
+class Ping(CollectStrategy):
+    def __init__(
+        self, name: str = "ping", *, ip: ipaddress.IPv4Address | ipaddress.IPv6Address
+    ) -> None:
+        if not isinstance(ip, (ipaddress.IPv4Address, ipaddress.IPv6Address)):
+            raise TypeError(
+                f"IP address must be an instance of ipaddress.IPv4Address or ipaddress.IPv6Address: {ip!r}"
+            )
+
+        super().__init__(name)
+        self._ip = ip
+        self._ping_path = shutil.which("ping")
+
+    def _ping_ip(self) -> Optional[str]:
+        """Ping the IP address and return the output."""
+        cmd = f"{self._ping_path} -c 3 -q -W 2 {self._ip}"
+        try:
+            return subprocess.check_output(
+                shlex.split(cmd),
+                stderr=subprocess.STDOUT,
+                text=True,
+                timeout=5,
+            )
+        except Exception:
+            if logger.isEnabledFor(logging.WARNING):
+                logger.exception("Failed to execute ping command for IP %s", self._ip)
+            return None
+
+    def execute(self) -> Optional[str]:
+        """Ping the IP address and return the output.
+
+        Returns:
+            Optional[str]: The output of the ping command, or None if the command failed.
+        """
+        if self._ping_path is None:
+            logger.warning("ping command not found in system PATH")
+            return None
+
+        return self._ping_ip()
+
+
+class HccnTool(CollectStrategy):
+    """Base class for all hccn_tool-based collect strategies."""
+
+    HCCN_TOOL_PATH = "/usr/local/Ascend/driver/tools/hccn_tool"
+
+    def __init__(
+        self,
+        name: str,
+        *,
+        device_ids: List[int],
+        max_workers: int = 8,
+        timeout: float = 3,
+    ):
+        super().__init__(name)
+        self._device_ids = device_ids
+        self._max_workers = max_workers
+        self._timeout = timeout
+        self._bin_path = shutil.which("hccn_tool") or self.HCCN_TOOL_PATH
+
+    def _run(self, cmd: List[str]) -> Optional[str]:
+        """Execute a single hccn_tool command and return its stdout and stderr."""
+        try:
+            return subprocess.check_output(
+                cmd,
+                stderr=subprocess.STDOUT,
+                text=True,
+                timeout=self._timeout,
+            )
+        except Exception:
+            if logger.isEnabledFor(logging.WARNING):
+                logger.exception("Failed to execute hccn_tool command: %s", cmd)
+            return None
+
+    @abstractmethod
+    def execute(self) -> List[Any]:
+        """Execute the hccn_tool command for each device and return a list of results."""
+
+
+class _SingleOption(HccnTool):
+    """
+    Runs:  hccn_tool -i <device_id> <option> -g
+
+    Returns:
+        List[Optional[str]]: A list of results, one per device_id, or None if the command failed.
+    """
+
+    OPTION: str
+    DEFAULT_NAME: str
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        if not isinstance(getattr(cls, "OPTION", None), str):
+            raise TypeError(
+                f"{cls.__name__} must define a string class variable 'OPTION'"
+            )
+        if not isinstance(getattr(cls, "DEFAULT_NAME", None), str):
+            raise TypeError(
+                f"{cls.__name__} must define a string class variable 'DEFAULT_NAME'"
+            )
+
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        *,
+        device_ids: List[int],
+        max_workers: int = 8,
+        timeout: float = 3,
+    ):
+        super().__init__(
+            name=name or self.DEFAULT_NAME,
+            device_ids=device_ids,
+            max_workers=max_workers,
+            timeout=timeout,
+        )
+
+    def _build_cmd(self, device_id: int) -> List[str]:
+        return [self._bin_path, "-i", str(device_id), self.OPTION, "-g"]
+
+    def execute(self) -> List[Optional[str]]:
+        cmds = [self._build_cmd(device_id) for device_id in self._device_ids]
+        with ThreadPoolExecutor(max_workers=self._max_workers) as executor:
+            return list(executor.map(self._run, cmds))
+
+
+class _OptionIp(HccnTool):
+    """
+    Runs:  hccn_tool -i <device_id> <option> -g address <peer_ip>
+           for every (device_id, peer_ip) combination.
+
+    Returns:
+        List[Dict[str, Optional[str]]]: A list of results, one per device_id, or None if the command failed.
+        — one dict per device_id; keys are peer IPs, values are raw output.
+    """
+
+    OPTION: str
+    DEFAULT_NAME: str
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        if not isinstance(getattr(cls, "OPTION", None), str):
+            raise TypeError(
+                f"{cls.__name__} must define a string class variable 'OPTION'"
+            )
+        if not isinstance(getattr(cls, "DEFAULT_NAME", None), str):
+            raise TypeError(
+                f"{cls.__name__} must define a string class variable 'DEFAULT_NAME'"
+            )
+
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        *,
+        device_ids: List[int],
+        device_ips: List[str],
+        max_workers: int = 8,
+        timeout: float = 3,
+    ):
+        super().__init__(
+            name=name or self.DEFAULT_NAME,
+            device_ids=device_ids,
+            max_workers=max_workers,
+            timeout=timeout,
+        )
+        self._device_ips = device_ips
+
+    def _build_cmd(self, device_id: int, ip: str) -> List[str]:
+        return [self._bin_path, "-i", str(device_id), self.OPTION, "-g", "address", ip]
+
+    def _probe_device(self, device_id: int) -> Dict[str, Optional[str]]:
+        """Run probes for all peer IPs from a single device — sequentially."""
+        return {
+            ip: self._run(self._build_cmd(device_id, ip)) for ip in self._device_ips
+        }
+
+    def execute(self) -> List[Dict[str, Optional[str]]]:
+        with ThreadPoolExecutor(max_workers=self._max_workers) as executor:
+            return list(executor.map(self._probe_device, self._device_ids))
+
+
+class Vnic(_SingleOption):
+    OPTION = "-vnic"
+    DEFAULT_NAME = "vnic"
+
+
+class Link(_SingleOption):
+    OPTION = "-link"
+    DEFAULT_NAME = "link"
+
+
+class Tls(_SingleOption):
+    OPTION = "-tls"
+    DEFAULT_NAME = "tls"
+
+
+class HcclPing(_OptionIp):
+    OPTION = "-ping"
+    DEFAULT_NAME = "hccl_ping"
+
+
+class HccsPing(_OptionIp):
+    OPTION = "-hccs_ping"
+    DEFAULT_NAME = "hccs_ping"
+
+
+class Network(CollectStrategyGroup):
+    HCCS_PING_VERSION = "1.2"
+
+    def __init__(
+        self,
+        name: str = "network",
+        *,
+        rank_table: RankTable,
+        npu_count: Optional[int] = None,
+    ):
+        if not isinstance(rank_table, RankTable):
+            raise TypeError("rank_table must be an instance of RankTable")
+
+        npu_count = npu_count if npu_count is not None else get_npu_count()
+        if npu_count == 0:
+            raise ValueError("No NPU devices found in the system")
+
+        # Collect all unique device IPs from rank table
+        all_device_ips = list(
+            dict.fromkeys(
+                device_info.device_ip
+                for device_info_list in rank_table.host_to_devices.values()
+                for device_info in device_info_list
+            )
+        )
+
+        if not all_device_ips:
+            raise ValueError("No device IP addresses found in the rank table")
+
+        device_ids = list(range(npu_count))
+
+        # Determine which ping class to use based on rank table version
+        ping_cls = (
+            HccsPing if rank_table.version == self.HCCS_PING_VERSION else HcclPing
+        )
+
+        # Build strategies list
+        # Each Ping needs a unique name based on the IP
+        strategies = [Ping(name=f"ping_{ip}", ip=ip) for ip in all_device_ips]
+        strategies.extend(
+            [
+                Vnic(device_ids=device_ids),
+                Link(device_ids=device_ids),
+                Tls(device_ids=device_ids),
+                ping_cls(device_ids=device_ids, device_ips=all_device_ips),
+            ]
+        )
+
+        super().__init__(name, strategies=strategies)
+
+
+class Stress(CollectStrategy):
+    def __init__(
+        self,
+        name: str,
+        *,
+        batch_size: int,
+        seq_len: int,
+        hidden_size: int,
+        intermediate_size: int,
+        epochs: int = 5,
+    ):
+        self._torch = None
+        try:
+            import torch
+
+            self._torch = torch
+        except ImportError:
+            logger.warning("Failed to import torch")
+
+        for param_name, param_value in [
+            ("batch_size", batch_size),
+            ("seq_len", seq_len),
+            ("hidden_size", hidden_size),
+            ("intermediate_size", intermediate_size),
+            ("epochs", epochs),
+        ]:
+            if not isinstance(param_value, int) or param_value <= 0:
+                raise ValueError(
+                    f"{param_name} must be a positive integer, got {param_value!r}"
+                )
+
+        super().__init__(name)
+        self._batch_size = batch_size
+        self._seq_len = seq_len
+        self._hidden_size = hidden_size
+        self._intermediate_size = intermediate_size
+        self._epochs = epochs
+
+    @property
+    @abstractmethod
+    def device_type(self) -> str:
+        pass
+
+    @abstractmethod
+    def _get_free_memory(self, device: str) -> float:
+        pass
+
+    def _calculate_tensor_memory(self, shape: Tuple[int, ...]) -> int:
+        if not isinstance(shape, tuple):
+            shape = (shape,)
+
+        return reduce(operator.mul, shape, 1) * 4  # float32 = 4 bytes
+
+    def _check_memory_for_matmul(self, device_pos: str) -> bool:
+        mat_a_mem = self._calculate_tensor_memory(
+            (self._batch_size, self._seq_len, self._hidden_size)
+        )
+        mat_b_mem = self._calculate_tensor_memory(
+            (self._batch_size, self._hidden_size, self._intermediate_size)
+        )
+        # addbmm output shape is (seq_len, intermediate_size); unchanged
+        mat_c_mem = self._calculate_tensor_memory(
+            (self._seq_len, self._intermediate_size)
+        )
+        total_required = mat_a_mem + mat_b_mem + mat_c_mem
+
+        free_memory = self._get_free_memory(device_pos)
+        safety_margin = 0.2
+        available_with_margin = free_memory * (1 - safety_margin)
+        has_enough_mem = total_required <= available_with_margin
+        logger.debug(
+            "Device %s - Required memory: %d bytes, Free memory: %d bytes, "
+            "Available with margin: %d bytes",
+            device_pos,
+            total_required,
+            free_memory,
+            available_with_margin,
+        )
+
+        if not has_enough_mem:
+            logger.warning(
+                "Insufficient memory on device %s for matmul operation", device_pos
+            )
+            return False
+
+        return True
+
+    def _matmul_stress_test(self, device_id: int) -> float:
+        """Run matrix-multiply stress on one device and return elapsed ms."""
+        device_pos = f"{self.device_type}:{device_id}"
+
+        if not self._check_memory_for_matmul(device_pos):
+            return 0.0
+
+        start_time = time.perf_counter()
+        for _ in range(self._epochs):
+            mat_a = self._torch.randn(
+                self._batch_size, self._seq_len, self._hidden_size
+            ).to(device_pos)
+            mat_b = self._torch.randn(
+                self._batch_size, self._hidden_size, self._intermediate_size
+            ).to(device_pos)
+            mat_c = self._torch.zeros(self._seq_len, self._intermediate_size).to(
+                device_pos
+            )
+            self._torch.addbmm(mat_c, mat_a, mat_b)
+
+        end_time = time.perf_counter()
+        return (end_time - start_time) * 1000
+
+    def execute(self) -> Optional[Dict[int, Optional[float]]]:
+        """Run the stress test and return the elapsed time in milliseconds for each device.
+
+        Returns:
+            Optional[Dict[int, Optional[float]]]: A dictionary of device IDs and their elapsed time in milliseconds,
+                                                  or None if torch is not available.
+        """
+        if not self._torch:
+            logger.warning("torch is not available, skip the stress test")
+            return None
+
+        output = {}
+        cpu_count = os.cpu_count() or 1
+        self._torch.set_num_threads(cpu_count)
+        with ThreadPoolExecutor(max_workers=cpu_count) as executor:
+            future_to_id = {
+                executor.submit(self._matmul_stress_test, cpu_id): cpu_id
+                for cpu_id in range(cpu_count)
+            }
+            for future in as_completed(future_to_id):
+                cpu_id = future_to_id[future]
+                try:
+                    elapsed_ms = future.result()
+                    logger.debug(
+                        "Stress test completed on device %s:%s in %.2f ms",
+                        self.device_type,
+                        cpu_id,
+                        elapsed_ms,
+                    )
+                    output[cpu_id] = elapsed_ms
+                except Exception:
+                    if logger.isEnabledFor(logging.WARNING):
+                        logger.exception(
+                            "Stress test failed on device %s:%s",
+                            self.device_type,
+                            cpu_id,
+                        )
+                    output[cpu_id] = None
+
+        return output
+
+
+class CPU(Stress):
+    def __init__(
+        self,
+        name: str = "cpu",
+        *,
+        batch_size: int = 1,
+        seq_len: int = 512,
+        hidden_size: int = 1024,
+        intermediate_size: int = 64,
+        epochs: int = 5,
+    ):
+        super().__init__(
+            name,
+            batch_size=batch_size,
+            seq_len=seq_len,
+            hidden_size=hidden_size,
+            intermediate_size=intermediate_size,
+            epochs=epochs,
+        )
+
+    @property
+    def device_type(self) -> str:
+        return "cpu"
+
+    def _get_free_memory(self, device: str) -> float:
+        import psutil
+
+        memory_available = psutil.virtual_memory().available
+        logger.debug("Available CPU memory: %d bytes", memory_available)
+        return memory_available
+
+
+class NPU(Stress):
+    def __init__(
+        self,
+        name: str = "npu",
+        *,
+        batch_size: int = 1,
+        seq_len: int = 4096,
+        hidden_size: int = 8192,
+        intermediate_size: int = 3584,
+        epochs: int = 5,
+    ):
+        super().__init__(
+            name,
+            batch_size=batch_size,
+            seq_len=seq_len,
+            hidden_size=hidden_size,
+            intermediate_size=intermediate_size,
+            epochs=epochs,
+        )
+
+        self._torch_npu = None
+        try:
+            import torch_npu
+
+            self._torch_npu = torch_npu
+        except ImportError:
+            logger.warning("Failed to import torch_npu")
+
+    @property
+    def device_type(self) -> str:
+        return "npu"
+
+    def _get_free_memory(self, device: str) -> float:
+        if self._torch_npu is None:
+            logger.warning("torch_npu is not available")
+            return 0
+
+        if not self._torch_npu.npu.is_available():
+            logger.warning("NPU device is not available: %s", device)
+            return 0
+
+        total_memory = self._torch_npu.npu.get_device_properties(device).total_memory
+        used_memory = self._torch_npu.npu.memory_allocated(device)
+        logger.debug(
+            "NPU device %s - Total memory: %d bytes, Used memory: %d bytes, "
+            "Free memory: %d bytes",
+            device,
+            total_memory,
+            used_memory,
+            total_memory - used_memory,
+        )
+        return total_memory - used_memory
+
+    def execute(self) -> Optional[Dict[int, Optional[float]]]:
+        if not self._torch_npu:
+            logger.warning("torch_npu is not available, skip the stress test")
+            return None
+
+        return super().execute()

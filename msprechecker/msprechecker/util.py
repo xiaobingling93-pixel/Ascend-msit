@@ -14,10 +14,12 @@
 # See the Mulan PSL v2 for more details.
 # -------------------------------------------------------------------------
 
+import dataclasses
 import itertools
 import logging
 import os
 import re
+import shlex
 import shutil
 import stat
 import subprocess
@@ -54,11 +56,34 @@ class NpuType(Enum):
     UNKNOWN = "unknown"
 
 
+class ConnMode(Enum):
+    ROUTE = "route"
+    FIBER = "fiber"
+    UNKNOWN = "unknown"
+
+
 class Framework(Enum):
     MINDIE = "mindie"
     VLLM = "vllm"
     SGLANG = "sglang"
     UNKNOWN = "unknown"
+
+
+class DeployMode(Enum):
+    PD_MIX = "pd_mix"
+    PD_DISAGGREGATION = "pd_disaggregation"
+    PD_DISAGGREGATION_SINGLE_CONTAINER = "pd_disaggregation_single_container"
+    EP = "ep"
+    LWD = "lwd"
+    UNKNOWN = "unknown"
+
+
+@dataclasses.dataclass(frozen=True)
+class HardwareProfile:
+    npu_count: int
+    npu_type: NpuType
+    npu_memory_mb: Optional[int]
+    conn_mode: ConnMode
 
 
 def get_pkg_version(pkg_name: str) -> Optional[Version]:
@@ -147,3 +172,54 @@ def get_npu_memory() -> Optional[int]:
             return int(value)
 
     return None
+
+
+def get_conn_mode() -> ConnMode:
+    """Detect NPU connection mode via hccn_tool LLDP output."""
+    hccn_tool = shutil.which("hccn_tool")
+    if not hccn_tool:
+        return ConnMode.UNKNOWN
+
+    try:
+        output = subprocess.check_output(
+            shlex.split(f"{hccn_tool} -i 0 -lldp -g"),
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+    except Exception:
+        logger.exception("Failed to execute hccn_tool")
+        return ConnMode.UNKNOWN
+
+    if not output:
+        return ConnMode.UNKNOWN
+
+    lines = output.splitlines()
+    try:
+        idx = lines.index("System Description TLV")
+    except ValueError:
+        return ConnMode.UNKNOWN
+
+    if idx + 1 >= len(lines):
+        return ConnMode.UNKNOWN
+
+    next_line = lines[idx + 1]
+    if "Routing" in next_line:
+        return ConnMode.ROUTE
+    if "AscendNPU" in next_line:
+        return ConnMode.FIBER
+    return ConnMode.UNKNOWN
+
+
+def probe_hardware() -> HardwareProfile:
+    """
+    Probe all hardware characteristics in one call.
+
+    The caller is responsible for caching the result if repeated
+    subprocess calls are undesirable.
+    """
+    return HardwareProfile(
+        npu_count=get_npu_count(),
+        npu_type=get_npu_type(),
+        npu_memory_mb=get_npu_memory(),
+        conn_mode=get_conn_mode(),
+    )
